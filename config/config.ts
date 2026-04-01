@@ -5,6 +5,7 @@ export default defineConfig({
   favicons: ['/favicon.svg'],
   routes: [
     { path: '/login', component: '@/pages/login', layout: false },
+    { path: '/403', component: '@/pages/forbidden', layout: false },
     { path: '/', redirect: '/dashboard' },
     { path: '/dashboard', component: '@/pages/dashboard' },
     { path: '/members', component: '@/pages/members' },

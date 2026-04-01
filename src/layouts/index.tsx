@@ -5,7 +5,7 @@ import { MenuOutlined } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import AppSidebar from '@/components/AppSidebar';
 import cls from '@/styles/layout.module.css';
-import { isDemoAuthed } from '@/utils/mockAuth';
+import { canAccessDemoRoute, getDemoSession, isDemoAuthed } from '@/utils/mockAuth';
 
 const AppLayout: FC<PropsWithChildren> = ({ children }) => {
   const location = useLocation();
@@ -16,10 +16,16 @@ const AppLayout: FC<PropsWithChildren> = ({ children }) => {
     if (!isDemoAuthed()) {
       const nextPath = `${location.pathname}${location.search}${location.hash}`;
       navigate('/login', { replace: true, state: { from: nextPath } });
+      return;
+    }
+
+    const session = getDemoSession();
+    if (!canAccessDemoRoute(location.pathname, session)) {
+      navigate('/403', { replace: true, state: { from: location.pathname } });
     }
   }, [location.hash, location.pathname, location.search, navigate]);
 
-  if (!isDemoAuthed()) {
+  if (!isDemoAuthed() || !canAccessDemoRoute(location.pathname, getDemoSession())) {
     return null;
   }
 
