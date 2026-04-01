@@ -18,7 +18,7 @@
 }
 
 .panel {
-  width: min(460px, 100%);
+  width: min(480px, 100%);
   position: relative;
   padding: 30px;
   border-radius: 30px;
@@ -55,23 +55,6 @@
   margin-top: 18px;
 }
 
-.helperRow {
-  display: flex;
-  justify-content: flex-end;
-  margin: -6px 0 14px;
-}
-
-.helperLink {
-  color: var(--text-blue);
-  font-size: 13px;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.helperLink:hover {
-  color: #446ec7;
-}
-
 .form :global(.ant-form-item-label > label) {
   font-weight: 700;
   color: var(--text-violet);
@@ -91,4 +74,26 @@
 .input:focus-within {
   border-color: rgba(67, 199, 171, 0.5);
   box-shadow: 0 0 0 3px rgba(67, 199, 171, 0.12);
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.actions > * {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .panel {
+    padding: 20px;
+    border-radius: 22px;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
 }

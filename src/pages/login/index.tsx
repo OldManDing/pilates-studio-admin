@@ -1,7 +1,7 @@
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { App, Form, Input } from 'antd';
 import { useEffect, useMemo } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
 import { getSafeRedirectPath, isDemoAuthed, saveDemoSession } from '@/utils/mockAuth';
 import cls from './index.module.css';
@@ -72,6 +72,10 @@ export default function LoginPage() {
               placeholder="请输入密码"
             />
           </Form.Item>
+
+          <div className={cls.helperRow}>
+            <Link className={cls.helperLink} to="/forgot-password">忘记密码？</Link>
+          </div>
 
           <ActionButton icon={<LockOutlined />} htmlType="submit">进入管理后台</ActionButton>
         </Form>
