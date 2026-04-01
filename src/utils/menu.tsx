@@ -18,6 +18,8 @@ export type MenuItem = {
   description: string;
 };
 
+export const isOwnerOnlyPath = (path: string) => path === '/roles';
+
 export const menuItems: MenuItem[] = [
   { key: '/dashboard', label: '仪表盘', icon: <AppstoreOutlined />, description: '运营总览与今日动态' },
   { key: '/members', label: '会员管理', icon: <UsergroupAddOutlined />, description: '会籍、状态与生命周期' },

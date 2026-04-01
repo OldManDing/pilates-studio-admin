@@ -124,6 +124,7 @@
 }
 
 .userCard {
+  width: 100%;
   padding: 18px;
   border-radius: 24px;
   background: rgba(247, 249, 246, 0.86);
@@ -133,6 +134,34 @@
   gap: 14px;
   align-items: center;
   min-width: 0;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.16s ease;
+}
+
+.accountWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.accountOpen .userCard {
+  background: rgba(242, 247, 244, 0.98);
+  border-color: rgba(83, 191, 168, 0.18);
+}
+
+.userCard:hover {
+  background: rgba(242, 247, 244, 0.96);
+  border-color: rgba(83, 191, 168, 0.16);
+}
+
+.userCard:active {
+  transform: translateY(1px);
+}
+
+.userCard:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(83, 191, 168, 0.16);
 }
 
 .userCard > div:nth-child(2) {
@@ -152,7 +181,14 @@
 
 .userName {
   font-weight: 700;
+}
+
+.userNameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 4px;
+  flex-wrap: wrap;
 }
 
 .userMeta {
@@ -160,17 +196,67 @@
   color: #8a93a0;
 }
 
-.logout {
-  border: 0;
-  background: rgba(83, 191, 168, 0.08);
+.userRole {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(83, 191, 168, 0.12);
+  color: var(--text-mint);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.userHint {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.chevron {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  transition: transform 0.18s ease;
+}
+
+.accountOpen .chevron {
+  transform: rotate(180deg);
+}
+
+.accountPanel {
+  padding: 8px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(83, 191, 168, 0.12);
+  box-shadow: 0 12px 26px rgba(53, 63, 81, 0.08);
+}
+
+.accountAction,
+.accountMetaRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
   color: var(--text-secondary);
   font-weight: 700;
-  border-radius: 12px;
-  padding: 8px 12px;
+}
+
+.accountAction {
+  border: 0;
+  background: transparent;
   cursor: pointer;
 }
 
-.logout:hover {
-  background: rgba(83, 191, 168, 0.14);
+.accountAction:hover {
+  background: rgba(83, 191, 168, 0.08);
   color: var(--text-heading);
+}
+
+.accountMetaRow {
+  font-size: 12px;
+  color: var(--text-tertiary);
 }

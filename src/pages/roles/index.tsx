@@ -3,6 +3,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { App, Switch, Table } from 'antd';
 import { useState } from 'react';
 import ActionButton from '@/components/ActionButton';
+import EmptyState from '@/components/EmptyState';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import StatusTag from '@/components/StatusTag';
@@ -74,27 +75,31 @@ export default function RolesPage() {
       />
 
       <SectionCard title="角色列表" subtitle="当前岗位分配与权限范围">
-        <div className={cls.roleGrid}>
-          {roleCards.map((item) => (
-            <div key={item.key} className={widgetCls.settingBlock}>
-              <div className={widgetCls.detailHeader}>
-                <div>
-                  <h3 className={widgetCls.detailTitle}>{item.name}</h3>
-                  <div className={widgetCls.smallText}>{item.users} 人使用</div>
+        {roleCards.length ? (
+          <div className={cls.roleGrid}>
+            {roleCards.map((item) => (
+              <div key={item.key} className={widgetCls.settingBlock}>
+                <div className={widgetCls.detailHeader}>
+                  <div>
+                    <h3 className={widgetCls.detailTitle}>{item.name}</h3>
+                    <div className={widgetCls.smallText}>{item.users} 人使用</div>
+                  </div>
+                  <StatusTag status={item.status} />
                 </div>
-                <StatusTag status={item.status} />
+                <div className={widgetCls.smallText}>{item.description}</div>
+                <div className={cls.scopeRow}>
+                  {item.scopes.map((scope) => (
+                    <span key={scope} className={widgetCls.chip}>
+                      {scope}
+                    </span>
+                  ))}
+                </div>
               </div>
-              <div className={widgetCls.smallText}>{item.description}</div>
-              <div className={cls.scopeRow}>
-                {item.scopes.map((scope) => (
-                  <span key={scope} className={widgetCls.chip}>
-                    {scope}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState title="暂无角色配置" description="角色列表为空时，可在此统一创建岗位权限模板。" actionText="新增角色" onAction={() => message.info('演示模式：新增角色将在接入后端后开放。')} />
+        )}
       </SectionCard>
 
       <SectionCard
@@ -109,16 +114,20 @@ export default function RolesPage() {
           </ActionButton>
         }
       >
-        <div className={pageCls.tableWrap}>
-          <Table<PermissionRow>
-            className={pageCls.membersTable}
-            rowKey="key"
-            columns={columns}
-            dataSource={matrix}
-            scroll={{ x: 760 }}
-            pagination={false}
-          />
-        </div>
+        {matrix.length ? (
+          <div className={pageCls.tableWrap}>
+            <Table<PermissionRow>
+              className={pageCls.membersTable}
+              rowKey="key"
+              columns={columns}
+              dataSource={matrix}
+              scroll={{ x: 760 }}
+              pagination={false}
+            />
+          </div>
+        ) : (
+          <EmptyState title="暂无权限矩阵" description="当前尚未配置角色权限，请先创建角色或导入默认模板。" actionText="返回角色列表" onAction={() => window.scrollTo({ top: 0, behavior: 'smooth' })} />
+        )}
       </SectionCard>
     </div>
   );
