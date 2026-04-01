@@ -36,6 +36,7 @@
 :global(.ant-btn-primary).button {
   border: 1px solid rgba(54, 173, 149, 0.24);
   background: linear-gradient(135deg, #45cdb1 0%, #68dcc4 100%);
+  color: var(--button-text-primary);
   box-shadow: 0 8px 20px rgba(67, 199, 171, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.34);
 }
 
@@ -57,13 +58,13 @@
 :global(.ant-btn-default).button {
   border-color: rgba(148, 163, 184, 0.26);
   background: rgba(255, 255, 255, 0.9);
-  color: #3c4a5a;
+  color: var(--button-text-secondary);
   box-shadow: 0 5px 12px rgba(15, 23, 42, 0.038), inset 0 1px 0 rgba(255, 255, 255, 0.84);
 }
 
 :global(.ant-btn-default).button:hover {
   border-color: rgba(125, 143, 168, 0.4);
-  color: #243346;
+  color: var(--button-text-secondary-hover);
   background: rgba(250, 253, 255, 0.98);
   box-shadow: 0 8px 16px rgba(44, 65, 95, 0.1);
 }
@@ -76,4 +77,8 @@
 
 :global(.ant-btn-default).button:focus-visible {
   box-shadow: 0 0 0 3px rgba(82, 122, 184, 0.16), 0 8px 16px rgba(22, 43, 73, 0.11);
+}
+
+:global(.ant-btn).button :global(.anticon) {
+  color: inherit;
 }

@@ -88,11 +88,13 @@
   place-items: center;
   font-size: 18px;
   background: rgba(83, 191, 168, 0.08);
+  color: var(--icon-muted);
   transition: background 0.2s ease;
 }
 
 .active .icon {
   background: rgba(255, 255, 255, 0.16);
+  color: #fff;
 }
 
 .label {
