@@ -15,7 +15,7 @@ const StatCard: FC<Props> = ({ title, value, hint, icon, tone = 'mint' }) => {
   const colors = getToneColor(tone);
 
   return (
-    <div className={cls.card}>
+    <div className={cls.card} style={{ ['--stat-accent' as string]: colors.solid }}>
       <div className={cls.top}>
         <div className={cls.title}>{title}</div>
         <div className={cls.icon} style={{ background: colors.soft, color: colors.solid }}>

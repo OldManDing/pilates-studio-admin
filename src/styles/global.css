@@ -5,8 +5,22 @@
   --bg-sidebar: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 249, 246, 0.94) 100%);
   --bg-accent: linear-gradient(135deg, #48d2b6 0%, #6be0c8 100%);
   --text-main: #23313b;
+  --text-heading: #1f2a33;
   --text-secondary: #6d7683;
   --text-tertiary: #98a2b3;
+  --text-soft: #a9b1bc;
+  --text-mint: #3f9f8a;
+  --text-violet: #7569d9;
+  --text-orange: #c68a49;
+  --text-pink: #c97892;
+  --text-blue: #5d85d6;
+  --icon-primary: #53bfa8;
+  --icon-secondary: #7569d9;
+  --icon-tertiary: #c68a49;
+  --icon-muted: #7d8897;
+  --button-text-primary: #ffffff;
+  --button-text-secondary: #415061;
+  --button-text-secondary-hover: #28384a;
   --border-soft: rgba(15, 23, 42, 0.06);
   --shadow-card: 0 18px 44px rgba(53, 63, 81, 0.07);
   --shadow-soft: 0 12px 28px rgba(62, 71, 87, 0.05);
@@ -43,6 +57,13 @@ body {
     radial-gradient(circle at top right, rgba(136, 120, 238, 0.08), transparent 20%),
     radial-gradient(circle at bottom left, rgba(239, 177, 105, 0.07), transparent 22%),
     var(--bg-app);
+  color: var(--text-main);
+}
+
+button,
+input,
+select,
+textarea {
   color: var(--text-main);
 }
 

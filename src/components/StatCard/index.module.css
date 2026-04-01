@@ -21,8 +21,9 @@
 }
 
 .title {
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   font-size: 14px;
+  font-weight: 700;
 }
 
 .value {
@@ -31,6 +32,7 @@
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: -0.01em;
+  color: var(--stat-accent, var(--text-heading));
 }
 
 .hint {
@@ -47,4 +49,20 @@
   place-items: center;
   font-size: 22px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.card:nth-child(1) .icon {
+  color: var(--icon-primary) !important;
+}
+
+.card:nth-child(2) .icon {
+  color: var(--icon-secondary) !important;
+}
+
+.card:nth-child(3) .icon {
+  color: var(--icon-tertiary) !important;
+}
+
+.card:nth-child(4) .icon {
+  color: var(--text-pink) !important;
 }

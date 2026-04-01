@@ -10,10 +10,13 @@
   margin: 0;
   font-size: 34px;
   line-height: 1.15;
+  color: var(--text-heading);
+  letter-spacing: -0.02em;
 }
 
 .subtitle {
   margin-top: 10px;
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   font-size: 15px;
+  max-width: 720px;
 }
