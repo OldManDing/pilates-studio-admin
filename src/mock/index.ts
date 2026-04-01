@@ -261,3 +261,47 @@ export const dataActions = [
   { title: '导出数据', description: '按时间范围导出经营与会员报表' },
   { title: '数据恢复', description: '从最近一次备份恢复门店数据' }
 ];
+
+export const roleCards: Array<{ key: string; name: string; status: '正常' | '待激活' | '处理中'; users: number; description: string; scopes: string[] }> = [
+  {
+    key: 'owner',
+    name: '店长',
+    status: '正常',
+    users: 2,
+    description: '负责门店运营目标、排班审批与财务复核。',
+    scopes: ['门店总览', '财务查看', '角色管理']
+  },
+  {
+    key: 'frontdesk',
+    name: '前台',
+    status: '正常',
+    users: 4,
+    description: '处理会员接待、预约确认与课程签到。',
+    scopes: ['会员管理', '预约管理', '课程查看']
+  },
+  {
+    key: 'coach',
+    name: '教练',
+    status: '待激活',
+    users: 9,
+    description: '查看课程安排、学员档案与训练备注。',
+    scopes: ['课程安排', '会员信息(只读)', '签到记录']
+  },
+  {
+    key: 'finance',
+    name: '财务',
+    status: '处理中',
+    users: 1,
+    description: '对账、报表导出及交易流水核查。',
+    scopes: ['财务报表', '数据导出', '交易流水']
+  }
+];
+
+export const permissionMatrix: Array<{ key: string; module: string; owner: boolean; frontdesk: boolean; coach: boolean; finance: boolean }> = [
+  { key: 'dashboard', module: '仪表盘总览', owner: true, frontdesk: true, coach: true, finance: true },
+  { key: 'members', module: '会员管理', owner: true, frontdesk: true, coach: true, finance: false },
+  { key: 'bookings', module: '预约管理', owner: true, frontdesk: true, coach: true, finance: false },
+  { key: 'coaches', module: '教练管理', owner: true, frontdesk: false, coach: true, finance: false },
+  { key: 'finance', module: '财务报表', owner: true, frontdesk: false, coach: false, finance: true },
+  { key: 'settings', module: '系统设置', owner: true, frontdesk: false, coach: false, finance: false }
+];
