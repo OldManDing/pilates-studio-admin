@@ -62,10 +62,12 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 18px;
+  flex-wrap: wrap;
 }
 
 .toolbarSearch {
   width: 380px;
+  max-width: 100%;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.88);
   border-color: rgba(148, 163, 184, 0.2);
@@ -88,6 +90,11 @@
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
 }
 
 .surface {
@@ -174,6 +181,58 @@
 .membersAction:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px rgba(82, 122, 184, 0.18);
+}
+
+.mobileMemberList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobileMemberCard {
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  box-shadow: 0 10px 22px rgba(53, 63, 81, 0.05);
+}
+
+.mobileMemberHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mobileMemberMetaGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.mobileMetaLabel {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+}
+
+.mobileMetaValue {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-heading);
+  line-height: 1.35;
+}
+
+.mobileMemberAction {
+  margin-top: 12px;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(47, 109, 255, 0.08);
+  color: var(--text-blue);
+  font-weight: 700;
 }
 
 .settingsForm :global(.ant-form-item) {
@@ -365,6 +424,76 @@
   .balancedTwoCol,
   .financeTwoCol,
   .analyticsPrimaryTwoCol {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbarSearch {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: 2px 0 18px;
+  }
+
+  .heroGrid,
+  .threeCol,
+  .fourCol,
+  .summaryGrid,
+  .equalCol,
+  .twoCol,
+  .balancedTwoCol,
+  .financeTwoCol,
+  .analyticsPrimaryTwoCol {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .toolbar {
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .toolbarLeft,
+  .toolbarRight {
+    width: 100%;
+  }
+
+  .toolbarRight > * {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .toolbarRight button,
+  .toolbarLeft button,
+  .toolbar button,
+  .toolbar :global(.ant-btn),
+  .cardActionPrimary,
+  .cardActionSecondary,
+  .cardActionHalf,
+  .membersAction,
+  .mobileMemberAction {
+    min-height: 46px;
+  }
+
+  .chartPanel {
+    height: 248px;
+  }
+
+  .chartPanelTall {
+    height: 276px;
+  }
+
+  .cardActionSecondary,
+  .cardActionHalf,
+  .cardActionPrimary {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .mobileMemberMetaGrid {
     grid-template-columns: 1fr;
   }
 }

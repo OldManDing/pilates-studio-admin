@@ -10,6 +10,7 @@ import StatusTag from '@/components/StatusTag';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import { financeBar, financeStats, revenueStructure, transactions } from '@/mock';
+import { useIsMobile } from '@/utils/useResponsive';
 
 const chartGrid = 'rgba(148, 163, 184, 0.14)';
 const axisTick = { fill: '#6f8198', fontSize: 12, fontWeight: 600 };
@@ -29,6 +30,8 @@ const iconMap = {
 };
 
 export default function FinancePage() {
+  const isMobile = useIsMobile();
+
   return (
     <div className={pageCls.page}>
       <PageHeader title="财务报表" subtitle="查看营收、支出与门店财务分析。" extra={<ActionButton icon={<DownloadOutlined />}>导出报表</ActionButton>} />
@@ -55,11 +58,11 @@ export default function FinancePage() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={axisTick} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} tick={axisTick} />
                 <YAxis axisLine={false} tickLine={false} tick={axisTick} />
                 <Tooltip cursor={{ fill: 'rgba(139, 124, 255, 0.08)' }} contentStyle={tooltipStyle} />
-                <Bar dataKey="revenue" fill="url(#financeRevenue)" radius={[10, 10, 0, 0]} barSize={26} />
-                <Bar dataKey="profit" fill="url(#financeProfit)" radius={[10, 10, 0, 0]} barSize={26} />
+                <Bar dataKey="revenue" fill="url(#financeRevenue)" radius={[10, 10, 0, 0]} barSize={isMobile ? 16 : 26} />
+                <Bar dataKey="profit" fill="url(#financeProfit)" radius={[10, 10, 0, 0]} barSize={isMobile ? 16 : 26} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -69,7 +72,7 @@ export default function FinancePage() {
           <div className={pageCls.chartPanelTall}>
             <ResponsiveContainer>
               <PieChart>
-                <Pie data={revenueStructure} dataKey="value" nameKey="name" innerRadius={74} outerRadius={108} paddingAngle={3} stroke="rgba(255,255,255,0.9)">
+                <Pie data={revenueStructure} dataKey="value" nameKey="name" innerRadius={isMobile ? 52 : 74} outerRadius={isMobile ? 82 : 108} paddingAngle={3} stroke="rgba(255,255,255,0.9)">
                   {revenueStructure.map((item) => (
                     <Cell key={item.name} fill={item.fill} />
                   ))}

@@ -32,6 +32,7 @@
   display: flex;
   gap: 12px;
   align-items: flex-start;
+  min-width: 0;
 }
 
 .recordTitle {
@@ -157,6 +158,7 @@
   gap: 10px;
   color: var(--text-secondary);
   font-size: 14px;
+  min-width: 0;
 }
 
 .twoButtons {
@@ -224,5 +226,36 @@
   .recordItem {
     flex-direction: column;
     align-items: stretch;
+  }
+}
+
+@media (max-width: 768px) {
+  .recordItem,
+  .detailCard,
+  .settingBlock {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .chipRow {
+    gap: 8px;
+  }
+
+  .metricGrid,
+  .courseGrid,
+  .coachGrid,
+  .settingsGrid,
+  .split {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .twoButtons {
+    flex-direction: column;
+  }
+
+  .settingRow {
+    align-items: flex-start;
+    gap: 10px;
   }
 }

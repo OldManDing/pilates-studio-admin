@@ -8,6 +8,7 @@ import StatCard from '@/components/StatCard';
 import StatusTag from '@/components/StatusTag';
 import pageCls from '@/styles/page.module.css';
 import { membersStats, membersTable } from '@/mock';
+import { useIsMobile } from '@/utils/useResponsive';
 
 const iconMap = {
   team: <TeamOutlined />,
@@ -53,6 +54,8 @@ const columns: ColumnsType<MemberRow> = [
 ];
 
 export default function MembersPage() {
+  const isMobile = useIsMobile();
+
   return (
     <div className={pageCls.page}>
       <PageHeader
@@ -83,13 +86,54 @@ export default function MembersPage() {
       </div>
 
       <div className={pageCls.surface} style={{ padding: 20 }}>
-        <Table<MemberRow>
-          className={pageCls.membersTable}
-          rowKey="key"
-          columns={columns}
-          dataSource={membersTable}
-          pagination={{ pageSize: 5, hideOnSinglePage: true }}
-        />
+        {isMobile ? (
+          <div className={pageCls.mobileMemberList}>
+            {membersTable.map((member) => (
+              <div key={member.key} className={pageCls.mobileMemberCard}>
+                <div className={pageCls.mobileMemberHead}>
+                  <Space>
+                    <MemberAvatar name={member.name} tone={member.tone} />
+                    <div>
+                      <div className={pageCls.membersName}>{member.name}</div>
+                      <div className={pageCls.membersSubtext}>{member.phone}</div>
+                    </div>
+                  </Space>
+                  <StatusTag status={member.status} />
+                </div>
+                <div className={pageCls.mobileMemberMetaGrid}>
+                  <div>
+                    <div className={pageCls.mobileMetaLabel}>会籍类型</div>
+                    <div className={pageCls.mobileMetaValue}>{member.membership}</div>
+                  </div>
+                  <div>
+                    <div className={pageCls.mobileMetaLabel}>剩余课时</div>
+                    <div className={pageCls.mobileMetaValue}>{member.remaining}</div>
+                  </div>
+                  <div>
+                    <div className={pageCls.mobileMetaLabel}>加入日期</div>
+                    <div className={pageCls.mobileMetaValue}>{member.joinedAt}</div>
+                  </div>
+                  <div>
+                    <div className={pageCls.mobileMetaLabel}>邮箱</div>
+                    <div className={pageCls.membersSubtext}>{member.email}</div>
+                  </div>
+                </div>
+                <button type="button" className={pageCls.mobileMemberAction}>查看详情</button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={pageCls.tableWrap}>
+            <Table<MemberRow>
+              className={pageCls.membersTable}
+              rowKey="key"
+              columns={columns}
+              dataSource={membersTable}
+              scroll={{ x: 860 }}
+              pagination={{ pageSize: 5, hideOnSinglePage: true }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

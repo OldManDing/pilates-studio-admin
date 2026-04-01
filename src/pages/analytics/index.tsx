@@ -7,6 +7,7 @@ import StatCard from '@/components/StatCard';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import { analyticsStats, bookingDistribution, peakPeriodData, popularityData, radarData, retentionData } from '@/mock';
+import { useIsMobile } from '@/utils/useResponsive';
 
 const chartGrid = 'rgba(148, 163, 184, 0.14)';
 const axisTick = { fill: '#6f8198', fontSize: 12, fontWeight: 600 };
@@ -26,6 +27,8 @@ const iconMap = {
 };
 
 export default function AnalyticsPage() {
+  const isMobile = useIsMobile();
+
   return (
     <div className={pageCls.page}>
       <PageHeader title="数据分析" subtitle="深度洞察业务数据和运营指标。" />
@@ -48,10 +51,10 @@ export default function AnalyticsPage() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} angle={-15} textAnchor="end" height={64} tick={axisTick} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} angle={isMobile ? 0 : -15} textAnchor={isMobile ? 'middle' : 'end'} height={isMobile ? 38 : 64} tick={axisTick} />
                 <YAxis axisLine={false} tickLine={false} tick={axisTick} />
                 <Tooltip cursor={{ fill: 'rgba(67, 199, 171, 0.09)' }} contentStyle={tooltipStyle} />
-                <Bar dataKey="value" fill="url(#analyticsBar)" radius={[10, 10, 0, 0]} barSize={28} />
+                <Bar dataKey="value" fill="url(#analyticsBar)" radius={[10, 10, 0, 0]} barSize={isMobile ? 18 : 28} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -62,7 +65,7 @@ export default function AnalyticsPage() {
             <ResponsiveContainer>
               <RadarChart data={radarData}>
                 <PolarGrid stroke="rgba(148, 163, 184, 0.28)" />
-                <PolarAngleAxis dataKey="subject" tick={axisTick} />
+                <PolarAngleAxis dataKey="subject" tick={{ ...axisTick, fontSize: isMobile ? 10 : 12 }} />
                 <Radar name="评分" dataKey="score" stroke="#8b7cff" strokeWidth={2.5} fill="#8b7cff" fillOpacity={0.32} />
                 <Tooltip contentStyle={tooltipStyle} />
               </RadarChart>
@@ -77,7 +80,7 @@ export default function AnalyticsPage() {
             <ResponsiveContainer>
               <LineChart data={bookingDistribution}>
                 <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
-                <XAxis dataKey="time" axisLine={false} tickLine={false} tick={axisTick} />
+                <XAxis dataKey="time" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} tick={axisTick} />
                 <YAxis axisLine={false} tickLine={false} tick={axisTick} />
                 <Tooltip cursor={{ stroke: '#ffb760', strokeDasharray: '4 4' }} contentStyle={tooltipStyle} />
                 <Line type="monotone" dataKey="value" stroke="#ffb760" strokeWidth={3.4} dot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff' }} />
@@ -91,7 +94,7 @@ export default function AnalyticsPage() {
             <ResponsiveContainer>
               <LineChart data={retentionData}>
                 <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={axisTick} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} tick={axisTick} />
                 <YAxis axisLine={false} tickLine={false} tick={axisTick} />
                 <Tooltip contentStyle={tooltipStyle} />
                 <Line type="monotone" dataKey="retained" stroke="#8b7cff" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 5 }} />
