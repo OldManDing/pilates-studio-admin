@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { App, Space } from 'antd';
 import { DownOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons';
 import cls from './index.module.css';
@@ -15,6 +15,26 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
   const session = getDemoSession();
   const { message } = App.useApp();
   const [accountOpen, setAccountOpen] = useState(false);
+  const accountWrapRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setAccountOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    const handleDocumentClick = (event: MouseEvent) => {
+      if (!accountWrapRef.current) {
+        return;
+      }
+
+      if (!accountWrapRef.current.contains(event.target as Node)) {
+        setAccountOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleDocumentClick);
+    return () => document.removeEventListener('mousedown', handleDocumentClick);
+  }, []);
 
   const visibleMenuItems = menuItems.filter((item) => {
     if (!session) {
@@ -77,8 +97,14 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
         })}
       </div>
 
-      <div className={`${cls.accountWrap} ${accountOpen ? cls.accountOpen : ''}`}>
-        <button type="button" className={cls.userCard} onClick={() => setAccountOpen((value) => !value)}>
+      <div ref={accountWrapRef} className={`${cls.accountWrap} ${accountOpen ? cls.accountOpen : ''}`}>
+        <button
+          type="button"
+          className={cls.userCard}
+          aria-expanded={accountOpen}
+          aria-controls="sidebar-account-panel"
+          onClick={() => setAccountOpen((value) => !value)}
+        >
           <div className={cls.avatar}>{(session?.name ?? '管理员').slice(0, 1)}</div>
           <div>
             <div className={cls.userNameRow}>
@@ -96,8 +122,8 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
           </div>
           <span className={cls.chevron}><DownOutlined /></span>
         </button>
-        {accountOpen ? (
-          <div className={cls.accountPanel}>
+        <div id="sidebar-account-panel" className={cls.accountPanel} aria-hidden={!accountOpen}>
+          <div className={cls.accountPanelInner}>
             <button type="button" className={cls.accountAction} onClick={() => handleUserAction('settings')}>
               <SettingOutlined />
               <span>前往系统设置</span>
@@ -111,7 +137,7 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
               <span>当前身份：{session?.name ?? '管理员'}</span>
             </div>
           </div>
-        ) : null}
+        </div>
       </div>
     </div>
   );
