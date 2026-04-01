@@ -60,7 +60,7 @@ const AppLayout: FC<PropsWithChildren> = ({ children }) => {
         open={mobileSidebarOpen}
         onClose={() => setMobileSidebarOpen(false)}
         placement="left"
-        width={308}
+        width={300}
         className={cls.mobileDrawer}
         rootClassName={cls.mobileDrawerRoot}
         closable={false}
