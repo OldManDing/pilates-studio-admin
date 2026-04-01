@@ -1,6 +1,7 @@
 import type { FC } from 'react';
 import cls from './index.module.css';
 import { menuItems } from '@/utils/menu';
+import { clearDemoSession, getDemoSession } from '@/utils/mockAuth';
 
 type Props = {
   pathname: string;
@@ -8,6 +9,8 @@ type Props = {
 };
 
 const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
+  const session = getDemoSession();
+
   return (
     <div className={cls.wrapper}>
       <div className={cls.brand}>
@@ -45,11 +48,21 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
       </div>
 
       <div className={cls.userCard}>
-        <div className={cls.avatar}>A</div>
+        <div className={cls.avatar}>{(session?.name ?? '管理员').slice(0, 1)}</div>
         <div>
-          <div className={cls.userName}>管理员</div>
-          <div className={cls.userMeta}>admin@pilates.com</div>
+          <div className={cls.userName}>{session?.name ?? '管理员'}</div>
+          <div className={cls.userMeta}>{session?.account ?? 'admin@pilates.com'}</div>
         </div>
+        <button
+          type="button"
+          className={cls.logout}
+          onClick={() => {
+            clearDemoSession();
+            onNavigate('/login');
+          }}
+        >
+          退出
+        </button>
       </div>
     </div>
   );
