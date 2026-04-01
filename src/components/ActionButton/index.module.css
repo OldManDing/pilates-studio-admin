@@ -1,0 +1,79 @@
+.button {
+  height: 46px;
+  border-radius: 16px;
+  padding-inline: 18px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: transform 0.14s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease, color 0.18s ease, opacity 0.18s ease;
+}
+
+:global(.ant-btn).button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+:global(.ant-btn).button:hover {
+  transform: translateY(-0.5px);
+}
+
+:global(.ant-btn).button:active {
+  transform: translateY(0.5px) scale(0.997);
+}
+
+:global(.ant-btn).button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(67, 199, 171, 0.18), 0 10px 24px rgba(24, 43, 68, 0.12);
+}
+
+:global(.ant-btn).button:disabled,
+:global(.ant-btn).button.ant-btn-disabled {
+  transform: none;
+  opacity: 0.56;
+  box-shadow: none;
+}
+
+:global(.ant-btn-primary).button {
+  border: 1px solid rgba(54, 173, 149, 0.24);
+  background: linear-gradient(135deg, #45cdb1 0%, #68dcc4 100%);
+  box-shadow: 0 8px 20px rgba(67, 199, 171, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+:global(.ant-btn-primary).button:hover {
+  background: linear-gradient(135deg, #3fbfa5 0%, #5fd3bc 100%);
+  box-shadow: 0 12px 24px rgba(67, 199, 171, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+:global(.ant-btn-primary).button:active {
+  background: linear-gradient(135deg, #38ae96 0%, #56c5af 100%);
+  border-color: rgba(45, 146, 126, 0.35);
+  box-shadow: 0 5px 12px rgba(67, 199, 171, 0.18), inset 0 2px 4px rgba(20, 64, 55, 0.15);
+}
+
+:global(.ant-btn-primary).button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(67, 199, 171, 0.22), 0 12px 24px rgba(49, 168, 143, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+:global(.ant-btn-default).button {
+  border-color: rgba(148, 163, 184, 0.26);
+  background: rgba(255, 255, 255, 0.9);
+  color: #3c4a5a;
+  box-shadow: 0 5px 12px rgba(15, 23, 42, 0.038), inset 0 1px 0 rgba(255, 255, 255, 0.84);
+}
+
+:global(.ant-btn-default).button:hover {
+  border-color: rgba(125, 143, 168, 0.4);
+  color: #243346;
+  background: rgba(250, 253, 255, 0.98);
+  box-shadow: 0 8px 16px rgba(44, 65, 95, 0.1);
+}
+
+:global(.ant-btn-default).button:active {
+  border-color: rgba(126, 147, 175, 0.36);
+  background: rgba(243, 248, 252, 1);
+  box-shadow: inset 0 2px 4px rgba(36, 51, 72, 0.12);
+}
+
+:global(.ant-btn-default).button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(82, 122, 184, 0.16), 0 8px 16px rgba(22, 43, 73, 0.11);
+}

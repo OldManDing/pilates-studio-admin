@@ -1,0 +1,350 @@
+.page {
+  padding: 6px 8px 22px;
+}
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.twoCol {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.balancedTwoCol {
+  display: grid;
+  grid-template-columns: 1.08fr 1fr;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.financeTwoCol {
+  display: grid;
+  grid-template-columns: 1.9fr 1fr;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.analyticsPrimaryTwoCol {
+  display: grid;
+  grid-template-columns: 1.95fr 1fr;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.equalCol {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.threeCol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.fourCol {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.toolbarSearch {
+  width: 380px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(148, 163, 184, 0.2);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.toolbarSearch:hover {
+  border-color: rgba(67, 199, 171, 0.34);
+}
+
+.toolbarSearch:focus-within {
+  background: #fff;
+  border-color: rgba(67, 199, 171, 0.5);
+  box-shadow: 0 0 0 3px rgba(67, 199, 171, 0.12);
+}
+
+.toolbarLeft,
+.toolbarRight {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.surface {
+  background: var(--bg-surface);
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  backdrop-filter: blur(20px);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 14px 32px rgba(18, 38, 63, 0.08);
+}
+
+.membersTable :global(.ant-table-wrapper) {
+  border-radius: 16px;
+}
+
+.membersTable :global(.ant-table) {
+  background: transparent;
+}
+
+.membersTable :global(.ant-table-thead > tr > th) {
+  background: linear-gradient(180deg, rgba(247, 250, 253, 0.94) 0%, rgba(244, 248, 252, 0.92) 100%);
+  color: #4e5d70;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.membersTable :global(.ant-table-tbody > tr > td) {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.11);
+  color: #314053;
+  line-height: 1.4;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.membersTable :global(.ant-table-tbody > tr:hover > td) {
+  background: rgba(238, 249, 246, 0.7) !important;
+  border-bottom-color: rgba(119, 152, 138, 0.18);
+}
+
+.membersTable :global(.ant-table-pagination.ant-pagination) {
+  margin: 12px 8px 4px;
+}
+
+.membersName {
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.membersSubtext {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.membersAction {
+  appearance: none;
+  border: 0;
+  padding: 5px 10px;
+  background: rgba(47, 109, 255, 0.07);
+  color: #285fe0;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: color 0.18s ease, background 0.18s ease, opacity 0.18s ease, transform 0.14s ease;
+}
+
+.membersAction:hover {
+  color: #1f52cc;
+  background: rgba(47, 109, 255, 0.12);
+}
+
+.membersAction:active {
+  transform: translateY(0.5px);
+  background: rgba(47, 109, 255, 0.16);
+}
+
+.membersAction:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(82, 122, 184, 0.18);
+}
+
+.settingsForm :global(.ant-form-item) {
+  margin-bottom: 12px;
+}
+
+.settingsForm :global(.ant-form-item-label > label) {
+  font-weight: 700;
+  color: #465467;
+  margin-bottom: 2px;
+  letter-spacing: 0.01em;
+}
+
+.settingsInput {
+  border-radius: 12px;
+  border-color: rgba(148, 163, 184, 0.24);
+  min-height: 40px;
+  background: rgba(255, 255, 255, 0.94);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.settingsInput:hover {
+  border-color: rgba(67, 199, 171, 0.36);
+}
+
+.settingsInput:focus,
+.settingsInput:focus-within {
+  background: #fff;
+  border-color: rgba(67, 199, 171, 0.5);
+  box-shadow: 0 0 0 3px rgba(67, 199, 171, 0.12);
+}
+
+.chartPanel {
+  width: 100%;
+  height: 300px;
+}
+
+.chartPanelTall {
+  width: 100%;
+  height: 320px;
+}
+
+.chartTooltip {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  box-shadow: 0 12px 28px rgba(28, 45, 71, 0.12);
+  background: rgba(255, 255, 255, 0.97);
+  padding: 8px 10px;
+}
+
+.settingSwitch :global(.ant-switch) {
+  min-width: 42px;
+  height: 23px;
+  background: rgba(148, 163, 184, 0.45);
+  transition: box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.settingSwitch :global(.ant-switch:hover:not(.ant-switch-disabled)) {
+  background: rgba(124, 144, 168, 0.58);
+}
+
+.settingSwitch :global(.ant-switch.ant-switch-checked) {
+  background: linear-gradient(135deg, #43c7ab 0%, #6be0c8 100%);
+}
+
+.settingSwitch :global(.ant-switch:focus-visible) {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(67, 199, 171, 0.16);
+}
+
+.settingsUtilityButton {
+  border-radius: 12px;
+  border-color: rgba(148, 163, 184, 0.3);
+  background: rgba(255, 255, 255, 0.92);
+  font-weight: 600;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+}
+
+.settingsUtilityButton:hover {
+  border-color: rgba(117, 137, 164, 0.45) !important;
+  color: #2b3f58 !important;
+}
+
+.settingsUtilityButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(82, 122, 184, 0.16);
+}
+
+.segmentedSoft :global(.ant-segmented) {
+  padding: 4px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 18px rgba(53, 63, 81, 0.05);
+}
+
+.segmentedSoft :global(.ant-segmented-item) {
+  min-width: 84px;
+  min-height: 40px;
+  border-radius: 14px;
+  font-weight: 700;
+  color: #51606f;
+}
+
+.segmentedSoft :global(.ant-segmented-item-selected) {
+  color: #fff;
+}
+
+.segmentedSoft :global(.ant-segmented-thumb) {
+  border-radius: 14px;
+  background: linear-gradient(135deg, #53bfa8 0%, #77dac5 100%);
+  box-shadow: 0 8px 18px rgba(83, 191, 168, 0.18);
+}
+
+.textAction {
+  color: #5b6675;
+  font-weight: 700;
+}
+
+.cardActionPrimary {
+  flex: 1;
+  min-width: 0;
+  border-radius: 14px !important;
+  font-weight: 700;
+}
+
+.cardActionSecondary {
+  width: 96px;
+  border-radius: 14px !important;
+  font-weight: 700;
+}
+
+.cardActionHalf {
+  flex: 1;
+  min-width: 0;
+  border-radius: 14px !important;
+  font-weight: 700;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.muted {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 1400px) {
+  .heroGrid,
+  .threeCol,
+  .fourCol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1024px) {
+  .heroGrid,
+  .threeCol,
+  .fourCol,
+  .summaryGrid,
+  .equalCol,
+  .twoCol,
+  .balancedTwoCol,
+  .financeTwoCol,
+  .analyticsPrimaryTwoCol {
+    grid-template-columns: 1fr;
+  }
+}

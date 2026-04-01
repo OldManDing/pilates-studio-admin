@@ -1,0 +1,213 @@
+.recordList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recordListDense {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recordItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(247, 250, 252, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.recordItem:hover {
+  border-color: rgba(67, 199, 171, 0.24);
+  background: rgba(243, 252, 249, 0.98);
+  box-shadow: 0 10px 20px rgba(38, 57, 84, 0.07);
+}
+
+.recordMeta {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.recordTitle {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.recordSub {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metricCard {
+  padding: 13px;
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.metricCard:hover {
+  border-color: rgba(139, 124, 255, 0.22);
+  background: rgba(245, 246, 255, 0.78);
+}
+
+.metricLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.metricValue {
+  margin-top: 8px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #f4f5f2;
+  color: #556170;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chipPrimary {
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(83, 191, 168, 0.98), rgba(119, 218, 197, 0.94));
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chipLevel {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(245, 247, 244, 0.98);
+  color: #6b7683;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.courseGrid,
+.coachGrid,
+.settingsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.detailCard {
+  padding: 20px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow: var(--shadow-card);
+}
+
+.detailHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.detailTitle {
+  margin: 0;
+  font-size: 22px;
+}
+
+.infoStack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.twoButtons {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  align-items: stretch;
+}
+
+.settingBlock {
+  padding: 20px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  box-shadow: var(--shadow-card);
+}
+
+.settingRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 10px;
+  margin: 0 -8px;
+  border-radius: 14px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.16s ease;
+}
+
+.settingRow:hover {
+  background: rgba(245, 250, 248, 0.9);
+}
+
+.settingRow:focus-within {
+  background: rgba(240, 251, 247, 0.96);
+  border-color: rgba(67, 199, 171, 0.28);
+  box-shadow: 0 0 0 3px rgba(67, 199, 171, 0.1);
+}
+
+.settingRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.smallText {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.split {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .courseGrid,
+  .coachGrid,
+  .settingsGrid,
+  .split,
+  .metricGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .recordItem {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

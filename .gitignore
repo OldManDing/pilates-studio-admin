@@ -1,0 +1,14 @@
+node_modules/
+dist/
+src/.umi/
+src/.umi-production/
+.logs/
+.temp/
+coverage/
+.sisyphus/
+.DS_Store
+Thumbs.db
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
