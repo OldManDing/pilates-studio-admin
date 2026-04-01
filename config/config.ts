@@ -5,7 +5,9 @@ export default defineConfig({
   favicons: ['/favicon.svg'],
   routes: [
     { path: '/login', component: '@/pages/login', layout: false },
+    { path: '/forgot-password', component: '@/pages/forgot-password', layout: false },
     { path: '/403', component: '@/pages/forbidden', layout: false },
+    { path: '/404', component: '@/pages/not-found', layout: false },
     { path: '/', redirect: '/dashboard' },
     { path: '/dashboard', component: '@/pages/dashboard' },
     { path: '/members', component: '@/pages/members' },
@@ -15,6 +17,7 @@ export default defineConfig({
     { path: '/finance', component: '@/pages/finance' },
     { path: '/analytics', component: '@/pages/analytics' },
     { path: '/roles', component: '@/pages/roles' },
-    { path: '/settings', component: '@/pages/settings' }
+    { path: '/settings', component: '@/pages/settings' },
+    { path: '*', component: '@/pages/not-found', layout: false }
   ]
 });
