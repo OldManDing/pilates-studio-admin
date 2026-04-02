@@ -2,6 +2,7 @@ import { DeleteOutlined, DownloadOutlined, EditOutlined, FilterOutlined, PlusOut
 import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, message } from 'antd';
 import { useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
+import EmptyState from '@/components/EmptyState';
 import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
@@ -226,55 +227,50 @@ export default function MembersPage() {
         </div>
       </div>
 
-      <div className={widgetCls.recordList}>
-        {filteredMembers.map((member) => (
-          <div key={member.key} className={`${widgetCls.recordItem} ${pageCls.surface} ${pageCls.memberRecordItem}`}>
-            <div className={widgetCls.recordMeta}>
-              <MemberAvatar name={member.name} tone={member.tone} />
-              <div className={pageCls.memberRecordHead}>
-                <div className={pageCls.memberRecordNameRow}>
-                  <span className={pageCls.membersName}>{member.name}</span>
-                  <StatusTag status={member.status} />
+      {filteredMembers.length ? (
+        <div className={widgetCls.recordList}>
+          {filteredMembers.map((member) => (
+            <div key={member.key} className={`${widgetCls.recordItem} ${pageCls.surface} ${pageCls.memberRecordItem}`}>
+              <div className={widgetCls.recordMeta}>
+                <MemberAvatar name={member.name} tone={member.tone} />
+                <div className={pageCls.memberRecordHead}>
+                  <div className={pageCls.memberRecordNameRow}>
+                    <span className={pageCls.membersName}>{member.name}</span>
+                    <StatusTag status={member.status} />
+                  </div>
+                  <div className={widgetCls.recordSub}>{member.phone}</div>
+                  <div className={pageCls.membersSubtext}>{member.email}</div>
                 </div>
-                <div className={widgetCls.recordSub}>{member.phone}</div>
-                <div className={pageCls.membersSubtext}>{member.email}</div>
+              </div>
+
+              <div className={pageCls.memberRecordGrid}>
+                <div className={pageCls.memberRecordField}>
+                  <div className={pageCls.memberRecordLabel}>会籍类型</div>
+                  <div className={pageCls.memberRecordValue}>{member.membership}</div>
+                </div>
+                <div className={pageCls.memberRecordField}>
+                  <div className={pageCls.memberRecordLabel}>加入日期</div>
+                  <div className={pageCls.memberRecordValue}>{member.joinedAt}</div>
+                </div>
+                <div className={pageCls.memberRecordField}>
+                  <div className={pageCls.memberRecordLabel}>剩余课时</div>
+                  <div className={pageCls.memberRecordValue}>{member.remaining} 节</div>
+                </div>
+              </div>
+
+              <div className={widgetCls.detailActionGroup}>
+                <div className={pageCls.memberRemainingBadge}>剩余课时 {member.remaining} 节</div>
+                <Button size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={() => openEditModal(member)}>编辑</Button>
+                <Button size="large" className={pageCls.cardActionHalf} onClick={() => setDetailMember(member)}>查看详情</Button>
               </div>
             </div>
-
-            <div className={pageCls.memberRecordGrid}>
-              <div className={pageCls.memberRecordField}>
-                <div className={pageCls.memberRecordLabel}>会籍类型</div>
-                <div className={pageCls.memberRecordValue}>{member.membership}</div>
-              </div>
-              <div className={pageCls.memberRecordField}>
-                <div className={pageCls.memberRecordLabel}>加入日期</div>
-                <div className={pageCls.memberRecordValue}>{member.joinedAt}</div>
-              </div>
-              <div className={pageCls.memberRecordField}>
-                <div className={pageCls.memberRecordLabel}>剩余课时</div>
-                <div className={pageCls.memberRecordValue}>{member.remaining} 节</div>
-              </div>
-            </div>
-
-            <div className={widgetCls.detailActionGroup}>
-              <div className={pageCls.memberRemainingBadge}>剩余课时 {member.remaining} 节</div>
-              <Button size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={() => openEditModal(member)}>编辑</Button>
-              <Button size="large" className={pageCls.cardActionHalf} onClick={() => setDetailMember(member)}>查看详情</Button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filteredMembers.length === 0 ? (
-        <div className={`${pageCls.surface} ${widgetCls.detailCard}`} style={{ marginTop: 16 }}>
-          <div className={widgetCls.detailTitle}>暂无符合条件的会员</div>
-          <div className={widgetCls.smallText} style={{ marginTop: 8 }}>试试调整搜索词或清空筛选条件。</div>
-          <div className={widgetCls.twoButtons}>
-            <Button size="large" className={pageCls.cardActionHalf} onClick={() => setSearchValue('')}>清空搜索</Button>
-            <Button type="primary" size="large" className={pageCls.cardActionHalf} onClick={resetFilters}>清空筛选</Button>
-          </div>
+          ))}
         </div>
-      ) : null}
+      ) : (
+        <div className={`${pageCls.surface} ${widgetCls.detailCard}`} style={{ marginTop: 16 }}>
+          <EmptyState title="暂无符合条件的会员" description="试试调整搜索词或清空筛选条件，也可以直接新增会员。" actionText="清空筛选" onAction={() => { setSearchValue(''); resetFilters(); }} />
+        </div>
+      )}
 
       <Modal
         className={pageCls.crudModal}

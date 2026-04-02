@@ -44,10 +44,6 @@
   background: rgba(250, 248, 244, 0.96);
 }
 
-.mobileDrawerRoot :global(.ant-drawer-content-wrapper) {
-  max-width: min(300px, calc(100vw - 16px));
-}
-
 @media (max-width: 1200px) {
   .sidebar {
     position: static;
@@ -117,5 +113,9 @@
   .mobileDrawerRoot,
   .mobileDrawer {
     display: block;
+  }
+
+  .mobileDrawerRoot :global(.ant-drawer-content-wrapper) {
+    max-width: min(300px, calc(100vw - 16px));
   }
 }

@@ -2,6 +2,7 @@ import { CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutli
 import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Popconfirm, Row, Segmented, Select, message } from 'antd';
 import { useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
+import EmptyState from '@/components/EmptyState';
 import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
@@ -279,46 +280,41 @@ export default function BookingsPage() {
         </div>
       </div>
 
-      <div className={widgetCls.recordList}>
-        {filteredBookings.map((item) => (
-          <div key={item.id} className={`${widgetCls.recordItem} ${pageCls.surface}`}>
-            <div className={widgetCls.recordMeta}>
-              <MemberAvatar name={item.name} tone={item.tone} />
-              <div>
-                <div className={widgetCls.recordTitle} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                  {item.name}
-                  <StatusTag status={item.status} />
+      {filteredBookings.length ? (
+        <div className={widgetCls.recordList}>
+          {filteredBookings.map((item) => (
+            <div key={item.id} className={`${widgetCls.recordItem} ${pageCls.surface}`}>
+              <div className={widgetCls.recordMeta}>
+                <MemberAvatar name={item.name} tone={item.tone} />
+                <div>
+                  <div className={widgetCls.recordTitle} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                    {item.name}
+                    <StatusTag status={item.status} />
+                  </div>
+                  <div className={widgetCls.recordSub}>{item.code}</div>
+                  <div className={widgetCls.recordSub}>{item.course} · {item.time}</div>
                 </div>
-                <div className={widgetCls.recordSub}>{item.code}</div>
-                <div className={widgetCls.recordSub}>{item.course} · {item.time}</div>
+              </div>
+
+              <div className={widgetCls.infoStack}>
+                <div>教练：{item.coach}</div>
+                <div>预约时间：{item.bookedAt}</div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <Button type="primary" size="large" className={pageCls.cardActionHalf} onClick={() => handleStatusAdvance(item)}>
+                  {getStatusActionLabel(item.status)}
+                </Button>
+                <Button size="large" className={pageCls.cardActionHalf} onClick={() => setDetailBooking(item)}>详情</Button>
               </div>
             </div>
-
-            <div className={widgetCls.infoStack}>
-              <div>教练：{item.coach}</div>
-              <div>预约时间：{item.bookedAt}</div>
-            </div>
-
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <Button type="primary" size="large" className={pageCls.cardActionHalf} onClick={() => handleStatusAdvance(item)}>
-                {getStatusActionLabel(item.status)}
-              </Button>
-              <Button size="large" className={pageCls.cardActionHalf} onClick={() => setDetailBooking(item)}>详情</Button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filteredBookings.length === 0 ? (
-        <div className={`${pageCls.surface} ${widgetCls.detailCard}`} style={{ marginTop: 16 }}>
-          <div className={widgetCls.detailTitle}>当前筛选下暂无预约</div>
-          <div className={widgetCls.smallText} style={{ marginTop: 8 }}>你可以重置筛选，或直接创建一条新的预约记录。</div>
-          <div className={widgetCls.twoButtons}>
-            <Button size="large" className={pageCls.cardActionHalf} onClick={() => setSearchValue('')}>清空搜索</Button>
-            <Button type="primary" size="large" className={pageCls.cardActionHalf} onClick={resetFilters}>重置筛选</Button>
-          </div>
+          ))}
         </div>
-      ) : null}
+      ) : (
+        <div className={`${pageCls.surface} ${widgetCls.detailCard}`} style={{ marginTop: 16 }}>
+          <EmptyState title="当前筛选下暂无预约" description="你可以重置筛选条件，或直接创建一条新的预约记录。" actionText="重置筛选" onAction={() => { setSearchValue(''); resetFilters(); }} />
+        </div>
+      )}
 
       <Modal
         className={pageCls.crudModal}

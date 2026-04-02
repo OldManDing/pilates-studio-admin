@@ -634,9 +634,13 @@
   .toolbarSearch {
     width: 100%;
   }
+
+  .memberRecordGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 992px) {
   .page {
     padding: 2px 0 18px;
   }
@@ -696,13 +700,15 @@
     height: 292px;
     padding-top: 12px;
   }
+}
+
+@media (max-width: 768px) {
+  .memberRecordGrid {
+    grid-template-columns: 1fr;
+  }
 
   .memberRecordItem {
     align-items: stretch;
-  }
-
-  .memberRecordGrid {
-    grid-template-columns: 1fr;
   }
 
   .cardActionSecondary,
