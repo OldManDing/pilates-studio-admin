@@ -109,7 +109,7 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
           <div className={cls.userContent}>
             <div className={cls.userNameRow}>
               <div className={cls.userName}>{session?.name ?? '管理员'}</div>
-              <span className={cls.userRole}>{session?.role === 'owner' ? '最高权限' : '演示账号'}</span>
+              <span className={cls.userRole}>{session?.role === 'owner' ? '最高权限' : '受限权限'}</span>
             </div>
             <div className={cls.userMetaRowCompact}>
               <div className={cls.userMeta}>{session?.account ?? 'admin@pilates.com'}</div>
@@ -126,7 +126,7 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
             </button>
             <button type="button" className={cls.accountAction} onClick={() => handleUserAction('logout')}>
               <LogoutOutlined />
-              <span>退出当前演示账号</span>
+              <span>退出当前账号</span>
             </button>
             <div className={cls.accountMetaRow}>
               <UserOutlined />

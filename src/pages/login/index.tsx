@@ -3,7 +3,7 @@ import { App, Form, Input } from 'antd';
 import { useEffect, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
-import { getSafeRedirectPath, isDemoAuthed, saveDemoSession } from '@/utils/mockAuth';
+import { demoRoleExamples, getSafeRedirectPath, isDemoAuthed, saveDemoSession } from '@/utils/mockAuth';
 import cls from './index.module.css';
 
 type LoginValues = {
@@ -45,6 +45,28 @@ export default function LoginPage() {
         <div className={cls.brand}>Pilates Studio</div>
         <h1 className={cls.title}>欢迎登录门店管理后台</h1>
         <p className={cls.subtitle}>使用任意邮箱或手机号与密码即可进入预览环境，便于体验不同角色下的后台界面。</p>
+
+          <div className={cls.demoAccounts}>
+            <div className={cls.demoAccountsTitle}>推荐体验账号</div>
+            <div className={cls.demoAccountsHint}>点击任一身份可直接进入对应预览权限，无需手动输入账号密码。</div>
+            <div className={cls.demoAccountList}>
+              {demoRoleExamples.map((item) => (
+              <button
+                key={item.role}
+                type="button"
+                className={cls.demoAccountButton}
+                onClick={() => {
+                  saveDemoSession(item.account, '123456');
+                  message.success(`已切换到 ${item.label} 预览账号`);
+                  navigate(redirectPath, { replace: true });
+                }}
+              >
+                <span>{item.label}</span>
+                <span>{item.account}</span>
+              </button>
+            ))}
+          </div>
+        </div>
 
         <Form<LoginValues> className={cls.form} layout="vertical" onFinish={handleFinish} initialValues={{ account: 'admin@pilates.com' }}>
           <Form.Item

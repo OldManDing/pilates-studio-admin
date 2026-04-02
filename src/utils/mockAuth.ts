@@ -25,6 +25,13 @@ const ROLE_LABELS = {
 
 export type DemoRole = keyof typeof ROLE_LABELS;
 
+export const demoRoleExamples: Array<{ role: DemoRole; label: string; account: string }> = [
+  { role: 'owner', label: '店长', account: 'owner@pilates.com' },
+  { role: 'frontdesk', label: '前台', account: 'frontdesk@pilates.com' },
+  { role: 'coach', label: '教练', account: 'coach@pilates.com' },
+  { role: 'finance', label: '财务', account: 'finance@pilates.com' }
+];
+
 export type DemoSession = {
   name: string;
   account: string;

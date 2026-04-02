@@ -33,6 +33,13 @@
   flex-wrap: wrap;
 }
 
+.helper {
+  margin-top: 14px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
 @media (max-width: 768px) {
   .panel {
     padding: 18px;

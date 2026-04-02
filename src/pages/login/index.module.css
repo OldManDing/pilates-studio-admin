@@ -55,6 +55,53 @@
   margin-top: 18px;
 }
 
+.demoAccounts {
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(248, 250, 248, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.demoAccountsTitle {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.demoAccountsHint {
+  margin-bottom: 10px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.demoAccountList {
+  display: grid;
+  gap: 8px;
+}
+
+.demoAccountButton {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text-secondary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.demoAccountButton:hover {
+  border-color: rgba(83, 191, 168, 0.2);
+  color: var(--text-heading);
+}
+
 .helperRow {
   display: flex;
   justify-content: flex-end;
