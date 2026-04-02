@@ -240,10 +240,10 @@ export default function RolesPage() {
                 <div className={cls.roleFooter}>
                   <span className={pageCls.memberRemainingBadge}>权限项 {item.scopes.length} 个</span>
                   <div className={cls.roleActions}>
-                    <Button size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={() => openEditModal(item)}>编辑</Button>
-                    <Button size="large" className={pageCls.cardActionHalf} icon={<EyeOutlined />} onClick={() => setDetailRole(item)}>详情</Button>
+                    <Button size="middle" className={pageCls.cardActionSecondary} icon={<EditOutlined />} onClick={() => openEditModal(item)}>编辑</Button>
+                    <Button size="middle" className={pageCls.cardActionSecondary} icon={<EyeOutlined />} onClick={() => setDetailRole(item)}>详情</Button>
                     <Popconfirm title="确认删除该角色吗？" okText="删除" cancelText="取消" onConfirm={() => handleDeleteRole(item)}>
-                      <Button size="large" danger className={pageCls.cardActionHalf} icon={<DeleteOutlined />}>删除</Button>
+                      <Button size="middle" danger className={pageCls.cardActionSecondary} icon={<DeleteOutlined />}>删除</Button>
                     </Popconfirm>
                   </div>
                 </div>

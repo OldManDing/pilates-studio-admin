@@ -283,7 +283,7 @@ export default function FinancePage() {
 
       <div className={pageCls.financeTwoCol}>
         <SectionCard title="营收趋势" subtitle="过去 7 个月营收与利润对比">
-          <div className={pageCls.chartPanelTallOffset}>
+          <div className={pageCls.chartPanelTall}>
             <ResponsiveContainer>
               <BarChart data={financeBar} margin={{ top: 18, right: 8, left: 0, bottom: 0 }}>
                 <defs>
@@ -300,8 +300,8 @@ export default function FinancePage() {
                 <XAxis dataKey="month" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} tick={axisTick} />
                 <YAxis axisLine={false} tickLine={false} tick={axisTick} />
                 <Tooltip cursor={{ fill: 'rgba(139, 124, 255, 0.08)' }} content={<FinanceTrendTooltip />} />
-                <Bar dataKey="revenue" fill="url(#financeRevenue)" radius={[10, 10, 0, 0]} barSize={isMobile ? 18 : 30} />
-                <Bar dataKey="profit" fill="url(#financeProfit)" radius={[10, 10, 0, 0]} barSize={isMobile ? 18 : 30} />
+                <Bar dataKey="revenue" fill="url(#financeRevenue)" radius={[10, 10, 0, 0]} barSize={isMobile ? 16 : 24} />
+                <Bar dataKey="profit" fill="url(#financeProfit)" radius={[10, 10, 0, 0]} barSize={isMobile ? 16 : 24} />
               </BarChart>
             </ResponsiveContainer>
           </div>

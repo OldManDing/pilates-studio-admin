@@ -257,7 +257,7 @@ export default function BookingsPage() {
       </div>
 
       <div className={pageCls.toolbar}>
-        <div className={pageCls.toolbarLeft}>
+        <div className={`${pageCls.toolbarLeft} ${pageCls.workSection}`}>
           <div className={pageCls.segmentedSoft}>
             <Segmented<BookingPeriod>
               size="large"

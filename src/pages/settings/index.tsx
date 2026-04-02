@@ -1,6 +1,7 @@
 import { ArrowRightOutlined, SaveOutlined } from '@ant-design/icons';
-import { App, Button, Col, Descriptions, Drawer, Form, Input, Row, Select, Switch } from 'antd';
+import { App, Button, Col, Descriptions, Drawer, Form, Input, Row, Select, Switch, TimePicker } from 'antd';
 import { useMemo, useState } from 'react';
+import dayjs from 'dayjs';
 import ActionButton from '@/components/ActionButton';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
@@ -13,7 +14,7 @@ type StoreInfoValues = {
   name: string;
   phone: string;
   email: string;
-  hours: string;
+  hours: [dayjs.Dayjs, dayjs.Dayjs];
   address: string;
 };
 
@@ -42,7 +43,7 @@ const initialStoreInfo: StoreInfoValues = {
   name: 'Pilates Studio',
   phone: '400-820-8899',
   email: 'hello@pilates.com',
-  hours: '06:00 - 22:00',
+  hours: [dayjs('06:00', 'HH:mm'), dayjs('22:00', 'HH:mm')],
   address: '上海市静安区愚园路 168 号'
 };
 
@@ -266,7 +267,7 @@ export default function SettingsPage() {
             <Col span={12}><Form.Item label="门店名称" name="name" rules={[{ required: true, message: '请输入门店名称' }]}><Input className={pageCls.settingsInput} size="large" /></Form.Item></Col>
             <Col span={12}><Form.Item label="联系电话" name="phone" rules={[{ required: true, message: '请输入联系电话' }]}><Input className={pageCls.settingsInput} size="large" /></Form.Item></Col>
             <Col span={12}><Form.Item label="邮箱地址" name="email" rules={[{ required: true, message: '请输入邮箱地址' }, { type: 'email', message: '请输入有效邮箱地址' }]}><Input className={pageCls.settingsInput} size="large" /></Form.Item></Col>
-            <Col span={12}><Form.Item label="营业时间" name="hours" rules={[{ required: true, message: '请输入营业时间' }]}><Input className={pageCls.settingsInput} size="large" /></Form.Item></Col>
+            <Col span={12}><Form.Item label="营业时间" name="hours" rules={[{ required: true, message: '请选择营业时间' }]}><TimePicker.RangePicker className={pageCls.settingsInput} style={{ width: '100%' }} size="large" format="HH:mm" minuteStep={30} /></Form.Item></Col>
             <Col span={24}><Form.Item label="门店地址" name="address" rules={[{ required: true, message: '请输入门店地址' }]}><Input className={pageCls.settingsInput} size="large" /></Form.Item></Col>
           </Row>
           <ActionButton icon={<SaveOutlined />} onClick={handleSaveStoreInfo}>保存更改</ActionButton>

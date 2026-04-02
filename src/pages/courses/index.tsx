@@ -237,8 +237,8 @@ export default function CoursesPage() {
             </div>
 
             <div className={widgetCls.twoButtons}>
-              <Button type="primary" size="large" className={pageCls.cardActionPrimary} icon={<EditOutlined />} onClick={() => openEditModal(course)}>编辑课程</Button>
-              <Button size="large" className={pageCls.cardActionSecondary} icon={<EyeOutlined />} onClick={() => setDetailCourse(course)}>查看详情</Button>
+              <Button type="primary" size="middle" className={pageCls.cardActionPrimary} icon={<EditOutlined />} onClick={() => openEditModal(course)}>编辑课程</Button>
+              <Button size="middle" className={pageCls.cardActionSecondary} icon={<EyeOutlined />} onClick={() => setDetailCourse(course)}>查看详情</Button>
             </div>
           </div>
         ))}
