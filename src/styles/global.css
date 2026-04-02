@@ -73,6 +73,8 @@ body,
 #root {
   margin: 0;
   min-height: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(130, 146, 166, 0.38) transparent;
 }
 
 body {
@@ -84,6 +86,39 @@ body {
   color: var(--text-main);
   font-size: var(--font-size-md);
   line-height: 1.5;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+#root::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+#root::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background: rgba(130, 146, 166, 0.32);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+#root::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(109, 126, 147, 0.42);
+  background-clip: padding-box;
 }
 
 button,

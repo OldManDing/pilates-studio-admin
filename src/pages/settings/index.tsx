@@ -274,7 +274,7 @@ export default function SettingsPage() {
       </SectionCard>
 
       <div className={pageCls.equalCol} style={{ marginTop: 24 }}>
-        <div className={widgetCls.settingBlock}>
+        <div className={pageCls.settingsSectionShell}>
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>通知设置</h3>
@@ -295,7 +295,7 @@ export default function SettingsPage() {
           ))}
         </div>
 
-        <div className={widgetCls.settingBlock}>
+        <div className={pageCls.settingsSectionShell}>
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>系统信息</h3>
@@ -321,7 +321,7 @@ export default function SettingsPage() {
       </div>
 
       <div className={pageCls.equalCol}>
-        <div className={widgetCls.settingBlock}>
+        <div className={pageCls.settingsSectionShell}>
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>安全设置</h3>
@@ -333,7 +333,7 @@ export default function SettingsPage() {
               key={item.title}
               type="button"
               className={widgetCls.settingRow}
-              style={{ width: '100%', background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
+              style={{ width: '100%', border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
               onClick={() => {
                 if (item.title === '两步验证') {
                   setTwoFactorEnabled(securityState.两步验证.status === '正常');
@@ -353,7 +353,7 @@ export default function SettingsPage() {
           ))}
         </div>
 
-        <div className={widgetCls.settingBlock}>
+        <div className={pageCls.settingsSectionShell}>
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>数据管理</h3>
@@ -365,7 +365,7 @@ export default function SettingsPage() {
               key={item.title}
               type="button"
               className={widgetCls.settingRow}
-              style={{ width: '100%', background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
+              style={{ width: '100%', border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
               onClick={() => setOpenDataDrawer(item.title)}
             >
               <div>

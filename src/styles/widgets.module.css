@@ -544,6 +544,11 @@
   background: rgba(247, 250, 248, 0.88);
 }
 
+.settingRow[role='button'],
+.settingRow[type='button'] {
+  border: 0;
+}
+
 .settingRow:focus-within {
   background: rgba(242, 249, 246, 0.96);
   border-color: rgba(67, 199, 171, 0.22);
