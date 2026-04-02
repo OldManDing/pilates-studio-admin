@@ -284,15 +284,17 @@ export default function SettingsPage() {
               保存 {notificationDirtyCount > 0 ? `(${notificationDirtyCount})` : ''}
             </ActionButton>
           </div>
-          {notifications.map((item) => (
-            <div key={item.key} className={widgetCls.settingRow}>
-              <div>
-                <div className={widgetCls.recordTitle}>{item.title}</div>
-                <div className={widgetCls.smallText}>{item.description}</div>
+          <div className={pageCls.settingsSectionList}>
+            {notifications.map((item) => (
+              <div key={item.key} className={widgetCls.settingRow}>
+                <div>
+                  <div className={widgetCls.recordTitle}>{item.title}</div>
+                  <div className={widgetCls.smallText}>{item.description}</div>
+                </div>
+                <span className={pageCls.settingSwitch}><Switch checked={item.enabled} onChange={(checked) => handleToggleNotification(item.key, checked)} /></span>
               </div>
-              <span className={pageCls.settingSwitch}><Switch checked={item.enabled} onChange={(checked) => handleToggleNotification(item.key, checked)} /></span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         <div className={pageCls.settingsSectionShell}>
@@ -328,29 +330,31 @@ export default function SettingsPage() {
               <div className={widgetCls.smallText}>账户安全和权限管理</div>
             </div>
           </div>
-          {securityActions.map((item) => (
-            <button
-              key={item.title}
-              type="button"
-              className={widgetCls.settingRow}
-              style={{ width: '100%', border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
-              onClick={() => {
-                if (item.title === '两步验证') {
-                  setTwoFactorEnabled(securityState.两步验证.status === '正常');
-                }
-                setOpenSecurityDrawer(item.title);
-              }}
-            >
-              <div>
-                <div className={widgetCls.recordTitle}>{item.title}</div>
-                <div className={widgetCls.smallText}>{securityState[item.title].detail}</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                <StatusTag status={securityState[item.title].status} />
-                <ArrowRightOutlined />
-              </div>
-            </button>
-          ))}
+          <div className={pageCls.settingsSectionList}>
+            {securityActions.map((item) => (
+              <button
+                key={item.title}
+                type="button"
+                className={widgetCls.settingRow}
+                style={{ width: '100%', border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
+                onClick={() => {
+                  if (item.title === '两步验证') {
+                    setTwoFactorEnabled(securityState.两步验证.status === '正常');
+                  }
+                  setOpenSecurityDrawer(item.title);
+                }}
+              >
+                <div>
+                  <div className={widgetCls.recordTitle}>{item.title}</div>
+                  <div className={widgetCls.smallText}>{securityState[item.title].detail}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                  <StatusTag status={securityState[item.title].status} />
+                  <ArrowRightOutlined />
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className={pageCls.settingsSectionShell}>
@@ -360,24 +364,26 @@ export default function SettingsPage() {
               <div className={widgetCls.smallText}>备份、导出与恢复数据</div>
             </div>
           </div>
-          {dataActions.map((item) => (
-            <button
-              key={item.title}
-              type="button"
-              className={widgetCls.settingRow}
-              style={{ width: '100%', border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
-              onClick={() => setOpenDataDrawer(item.title)}
-            >
-              <div>
-                <div className={widgetCls.recordTitle}>{item.title}</div>
-                <div className={widgetCls.smallText}>{dataState[item.title].detail}</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                <StatusTag status={dataState[item.title].status} />
-                <ArrowRightOutlined />
-              </div>
-            </button>
-          ))}
+          <div className={pageCls.settingsSectionList}>
+            {dataActions.map((item) => (
+              <button
+                key={item.title}
+                type="button"
+                className={widgetCls.settingRow}
+                style={{ width: '100%', border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
+                onClick={() => setOpenDataDrawer(item.title)}
+              >
+                <div>
+                  <div className={widgetCls.recordTitle}>{item.title}</div>
+                  <div className={widgetCls.smallText}>{dataState[item.title].detail}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                  <StatusTag status={dataState[item.title].status} />
+                  <ArrowRightOutlined />
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -388,7 +394,7 @@ export default function SettingsPage() {
         onClose={() => setOpenSecurityDrawer(null)}
       >
         {openSecurityDrawer ? (
-          <div style={{ display: 'grid', gap: 16 }}>
+          <div className={pageCls.settingsDetailDrawerBody}>
             <div className={widgetCls.detailOverviewPanel}>
               <div className={widgetCls.recordTitle} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 {securityState[openSecurityDrawer].title}
@@ -399,7 +405,7 @@ export default function SettingsPage() {
             </div>
 
             {openSecurityDrawer === '修改密码' ? (
-              <div style={{ display: 'grid', gap: 14 }}>
+              <div className={pageCls.settingsDetailForm}>
                 <Input.Password className={pageCls.settingsInput} placeholder="当前密码" value={passwordDraft.current} onChange={(event) => setPasswordDraft((current) => ({ ...current, current: event.target.value }))} />
                 <Input.Password className={pageCls.settingsInput} placeholder="新密码" value={passwordDraft.next} onChange={(event) => setPasswordDraft((current) => ({ ...current, next: event.target.value }))} />
                 <Input.Password className={pageCls.settingsInput} placeholder="确认新密码" value={passwordDraft.confirm} onChange={(event) => setPasswordDraft((current) => ({ ...current, confirm: event.target.value }))} />
@@ -408,7 +414,7 @@ export default function SettingsPage() {
             ) : null}
 
             {openSecurityDrawer === '两步验证' ? (
-              <div style={{ display: 'grid', gap: 14 }}>
+              <div className={pageCls.settingsDetailForm}>
                 <div className={widgetCls.settingRow} style={{ margin: 0 }}>
                   <div>
                     <div className={widgetCls.recordTitle}>开启二次验证</div>
@@ -421,7 +427,7 @@ export default function SettingsPage() {
             ) : null}
 
             {openSecurityDrawer === '权限管理' ? (
-              <div style={{ display: 'grid', gap: 16 }}>
+              <div className={pageCls.settingsDetailDrawerBody}>
                 <Descriptions column={1} size="small" bordered>
                   <Descriptions.Item label="当前状态">{securityState.权限管理.detail}</Descriptions.Item>
                   <Descriptions.Item label="本地联动">角色页权限矩阵仍可继续编辑与保存</Descriptions.Item>
@@ -440,7 +446,7 @@ export default function SettingsPage() {
         onClose={() => setOpenDataDrawer(null)}
       >
         {openDataDrawer ? (
-          <div style={{ display: 'grid', gap: 16 }}>
+          <div className={pageCls.settingsDetailDrawerBody}>
             <div className={widgetCls.detailOverviewPanel}>
               <div className={widgetCls.recordTitle} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 {dataState[openDataDrawer].title}
@@ -455,9 +461,9 @@ export default function SettingsPage() {
             ) : null}
 
             {openDataDrawer === '导出数据' ? (
-              <div style={{ display: 'grid', gap: 14 }}>
+              <div className={pageCls.settingsDetailForm}>
                 <div>
-                  <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>导出时间范围</div>
+                  <div className={`${widgetCls.smallText} ${pageCls.settingsFieldLabel}`}>导出时间范围</div>
                   <Select
                     value={exportRange}
                     className={pageCls.settingsInput}
@@ -471,9 +477,9 @@ export default function SettingsPage() {
             ) : null}
 
             {openDataDrawer === '数据恢复' ? (
-              <div style={{ display: 'grid', gap: 14 }}>
+              <div className={pageCls.settingsDetailForm}>
                 <div>
-                  <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>恢复来源</div>
+                  <div className={`${widgetCls.smallText} ${pageCls.settingsFieldLabel}`}>恢复来源</div>
                   <Select
                     value={restoreSource}
                     className={pageCls.settingsInput}

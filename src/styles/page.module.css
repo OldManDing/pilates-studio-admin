@@ -506,6 +506,26 @@
   box-shadow: var(--shadow-soft);
 }
 
+.settingsSectionList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settingsDetailDrawerBody {
+  display: grid;
+  gap: 16px;
+}
+
+.settingsDetailForm {
+  display: grid;
+  gap: 14px;
+}
+
+.settingsFieldLabel {
+  margin-bottom: 8px;
+}
+
 .segmentedSoft :global(.ant-segmented) {
   padding: 4px;
   border-radius: 18px;
