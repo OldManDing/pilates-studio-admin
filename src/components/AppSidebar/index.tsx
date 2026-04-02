@@ -73,7 +73,7 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
 
       <div className={cls.menu}>
         {visibleMenuItems.map((item) => {
-          const active = pathname === item.key;
+          const active = pathname === item.key || (item.key === '/dashboard' && pathname.startsWith('/dashboard/'));
           return (
             <div
               key={item.key}

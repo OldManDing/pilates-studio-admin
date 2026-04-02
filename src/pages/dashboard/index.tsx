@@ -16,6 +16,7 @@ import {
   XAxis,
   YAxis
 } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
 import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
@@ -34,13 +35,24 @@ const iconMap = {
 };
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
+  const go = (path: string) => navigate(path);
+
   return (
     <div className={pageCls.page}>
       <PageHeader
         title="仪表盘"
         subtitle="欢迎回来，今天门店运营状态健康，课程、预约与会员增长都在稳定上升。"
-        extra={<ActionButton icon={<ArrowUpOutlined />}>本周概览</ActionButton>}
+        extra={<ActionButton icon={<ArrowUpOutlined />} onClick={() => go('/dashboard/finance-trend')}>财务趋势</ActionButton>}
       />
+
+      <div className={pageCls.toolbar}>
+        <ActionButton ghost onClick={() => go('/dashboard/courses')}>今日课程</ActionButton>
+        <ActionButton ghost onClick={() => go('/dashboard/bookings')}>今日预约</ActionButton>
+        <ActionButton ghost onClick={() => go('/dashboard/schedule')}>教练排班</ActionButton>
+        <ActionButton ghost onClick={() => go('/dashboard/growth')}>会员增长</ActionButton>
+        <ActionButton ghost onClick={() => go('/dashboard/finance-trend')}>财务趋势</ActionButton>
+      </div>
 
       <div className={pageCls.heroGrid}>
         {dashboardStats.map((item) => (
@@ -49,7 +61,11 @@ export default function DashboardPage() {
       </div>
 
       <div className={pageCls.balancedTwoCol}>
-        <SectionCard title="今日课程" subtitle="2026 年 4 月 1 日 · 共 18 节课程" extra={<StatusTag status="已确认" />}>
+        <SectionCard
+          title="今日课程"
+          subtitle="2026 年 4 月 1 日 · 共 18 节课程"
+          extra={<Button type="text" onClick={() => go('/dashboard/courses')}>查看详情</Button>}
+        >
           <div className={widgetCls.recordListDense}>
             {todayCourses.map((course) => (
               <div key={`${course.time}-${course.title}`} className={widgetCls.recordItem}>
@@ -71,7 +87,11 @@ export default function DashboardPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="今日预约" subtitle="实时同步最新预约状态" extra={<Button type="text">查看全部</Button>}>
+        <SectionCard
+          title="今日预约"
+          subtitle="实时同步最新预约状态"
+          extra={<Button type="text" onClick={() => go('/dashboard/bookings')}>查看全部</Button>}
+        >
           <div className={widgetCls.recordList}>
             {todayBookings.map((item) => (
               <div key={item.name} className={widgetCls.recordItem}>
@@ -86,7 +106,7 @@ export default function DashboardPage() {
                     <div className={widgetCls.recordSub}>{item.phone}</div>
                   </div>
                 </div>
-                <Button type="text">详情</Button>
+                <Button type="text" onClick={() => go('/dashboard/bookings')}>详情</Button>
               </div>
             ))}
           </div>
@@ -94,7 +114,11 @@ export default function DashboardPage() {
       </div>
 
       <div className={pageCls.balancedTwoCol}>
-        <SectionCard title="教练排班" subtitle="本周排班概览" extra={<Button type="text">编辑排班</Button>}>
+        <SectionCard
+          title="教练排班"
+          subtitle="本周排班概览"
+          extra={<Button type="text" onClick={() => go('/dashboard/schedule')}>查看排班</Button>}
+        >
           <div className={widgetCls.recordListDense}>
             {scheduleCards.map((coach) => (
               <div key={coach.name} className={widgetCls.detailCard}>
@@ -123,7 +147,11 @@ export default function DashboardPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="会员增长趋势" subtitle="过去 7 个月数据分析">
+        <SectionCard
+          title="会员增长趋势"
+          subtitle="过去 7 个月数据分析"
+          extra={<Button type="text" onClick={() => go('/dashboard/growth')}>查看趋势</Button>}
+        >
           <div style={{ width: '100%', height: 294 }}>
             <ResponsiveContainer>
               <AreaChart data={memberTrend}>
