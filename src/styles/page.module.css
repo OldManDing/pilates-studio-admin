@@ -261,6 +261,52 @@
   letter-spacing: 0.01em;
 }
 
+.crudModal :global(.ant-modal-content) {
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  box-shadow: 0 22px 48px rgba(18, 38, 63, 0.14);
+  backdrop-filter: blur(22px);
+  padding: 24px;
+}
+
+.crudModal :global(.ant-modal-header) {
+  background: transparent;
+  margin-bottom: 0;
+}
+
+.crudModal :global(.ant-modal-title) {
+  color: var(--text-heading);
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.crudModal :global(.ant-modal-body) {
+  padding-top: 0;
+}
+
+.crudModal :global(.ant-modal-footer) {
+  margin-top: 8px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.crudModalForm {
+  margin-top: 20px;
+}
+
+.crudModalForm :global(.ant-form-item) {
+  margin-bottom: 16px;
+}
+
+.crudModalForm :global(.ant-form-item-label > label) {
+  font-weight: 700;
+  color: var(--text-violet);
+  margin-bottom: 2px;
+  letter-spacing: 0.01em;
+}
+
 .settingsInput {
   border-radius: 12px;
   border-color: rgba(148, 163, 184, 0.24);

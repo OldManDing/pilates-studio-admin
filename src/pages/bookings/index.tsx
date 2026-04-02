@@ -1,5 +1,5 @@
 import { CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, EditOutlined, EyeOutlined, FilterOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
-import { Button, Descriptions, Drawer, Form, Input, Modal, Popconfirm, Segmented, Select, message } from 'antd';
+import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Popconfirm, Row, Segmented, Select, message } from 'antd';
 import { useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import MemberAvatar from '@/components/MemberAvatar';
@@ -96,6 +96,8 @@ const getNextBookingSerial = (current: BookingRecord[]) => {
   const nextValue = values.length > 0 ? Math.max(...values) + 1 : 1036;
   return String(nextValue);
 };
+
+const CRUD_MODAL_WIDTH = 780;
 
 export default function BookingsPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -244,7 +246,7 @@ export default function BookingsPage() {
       <PageHeader
         title="预约管理"
         subtitle="管理所有课程预约和签到记录。"
-        extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新建预约</ActionButton>}
+        extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增预约</ActionButton>}
       />
 
       <div className={pageCls.heroGrid}>
@@ -319,42 +321,64 @@ export default function BookingsPage() {
       ) : null}
 
       <Modal
-        title={editingBooking ? '编辑预约' : '新建预约'}
+        className={pageCls.crudModal}
+        title={editingBooking ? '编辑预约' : '新增预约'}
         open={isFormOpen}
+        width={CRUD_MODAL_WIDTH}
         onCancel={closeFormModal}
         onOk={handleSaveBooking}
-        okText={editingBooking ? '保存修改' : '创建预约'}
+        okText={editingBooking ? '保存修改' : '新增预约'}
         cancelText="取消"
         destroyOnHidden
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 20 }}>
-          <Form.Item name="name" label="会员姓名" rules={[{ required: true, message: '请输入会员姓名' }]}>
-            <Input className={pageCls.settingsInput} />
-          </Form.Item>
-          <Form.Item name="code" label="展示编号">
-            <Input className={pageCls.settingsInput} placeholder="例如：NO.1036，可留空自动生成" />
-          </Form.Item>
-          <Form.Item name="course" label="预约课程" rules={[{ required: true, message: '请输入预约课程' }]}>
-            <Input className={pageCls.settingsInput} />
-          </Form.Item>
-          <Form.Item name="coach" label="授课教练" rules={[{ required: true, message: '请输入授课教练' }]}>
-            <Input className={pageCls.settingsInput} />
-          </Form.Item>
-          <Form.Item name="period" label="预约范围" rules={[{ required: true, message: '请选择预约范围' }]}>
-            <Select className={pageCls.settingsInput} options={bookingPeriods.map((item) => ({ label: item, value: item }))} />
-          </Form.Item>
-          <Form.Item name="sessionTime" label="上课时间" rules={[{ required: true, message: '请输入上课时间' }]}>
-            <Input className={pageCls.settingsInput} placeholder="例如：18:30" />
-          </Form.Item>
-          <Form.Item name="bookedAt" label="预约时间" rules={[{ required: true, message: '请输入预约时间' }]}>
-            <Input className={pageCls.settingsInput} placeholder="例如：09:42" />
-          </Form.Item>
-          <Form.Item name="status" label="预约状态" rules={[{ required: true, message: '请选择预约状态' }]}>
-            <Select className={pageCls.settingsInput} options={bookingStatusOptions.map((item) => ({ label: item, value: item }))} />
-          </Form.Item>
-          <Form.Item name="tone" label="头像色系" rules={[{ required: true, message: '请选择头像色系' }]}>
-            <Select className={pageCls.settingsInput} options={toneOptions} />
-          </Form.Item>
+        <Form form={form} className={pageCls.crudModalForm} layout="vertical">
+          <Row gutter={18}>
+            <Col xs={24} md={12}>
+              <Form.Item name="name" label="会员姓名" rules={[{ required: true, message: '请输入会员姓名' }]}>
+                <Input className={pageCls.settingsInput} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="code" label="展示编号">
+                <Input className={pageCls.settingsInput} placeholder="例如：NO.1036，可留空自动生成" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="course" label="预约课程" rules={[{ required: true, message: '请输入预约课程' }]}>
+                <Input className={pageCls.settingsInput} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="coach" label="授课教练" rules={[{ required: true, message: '请输入授课教练' }]}>
+                <Input className={pageCls.settingsInput} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="period" label="预约范围" rules={[{ required: true, message: '请选择预约范围' }]}>
+                <Select className={pageCls.settingsInput} options={bookingPeriods.map((item) => ({ label: item, value: item }))} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="sessionTime" label="上课时间" rules={[{ required: true, message: '请输入上课时间' }]}>
+                <Input className={pageCls.settingsInput} placeholder="例如：18:30" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="bookedAt" label="预约时间" rules={[{ required: true, message: '请输入预约时间' }]}>
+                <Input className={pageCls.settingsInput} placeholder="例如：09:42" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="status" label="预约状态" rules={[{ required: true, message: '请选择预约状态' }]}>
+                <Select className={pageCls.settingsInput} options={bookingStatusOptions.map((item) => ({ label: item, value: item }))} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="tone" label="头像色系" rules={[{ required: true, message: '请选择头像色系' }]}>
+                <Select className={pageCls.settingsInput} options={toneOptions} />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
 

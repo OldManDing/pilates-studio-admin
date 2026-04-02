@@ -1,5 +1,5 @@
 import { DeleteOutlined, DownloadOutlined, EditOutlined, FilterOutlined, PlusOutlined, SearchOutlined, TeamOutlined, ThunderboltOutlined, UserAddOutlined, WarningOutlined } from '@ant-design/icons';
-import { Button, Descriptions, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Select, message } from 'antd';
+import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, message } from 'antd';
 import { useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import MemberAvatar from '@/components/MemberAvatar';
@@ -49,6 +49,7 @@ const memberStatusOptions: MemberStatus[] = ['正常', '待激活', '已过期']
 const membershipOptions = Array.from(new Set(membersTable.map((item) => item.membership)));
 
 const createMemberKey = () => `member-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const CRUD_MODAL_WIDTH = 780;
 
 export default function MembersPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -199,7 +200,7 @@ export default function MembersPage() {
       <PageHeader
         title="会员管理"
         subtitle="管理所有会员信息和会籍状态。"
-        extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>添加会员</ActionButton>}
+        extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增会员</ActionButton>}
       />
 
       <div className={pageCls.heroGrid}>
@@ -276,45 +277,65 @@ export default function MembersPage() {
       ) : null}
 
       <Modal
-        title={editingMember ? '编辑会员' : '添加会员'}
+        className={pageCls.crudModal}
+        title={editingMember ? '编辑会员' : '新增会员'}
         open={isFormOpen}
+        width={CRUD_MODAL_WIDTH}
         onCancel={closeFormModal}
         onOk={handleSaveMember}
-        okText={editingMember ? '保存修改' : '创建会员'}
+        okText={editingMember ? '保存修改' : '新增会员'}
         cancelText="取消"
         destroyOnHidden
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 20 }}>
-          <Form.Item name="name" label="会员姓名" rules={[{ required: true, message: '请输入会员姓名' }]}>
-            <Input className={pageCls.settingsInput} placeholder="例如：林若溪" />
-          </Form.Item>
-          <Form.Item name="phone" label="手机号" rules={[{ required: true, message: '请输入手机号' }]}>
-            <Input className={pageCls.settingsInput} placeholder="例如：138****5612" />
-          </Form.Item>
-          <Form.Item name="email" label="邮箱" rules={[{ required: true, message: '请输入邮箱' }, { type: 'email', message: '请输入有效邮箱地址' }]}>
-            <Input className={pageCls.settingsInput} placeholder="例如：member@demo.com" />
-          </Form.Item>
-          <Form.Item name="membership" label="会籍类型" rules={[{ required: true, message: '请选择会籍类型' }]}>
-            <Select
-              className={pageCls.settingsInput}
-              options={membershipOptions.map((item) => ({ label: item, value: item }))}
-            />
-          </Form.Item>
-          <Form.Item name="status" label="会籍状态" rules={[{ required: true, message: '请选择会籍状态' }]}>
-            <Select
-              className={pageCls.settingsInput}
-              options={memberStatusOptions.map((item) => ({ label: item, value: item }))}
-            />
-          </Form.Item>
-          <Form.Item name="remaining" label="剩余课时" rules={[{ required: true, message: '请输入剩余课时' }]}>
-            <InputNumber className={pageCls.settingsInput} style={{ width: '100%' }} min={0} precision={0} />
-          </Form.Item>
-          <Form.Item name="joinedAt" label="加入日期" rules={[{ required: true, message: '请输入加入日期' }]}>
-            <Input className={pageCls.settingsInput} placeholder="格式：YYYY-MM-DD" />
-          </Form.Item>
-          <Form.Item name="tone" label="头像色系" rules={[{ required: true, message: '请选择头像色系' }]}>
-            <Select className={pageCls.settingsInput} options={toneOptions} />
-          </Form.Item>
+        <Form form={form} className={pageCls.crudModalForm} layout="vertical">
+          <Row gutter={18}>
+            <Col xs={24} md={12}>
+              <Form.Item name="name" label="会员姓名" rules={[{ required: true, message: '请输入会员姓名' }]}>
+                <Input className={pageCls.settingsInput} placeholder="例如：林若溪" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="phone" label="手机号" rules={[{ required: true, message: '请输入手机号' }]}>
+                <Input className={pageCls.settingsInput} placeholder="例如：138****5612" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="email" label="邮箱" rules={[{ required: true, message: '请输入邮箱' }, { type: 'email', message: '请输入有效邮箱地址' }]}>
+                <Input className={pageCls.settingsInput} placeholder="例如：member@demo.com" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="membership" label="会籍类型" rules={[{ required: true, message: '请选择会籍类型' }]}>
+                <Select
+                  className={pageCls.settingsInput}
+                  options={membershipOptions.map((item) => ({ label: item, value: item }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="status" label="会籍状态" rules={[{ required: true, message: '请选择会籍状态' }]}>
+                <Select
+                  className={pageCls.settingsInput}
+                  options={memberStatusOptions.map((item) => ({ label: item, value: item }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="remaining" label="剩余课时" rules={[{ required: true, message: '请输入剩余课时' }]}>
+                <InputNumber className={pageCls.settingsInput} style={{ width: '100%' }} min={0} precision={0} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="joinedAt" label="加入日期" rules={[{ required: true, message: '请输入加入日期' }]}>
+                <Input className={pageCls.settingsInput} placeholder="格式：YYYY-MM-DD" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="tone" label="头像色系" rules={[{ required: true, message: '请选择头像色系' }]}>
+                <Select className={pageCls.settingsInput} options={toneOptions} />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
 
