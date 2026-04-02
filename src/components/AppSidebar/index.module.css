@@ -2,10 +2,11 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
   padding: 22px;
   color: #2c3943;
   min-width: 0;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .brand {
@@ -15,6 +16,7 @@
   margin-bottom: 24px;
   padding: 8px 4px;
   min-width: 0;
+  flex-shrink: 0;
 }
 
 .logo {
@@ -30,13 +32,13 @@
 }
 
 .brandTitle {
-  font-size: 18px;
+  font-size: var(--font-size-2xl);
   font-weight: 700;
   margin-bottom: 4px;
 }
 
 .brandMeta {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: #8a93a0;
 }
 
@@ -46,6 +48,25 @@
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+  padding-bottom: 12px;
+  margin-right: -6px;
+  scrollbar-gutter: stable;
+}
+
+.menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.menu::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.24);
+}
+
+.menu::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .item {
@@ -55,19 +76,23 @@
   padding: 16px 18px;
   border-radius: 22px;
   color: #506070;
+  background: rgba(244, 246, 244, 0.42);
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.16s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.16s ease, box-shadow 0.2s ease;
   min-width: 0;
 }
 
 .item:hover {
-  background: rgba(83, 191, 168, 0.08);
+  background: rgba(233, 240, 236, 0.96);
+  border-color: rgba(96, 114, 139, 0.14);
+  box-shadow: 0 8px 18px rgba(24, 40, 62, 0.04);
   transform: translateX(2px);
 }
 
 .item:focus-visible {
   outline: none;
-  background: rgba(83, 191, 168, 0.12);
+  background: rgba(229, 238, 234, 0.98);
   box-shadow: 0 0 0 3px rgba(83, 191, 168, 0.18);
 }
 
@@ -76,9 +101,10 @@
 }
 
 .active {
-  background: linear-gradient(135deg, rgba(83, 191, 168, 0.92), rgba(123, 218, 197, 0.92));
+  background: linear-gradient(135deg, rgba(71, 178, 155, 0.96), rgba(103, 200, 182, 0.95));
   color: white;
-  box-shadow: 0 12px 24px rgba(83, 191, 168, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  box-shadow: 0 12px 24px rgba(52, 158, 136, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  border-color: rgba(47, 151, 131, 0.18);
 }
 
 .active:focus-visible {
@@ -92,9 +118,9 @@
   display: grid;
   place-items: center;
   font-size: 18px;
-  background: rgba(83, 191, 168, 0.08);
+  background: rgba(223, 234, 229, 0.92);
   color: var(--icon-muted);
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .active .icon {
@@ -107,7 +133,7 @@
 }
 
 .desc {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: inherit;
   opacity: 0.78;
   margin-top: 4px;
@@ -127,10 +153,10 @@
 
 .userCard {
   width: 100%;
-  padding: 18px;
+  padding: 16px 18px;
   border-radius: 24px;
-  background: rgba(247, 249, 246, 0.86);
-  border: 1px solid rgba(83, 191, 168, 0.08);
+  background: var(--control-surface);
+  border: 1px solid rgba(96, 114, 139, 0.12);
   backdrop-filter: blur(18px);
   display: flex;
   gap: 14px;
@@ -138,7 +164,8 @@
   min-width: 0;
   text-align: left;
   cursor: pointer;
-  transition: background 0.18s ease, border-color 0.18s ease, transform 0.16s ease;
+  box-shadow: var(--control-shadow);
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.16s ease, box-shadow 0.18s ease;
 }
 
 .accountWrap {
@@ -147,17 +174,20 @@
   flex-direction: column;
   gap: 10px;
   min-width: 0;
-  margin-top: 10px;
+  margin-top: auto;
+  padding-top: 10px;
+  flex-shrink: 0;
 }
 
 .accountOpen .userCard {
-  background: rgba(242, 247, 244, 0.98);
-  border-color: rgba(83, 191, 168, 0.18);
+  background: var(--control-surface-hover);
+  border-color: rgba(96, 114, 139, 0.2);
 }
 
 .userCard:hover {
-  background: rgba(242, 247, 244, 0.96);
-  border-color: rgba(83, 191, 168, 0.16);
+  background: var(--control-surface-hover);
+  border-color: rgba(96, 114, 139, 0.18);
+  box-shadow: var(--control-shadow-strong);
 }
 
 .userCard:active {
@@ -174,9 +204,15 @@
   min-width: 0;
 }
 
+.userContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .avatar {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   border-radius: 16px;
   background: linear-gradient(135deg, rgba(83, 191, 168, 0.16), rgba(136, 120, 238, 0.16));
   display: grid;
@@ -185,20 +221,37 @@
 }
 
 .userName {
+  font-size: var(--font-size-md);
   font-weight: 700;
+  line-height: 1.35;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .userNameRow {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
-  flex-wrap: wrap;
+  margin-bottom: 0;
+  min-width: 0;
+  flex-wrap: nowrap;
 }
 
 .userMeta {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: #8a93a0;
+  line-height: 1.35;
+  min-width: 0;
+  flex: 1;
+}
+
+.userMetaRowCompact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
 .userRole {
@@ -207,16 +260,18 @@
   height: 22px;
   padding: 0 8px;
   border-radius: 999px;
-  background: rgba(83, 191, 168, 0.12);
+  background: rgba(83, 191, 168, 0.16);
   color: var(--text-mint);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
+  flex: none;
 }
 
-.userHint {
-  margin-top: 4px;
-  font-size: 11px;
+.userLoginMeta {
+  font-size: var(--font-size-xs);
   color: var(--text-tertiary);
+  line-height: 1.35;
+  white-space: nowrap;
 }
 
 .chevron {
@@ -278,23 +333,24 @@
 
 .accountAction {
   border: 0;
-  background: transparent;
+  background: rgba(244, 246, 244, 0.34);
   cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease;
 }
 
 .accountAction:hover {
-  background: rgba(83, 191, 168, 0.08);
+  background: var(--control-surface-hover);
   color: var(--text-heading);
 }
 
 .accountMetaRow {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--text-tertiary);
 }
 
 .accountAction span,
 .accountMetaRow span,
-.userHint span {
+.userLoginMeta span {
   min-width: 0;
 }
 

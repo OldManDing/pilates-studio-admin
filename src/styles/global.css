@@ -21,6 +21,19 @@
   --button-text-primary: #ffffff;
   --button-text-secondary: #415061;
   --button-text-secondary-hover: #28384a;
+  --control-surface: rgba(244, 246, 244, 0.96);
+  --control-surface-hover: rgba(237, 241, 239, 0.98);
+  --control-surface-strong: rgba(233, 238, 236, 0.98);
+  --control-border: rgba(116, 132, 154, 0.22);
+  --control-border-strong: rgba(96, 114, 139, 0.3);
+  --control-shadow: 0 8px 18px rgba(24, 40, 62, 0.08);
+  --control-shadow-strong: 0 10px 22px rgba(24, 40, 62, 0.11);
+  --control-primary-start: #3fb89f;
+  --control-primary-end: #5dceb7;
+  --control-primary-hover-start: #37ad95;
+  --control-primary-hover-end: #54c2ac;
+  --control-primary-active-start: #309f88;
+  --control-primary-active-end: #4ab39e;
   --border-soft: rgba(15, 23, 42, 0.06);
   --shadow-card: 0 18px 44px rgba(53, 63, 81, 0.07);
   --shadow-soft: 0 12px 28px rgba(62, 71, 87, 0.05);
@@ -28,6 +41,17 @@
   --radius-lg: 22px;
   --radius-md: 16px;
   --radius-sm: 12px;
+  --font-size-xs: 14px;
+  --font-size-sm: 15px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 22px;
+  --font-size-3xl: 24px;
+  --font-size-4xl: 26px;
+  --font-size-5xl: 32px;
+  --font-size-6xl: 36px;
+  --font-size-7xl: 40px;
   --mint: #53bfa8;
   --mint-soft: #edf8f3;
   --violet: #8878ee;
@@ -58,6 +82,8 @@ body {
     radial-gradient(circle at bottom left, rgba(239, 177, 105, 0.07), transparent 22%),
     var(--bg-app);
   color: var(--text-main);
+  font-size: var(--font-size-md);
+  line-height: 1.5;
 }
 
 button,

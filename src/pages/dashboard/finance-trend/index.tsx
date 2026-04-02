@@ -2,6 +2,7 @@ import { LineChartOutlined, PieChartOutlined, WalletOutlined } from '@ant-design
 import { Button } from 'antd';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import ActionButton from '@/components/ActionButton';
+import { createChartTooltip } from '@/components/ChartTooltip';
 import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
@@ -10,6 +11,7 @@ import StatusTag from '@/components/StatusTag';
 import { financeBar, financeStats, revenueStructure, transactions } from '@/mock';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
+import { formatCurrency, formatPercent } from '@/utils/format';
 import { useIsMobile } from '@/utils/useResponsive';
 import { useNavigate } from 'react-router-dom';
 
@@ -19,6 +21,22 @@ const iconMap = {
   line: <LineChartOutlined />,
   pie: <PieChartOutlined />
 };
+
+const DashboardFinanceTrendTooltip = createChartTooltip({
+  labelMap: {
+    revenue: '营收',
+    profit: '利润'
+  },
+  valueFormatter: (value) => (typeof value === 'number' ? formatCurrency(value * 1000) : value)
+});
+
+const DashboardFinanceStructureTooltip = createChartTooltip({
+  labelMap: {
+    value: '占比'
+  },
+  titleFormatter: (_, payload) => (typeof payload[0]?.name === 'string' ? payload[0].name : '营收构成'),
+  valueFormatter: (value) => (typeof value === 'number' ? formatPercent(value) : value)
+});
 
 export default function DashboardFinanceTrendPage() {
   const navigate = useNavigate();
@@ -57,7 +75,7 @@ export default function DashboardFinanceTrendPage() {
                 <CartesianGrid vertical={false} stroke="rgba(148, 163, 184, 0.14)" strokeDasharray="3 5" />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} />
                 <YAxis axisLine={false} tickLine={false} />
-                <Tooltip />
+                <Tooltip content={<DashboardFinanceTrendTooltip />} />
                 <Bar dataKey="revenue" fill="url(#dashboardFinanceRevenue)" radius={[10, 10, 0, 0]} barSize={isMobile ? 16 : 26} />
                 <Bar dataKey="profit" fill="url(#dashboardFinanceProfit)" radius={[10, 10, 0, 0]} barSize={isMobile ? 16 : 26} />
               </BarChart>
@@ -74,7 +92,7 @@ export default function DashboardFinanceTrendPage() {
                     <Cell key={item.name} fill={item.fill} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip content={<DashboardFinanceStructureTooltip />} />
               </PieChart>
             </ResponsiveContainer>
           </div>

@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { App, Space } from 'antd';
+import { App } from 'antd';
 import { DownOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons';
 import cls from './index.module.css';
 import { isOwnerOnlyPath, menuItems } from '@/utils/menu';
@@ -106,18 +106,14 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
           onClick={() => setAccountOpen((value) => !value)}
         >
           <div className={cls.avatar}>{(session?.name ?? '管理员').slice(0, 1)}</div>
-          <div>
+          <div className={cls.userContent}>
             <div className={cls.userNameRow}>
               <div className={cls.userName}>{session?.name ?? '管理员'}</div>
               <span className={cls.userRole}>{session?.role === 'owner' ? '最高权限' : '演示账号'}</span>
             </div>
-            <div className={cls.userMeta}>{session?.account ?? 'admin@pilates.com'}</div>
-            <div className={cls.userHint}>
-              <Space size={6}>
-                <span>登录于 {session ? formatLoginTime(session.loginAt) : '--'}</span>
-                <span>·</span>
-                <span>点击查看账户操作</span>
-              </Space>
+            <div className={cls.userMetaRowCompact}>
+              <div className={cls.userMeta}>{session?.account ?? 'admin@pilates.com'}</div>
+              <div className={cls.userLoginMeta}>登录 {session ? formatLoginTime(session.loginAt) : '--'}</div>
             </div>
           </div>
           <span className={cls.chevron}><DownOutlined /></span>

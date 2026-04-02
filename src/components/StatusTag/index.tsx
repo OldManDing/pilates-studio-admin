@@ -2,20 +2,20 @@ import type { FC } from 'react';
 import { Tag } from 'antd';
 
 const colorMap: Record<string, { color: string; bg: string }> = {
-  正常: { color: '#3a8f7e', bg: '#edf8f3' },
-  已确认: { color: '#3a8f7e', bg: '#edf8f3' },
-  已完成: { color: '#766be2', bg: '#f1efff' },
-  待确认: { color: '#c38a48', bg: '#fff5e8' },
-  待激活: { color: '#c38a48', bg: '#fff5e8' },
-  已取消: { color: '#cf7891', bg: '#fff2f5' },
-  已满: { color: '#cf7891', bg: '#fff2f5' },
-  余位充足: { color: '#3a8f7e', bg: '#edf8f3' },
-  '剩余 1 位': { color: '#c38a48', bg: '#fff5e8' },
-  '剩余 2 位': { color: '#c38a48', bg: '#fff5e8' },
-  已过期: { color: '#64748b', bg: '#f1f5f9' },
-  在职: { color: '#3a8f7e', bg: '#edf8f3' },
-  休假中: { color: '#cf7891', bg: '#fff2f5' },
-  处理中: { color: '#c38a48', bg: '#fff5e8' }
+  正常: { color: 'var(--text-mint)', bg: 'var(--mint-soft)' },
+  已确认: { color: 'var(--text-mint)', bg: 'var(--mint-soft)' },
+  已完成: { color: 'var(--text-violet)', bg: 'var(--violet-soft)' },
+  待确认: { color: 'var(--text-orange)', bg: 'var(--orange-soft)' },
+  待激活: { color: 'var(--text-orange)', bg: 'var(--orange-soft)' },
+  已取消: { color: 'var(--text-pink)', bg: 'var(--pink-soft)' },
+  已满: { color: 'var(--text-pink)', bg: 'var(--pink-soft)' },
+  余位充足: { color: 'var(--text-mint)', bg: 'var(--mint-soft)' },
+  '剩余 1 位': { color: 'var(--text-orange)', bg: 'var(--orange-soft)' },
+  '剩余 2 位': { color: 'var(--text-orange)', bg: 'var(--orange-soft)' },
+  已过期: { color: 'var(--text-secondary)', bg: 'rgba(241, 245, 249, 0.92)' },
+  在职: { color: 'var(--text-mint)', bg: 'var(--mint-soft)' },
+  休假中: { color: 'var(--text-pink)', bg: 'var(--pink-soft)' },
+  处理中: { color: 'var(--text-orange)', bg: 'var(--orange-soft)' }
 };
 
 type Props = {
@@ -23,18 +23,19 @@ type Props = {
 };
 
 const StatusTag: FC<Props> = ({ status }) => {
-  const item = colorMap[status] ?? { color: '#475569', bg: '#f1f5f9' };
+  const item = colorMap[status] ?? { color: 'var(--text-secondary)', bg: 'rgba(241, 245, 249, 0.92)' };
   return (
     <Tag
       bordered={false}
       style={{
         marginInlineEnd: 0,
         borderRadius: 999,
-        paddingInline: 10,
-        lineHeight: '26px',
+        paddingInline: 8,
+        lineHeight: '24px',
         color: item.color,
         background: item.bg,
-        fontWeight: 700
+        fontSize: 'var(--font-size-xs)',
+        fontWeight: 600
       }}
     >
       {status}

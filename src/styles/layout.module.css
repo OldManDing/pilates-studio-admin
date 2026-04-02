@@ -9,7 +9,11 @@
 .sidebar {
   position: fixed;
   inset: 20px auto 20px 20px;
-  width: 280px;
+  display: flex;
+  flex-direction: column;
+  width: clamp(248px, 22vw, 280px);
+  height: calc(100vh - 40px);
+  max-height: calc(100vh - 40px);
   border-radius: 30px;
   background: var(--bg-sidebar);
   border: 1px solid rgba(255, 255, 255, 0.72);
@@ -18,7 +22,7 @@
 }
 
 .main {
-  margin-left: 324px;
+  margin-left: calc(clamp(248px, 22vw, 280px) + 44px);
   padding: 20px 20px 28px;
 }
 
@@ -48,6 +52,8 @@
   .sidebar {
     position: static;
     width: auto;
+    height: auto;
+    max-height: none;
     margin: 16px;
   }
 

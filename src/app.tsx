@@ -10,13 +10,14 @@ export function rootContainer(container: ReactNode) {
       theme={{
         algorithm: theme.defaultAlgorithm,
         token: {
-          colorPrimary: '#53bfa8',
-          colorSuccess: '#57c8a9',
+          colorPrimary: '#47b29b',
+          colorSuccess: '#4db99f',
           colorWarning: '#efb169',
           colorError: '#ef8ba0',
           colorInfo: '#8878ee',
           borderRadius: 18,
           borderRadiusLG: 24,
+          fontSize: 15,
           fontFamily:
             'Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
           colorBgLayout: '#faf8f4',

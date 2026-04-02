@@ -1,6 +1,7 @@
 import { HeartOutlined, RiseOutlined, SmileOutlined } from '@ant-design/icons';
 import { Progress } from 'antd';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { createChartTooltip } from '@/components/ChartTooltip';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import StatCard from '@/components/StatCard';
@@ -11,13 +12,39 @@ import { useIsMobile } from '@/utils/useResponsive';
 
 const chartGrid = 'rgba(148, 163, 184, 0.14)';
 const axisTick = { fill: '#6f8198', fontSize: 12, fontWeight: 600 };
-const tooltipStyle = {
-  borderRadius: 12,
-  border: '1px solid rgba(255,255,255,0.84)',
-  boxShadow: '0 12px 28px rgba(28, 45, 71, 0.12)',
-  background: 'rgba(255,255,255,0.97)',
-  padding: '8px 10px'
-};
+const PopularityTooltip = createChartTooltip({
+  labelMap: {
+    value: '热度指数'
+  },
+  valueFormatter: (value) => (typeof value === 'number' ? `${value} 分` : value)
+});
+
+const RadarTooltip = createChartTooltip({
+  labelMap: {
+    score: '综合评分'
+  },
+  titleFormatter: (_, payload) => {
+    const subject = payload[0]?.payload?.subject;
+    return typeof subject === 'string' ? subject : '综合评分';
+  },
+  valueFormatter: (value) => (typeof value === 'number' ? `${value} 分` : value)
+});
+
+const BookingDistributionTooltip = createChartTooltip({
+  labelMap: {
+    value: '预约人次'
+  },
+  valueFormatter: (value) => (typeof value === 'number' ? `${value} 人次` : value)
+});
+
+const RetentionTooltip = createChartTooltip({
+  labelMap: {
+    retained: '留存会员',
+    newUsers: '新增会员',
+    churn: '流失会员'
+  },
+  valueFormatter: (value) => (typeof value === 'number' ? `${value} 人` : value)
+});
 
 const iconMap = {
   target: <RiseOutlined />,
@@ -53,7 +80,7 @@ export default function AnalyticsPage() {
                 <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} angle={isMobile ? 0 : -15} textAnchor={isMobile ? 'middle' : 'end'} height={isMobile ? 38 : 64} tick={axisTick} />
                 <YAxis axisLine={false} tickLine={false} tick={axisTick} />
-                <Tooltip cursor={{ fill: 'rgba(67, 199, 171, 0.09)' }} contentStyle={tooltipStyle} />
+                <Tooltip cursor={{ fill: 'rgba(67, 199, 171, 0.09)' }} content={<PopularityTooltip />} />
                 <Bar dataKey="value" fill="url(#analyticsBar)" radius={[10, 10, 0, 0]} barSize={isMobile ? 18 : 28} />
               </BarChart>
             </ResponsiveContainer>
@@ -67,7 +94,7 @@ export default function AnalyticsPage() {
                 <PolarGrid stroke="rgba(148, 163, 184, 0.28)" />
                 <PolarAngleAxis dataKey="subject" tick={{ ...axisTick, fontSize: isMobile ? 10 : 12 }} />
                 <Radar name="评分" dataKey="score" stroke="#8b7cff" strokeWidth={2.5} fill="#8b7cff" fillOpacity={0.32} />
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip content={<RadarTooltip />} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
@@ -82,7 +109,7 @@ export default function AnalyticsPage() {
                 <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
                 <XAxis dataKey="time" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} tick={axisTick} />
                 <YAxis axisLine={false} tickLine={false} tick={axisTick} />
-                <Tooltip cursor={{ stroke: '#ffb760', strokeDasharray: '4 4' }} contentStyle={tooltipStyle} />
+                <Tooltip cursor={{ stroke: '#ffb760', strokeDasharray: '4 4' }} content={<BookingDistributionTooltip />} />
                 <Line type="monotone" dataKey="value" stroke="#ffb760" strokeWidth={3.4} dot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6, strokeWidth: 2, stroke: '#fff' }} />
               </LineChart>
             </ResponsiveContainer>
@@ -96,7 +123,7 @@ export default function AnalyticsPage() {
                 <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} tick={axisTick} />
                 <YAxis axisLine={false} tickLine={false} tick={axisTick} />
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip content={<RetentionTooltip />} />
                 <Line type="monotone" dataKey="retained" stroke="#8b7cff" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 5 }} />
                 <Line type="monotone" dataKey="newUsers" stroke="#43c7ab" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 5 }} />
                 <Line type="monotone" dataKey="churn" stroke="#ff8da8" strokeWidth={2.5} strokeDasharray="6 6" dot={{ r: 0 }} activeDot={{ r: 5 }} />

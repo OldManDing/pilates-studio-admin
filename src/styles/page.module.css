@@ -9,6 +9,21 @@
   margin-bottom: 22px;
 }
 
+.dashboardHeroGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.dashboardSectionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+  align-items: stretch;
+}
+
 .twoCol {
   display: grid;
   grid-template-columns: 1.45fr 1fr;
@@ -116,7 +131,7 @@
 .membersTable :global(.ant-table-thead > tr > th) {
   background: linear-gradient(180deg, rgba(247, 250, 253, 0.94) 0%, rgba(244, 248, 252, 0.92) 100%);
   color: var(--text-tertiary);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -151,7 +166,7 @@
 
 .membersSubtext {
   color: var(--text-tertiary);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   line-height: 1.35;
   margin-top: 2px;
 }
@@ -212,13 +227,13 @@
 }
 
 .mobileMetaLabel {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--text-tertiary);
   margin-bottom: 4px;
 }
 
 .mobileMetaValue {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--text-heading);
   line-height: 1.35;
@@ -275,12 +290,124 @@
   height: 320px;
 }
 
+.chartPanelTallOffset {
+  width: 100%;
+  height: 336px;
+  padding-top: 16px;
+}
+
 .chartTooltip {
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.84);
   box-shadow: 0 12px 28px rgba(28, 45, 71, 0.12);
   background: rgba(255, 255, 255, 0.97);
   padding: 8px 10px;
+}
+
+.chartTooltipTitle {
+  margin-bottom: 8px;
+  color: var(--text-heading);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.chartTooltipList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chartTooltipItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 152px;
+}
+
+.chartTooltipLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.chartTooltipDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--tooltip-color, var(--text-tertiary));
+}
+
+.chartTooltipValue {
+  color: var(--text-heading);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.memberRecordItem {
+  align-items: center;
+}
+
+.memberRecordHead {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.memberRecordNameRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.memberRecordGrid {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.memberRecordField {
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(248, 250, 251, 0.84);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.memberRecordLabel {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.memberRecordValue {
+  margin-top: 8px;
+  color: var(--text-heading);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.memberRemainingBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(237, 248, 243, 0.86);
+  border: 1px solid rgba(83, 191, 168, 0.14);
+  color: var(--text-mint);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .settingSwitch :global(.ant-switch) {
@@ -305,15 +432,17 @@
 
 .settingsUtilityButton {
   border-radius: 12px;
-  border-color: rgba(148, 163, 184, 0.3);
-  background: rgba(255, 255, 255, 0.92);
+  border-color: var(--control-border);
+  background: var(--control-surface);
   font-weight: 600;
   color: var(--button-text-secondary);
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+  box-shadow: var(--control-shadow);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease, background 0.18s ease;
 }
 
 .settingsUtilityButton:hover {
-  border-color: rgba(117, 137, 164, 0.45) !important;
+  border-color: var(--control-border-strong) !important;
+  background: var(--control-surface-hover) !important;
   color: var(--button-text-secondary-hover) !important;
 }
 
@@ -341,6 +470,10 @@
   color: #fff;
 }
 
+.segmentedSoft :global(.ant-segmented-item-selected .ant-segmented-item-label) {
+  color: #fff;
+}
+
 .segmentedSoft :global(.ant-segmented-thumb) {
   border-radius: 14px;
   background: linear-gradient(135deg, #53bfa8 0%, #77dac5 100%);
@@ -364,6 +497,19 @@
   color: var(--button-text-primary) !important;
 }
 
+:global(.ant-btn-primary).cardActionPrimary,
+:global(.ant-btn-primary).cardActionHalf {
+  border-color: rgba(47, 151, 131, 0.28) !important;
+  background: linear-gradient(135deg, var(--control-primary-start) 0%, var(--control-primary-end) 100%) !important;
+  box-shadow: 0 8px 20px rgba(52, 158, 136, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+:global(.ant-btn-primary).cardActionPrimary:hover,
+:global(.ant-btn-primary).cardActionHalf:hover {
+  background: linear-gradient(135deg, var(--control-primary-hover-start) 0%, var(--control-primary-hover-end) 100%) !important;
+  box-shadow: 0 10px 22px rgba(52, 158, 136, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
 .cardActionSecondary {
   width: 96px;
   border-radius: 14px !important;
@@ -378,8 +524,17 @@
   font-weight: 700;
 }
 
+.cardActionSecondary,
+.cardActionHalf:not(:global(.ant-btn-primary)) {
+  border-color: var(--control-border) !important;
+  background: var(--control-surface) !important;
+  box-shadow: var(--control-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.74);
+}
+
 .cardActionSecondary:hover,
 .cardActionHalf:not(:global(.ant-btn-primary)):hover {
+  border-color: var(--control-border-strong) !important;
+  background: var(--control-surface-hover) !important;
   color: var(--button-text-secondary-hover) !important;
 }
 
@@ -408,6 +563,7 @@
 
 @media (max-width: 1400px) {
   .heroGrid,
+  .dashboardHeroGrid,
   .threeCol,
   .fourCol {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -416,11 +572,13 @@
 
 @media (max-width: 1024px) {
   .heroGrid,
+  .dashboardHeroGrid,
   .threeCol,
   .fourCol,
   .summaryGrid,
   .equalCol,
   .twoCol,
+  .dashboardSectionGrid,
   .balancedTwoCol,
   .financeTwoCol,
   .analyticsPrimaryTwoCol {
@@ -438,11 +596,13 @@
   }
 
   .heroGrid,
+  .dashboardHeroGrid,
   .threeCol,
   .fourCol,
   .summaryGrid,
   .equalCol,
   .twoCol,
+  .dashboardSectionGrid,
   .balancedTwoCol,
   .financeTwoCol,
   .analyticsPrimaryTwoCol {
@@ -484,6 +644,19 @@
 
   .chartPanelTall {
     height: 276px;
+  }
+
+  .chartPanelTallOffset {
+    height: 292px;
+    padding-top: 12px;
+  }
+
+  .memberRecordItem {
+    align-items: stretch;
+  }
+
+  .memberRecordGrid {
+    grid-template-columns: 1fr;
   }
 
   .cardActionSecondary,

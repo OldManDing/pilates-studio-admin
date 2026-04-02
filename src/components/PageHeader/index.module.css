@@ -1,14 +1,14 @@
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 16px;
   margin-bottom: 28px;
 }
 
 .title {
   margin: 0;
-  font-size: 34px;
+  font-size: var(--font-size-6xl);
   line-height: 1.15;
   color: var(--text-heading);
   letter-spacing: -0.02em;
@@ -17,7 +17,7 @@
 .subtitle {
   margin-top: 10px;
   color: var(--text-tertiary);
-  font-size: 15px;
+  font-size: var(--font-size-md);
   max-width: 720px;
 }
 
@@ -30,11 +30,11 @@
   }
 
   .title {
-    font-size: 28px;
+    font-size: var(--font-size-4xl);
   }
 
   .subtitle {
-    font-size: 14px;
+    font-size: var(--font-size-sm);
     max-width: none;
   }
 }

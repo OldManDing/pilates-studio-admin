@@ -11,8 +11,42 @@
   gap: 8px;
 }
 
+.roleCard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.roleBody {
+  display: grid;
+  gap: 2px;
+}
+
+.roleFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.roleActions {
+  display: flex;
+  gap: 10px;
+  flex: 1;
+  min-width: min(240px, 100%);
+}
+
+.roleActions > * {
+  flex: 1;
+}
+
 @media (max-width: 1024px) {
   .roleGrid {
     grid-template-columns: 1fr;
+  }
+
+  .roleActions {
+    width: 100%;
   }
 }
