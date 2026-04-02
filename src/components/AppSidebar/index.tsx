@@ -16,6 +16,9 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
   const { message } = App.useApp();
   const [accountOpen, setAccountOpen] = useState(false);
   const accountWrapRef = useRef<HTMLDivElement | null>(null);
+  const accountButtonRef = useRef<HTMLButtonElement | null>(null);
+  const settingsActionRef = useRef<HTMLButtonElement | null>(null);
+  const logoutActionRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     setAccountOpen(false);
@@ -35,6 +38,29 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
     document.addEventListener('mousedown', handleDocumentClick);
     return () => document.removeEventListener('mousedown', handleDocumentClick);
   }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!accountOpen) {
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setAccountOpen(false);
+        accountButtonRef.current?.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [accountOpen]);
+
+  useEffect(() => {
+    if (accountOpen) {
+      settingsActionRef.current?.focus();
+    }
+  }, [accountOpen]);
 
   const visibleMenuItems = menuItems.filter((item) => {
     if (!session) {
@@ -99,11 +125,18 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
 
       <div ref={accountWrapRef} className={`${cls.accountWrap} ${accountOpen ? cls.accountOpen : ''}`}>
         <button
+          ref={accountButtonRef}
           type="button"
           className={cls.userCard}
           aria-expanded={accountOpen}
           aria-controls="sidebar-account-panel"
           onClick={() => setAccountOpen((value) => !value)}
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowDown' && !accountOpen) {
+              event.preventDefault();
+              setAccountOpen(true);
+            }
+          }}
         >
           <div className={cls.avatar}>{(session?.name ?? '管理员').slice(0, 1)}</div>
           <div className={cls.userContent}>
@@ -120,11 +153,22 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
         </button>
         <div id="sidebar-account-panel" className={cls.accountPanel} aria-hidden={!accountOpen}>
           <div className={cls.accountPanelInner}>
-            <button type="button" className={cls.accountAction} onClick={() => handleUserAction('settings')}>
+            <button ref={settingsActionRef} type="button" className={cls.accountAction} onClick={() => handleUserAction('settings')}>
               <SettingOutlined />
               <span>前往系统设置</span>
             </button>
-            <button type="button" className={cls.accountAction} onClick={() => handleUserAction('logout')}>
+            <button
+              ref={logoutActionRef}
+              type="button"
+              className={cls.accountAction}
+              onClick={() => handleUserAction('logout')}
+              onKeyDown={(event) => {
+                if (event.key === 'Tab' && !event.shiftKey) {
+                  event.preventDefault();
+                  accountButtonRef.current?.focus();
+                }
+              }}
+            >
               <LogoutOutlined />
               <span>退出当前账号</span>
             </button>

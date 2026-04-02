@@ -343,6 +343,11 @@
   color: var(--text-heading);
 }
 
+.accountAction:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(83, 191, 168, 0.16);
+}
+
 .accountMetaRow {
   font-size: var(--font-size-xs);
   color: var(--text-tertiary);
