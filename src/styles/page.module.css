@@ -120,6 +120,30 @@
   box-shadow: 0 14px 32px rgba(18, 38, 63, 0.08);
 }
 
+.workPage {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.showcasePage {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.workSection {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.showcaseSection {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
 .membersTable :global(.ant-table-wrapper) {
   border-radius: 16px;
 }

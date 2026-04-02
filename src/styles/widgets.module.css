@@ -22,6 +22,16 @@
   transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
+.workRecordItem {
+  padding: 12px 14px;
+  border-radius: 14px;
+}
+
+.showcaseRecordItem {
+  padding: 16px 18px;
+  border-radius: 18px;
+}
+
 .recordItem:hover {
   border-color: rgba(67, 199, 171, 0.16);
   background: rgba(250, 252, 251, 0.94);

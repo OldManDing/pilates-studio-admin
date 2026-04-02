@@ -44,7 +44,7 @@ export default function DashboardFinanceTrendPage() {
   const isMobile = useIsMobile();
 
   return (
-    <div className={pageCls.page}>
+    <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
       <PageHeader
         title="财务趋势钻取"
         subtitle="来自仪表盘的财务摘要页，聚焦营收变化与结构分布。"
@@ -116,7 +116,7 @@ export default function DashboardFinanceTrendPage() {
       <SectionCard title="最近交易" subtitle="用于快速核对现金流" extra={<Button type="text" onClick={() => go('/finance')}>进入完整财务模块</Button>}>
         <div className={widgetCls.recordList}>
           {transactions.map((item) => (
-            <div key={`${item.name}-${item.date}`} className={widgetCls.recordItem}>
+            <div key={`${item.name}-${item.date}`} className={`${widgetCls.recordItem} ${widgetCls.showcaseRecordItem}`}>
               <div className={widgetCls.recordMeta}>
                 <MemberAvatar name={item.name} tone={item.tone} />
                 <div>

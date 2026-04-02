@@ -242,7 +242,7 @@ export default function BookingsPage() {
   };
 
   return (
-    <div className={pageCls.page}>
+    <div className={`${pageCls.page} ${pageCls.workPage}`}>
       {contextHolder}
       <PageHeader
         title="预约管理"
@@ -281,9 +281,9 @@ export default function BookingsPage() {
       </div>
 
       {filteredBookings.length ? (
-        <div className={widgetCls.recordList}>
+        <div className={`${widgetCls.recordList} ${pageCls.workSection}`}>
           {filteredBookings.map((item) => (
-            <div key={item.id} className={`${widgetCls.recordItem} ${pageCls.surface}`}>
+            <div key={item.id} className={`${widgetCls.recordItem} ${widgetCls.workRecordItem} ${pageCls.surface}`}>
               <div className={widgetCls.recordMeta}>
                 <MemberAvatar name={item.name} tone={item.tone} />
                 <div>

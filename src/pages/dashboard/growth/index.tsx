@@ -16,7 +16,7 @@ export default function DashboardGrowthPage() {
   const delta = latest.total - previous.total;
 
   return (
-    <div className={pageCls.page}>
+    <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
       <PageHeader
         title="会员增长趋势"
         subtitle="从仪表盘快速放大会员趋势，聚焦增量、活跃率和近期变化节奏。"

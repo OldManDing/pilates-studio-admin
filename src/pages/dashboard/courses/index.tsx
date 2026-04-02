@@ -15,7 +15,7 @@ export default function DashboardCoursesPage() {
   const openCount = todayCourses.length - fullCount;
 
   return (
-    <div className={pageCls.page}>
+    <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
       <PageHeader
         title="今日课程排期"
         subtitle="从仪表盘快速查看今日课程节奏，优先识别满班时段与待提升场次。"
@@ -76,7 +76,7 @@ export default function DashboardCoursesPage() {
       <SectionCard title="课程时段列表" subtitle="保留轻量预览形式，支持快速跳入正式模块。">
         <div className={widgetCls.recordListDense}>
           {todayCourses.map((course) => (
-            <div key={`${course.time}-${course.title}`} className={widgetCls.recordItem}>
+            <div key={`${course.time}-${course.title}`} className={`${widgetCls.recordItem} ${widgetCls.showcaseRecordItem}`}>
               <div className={widgetCls.detailCourseMeta}>
                 <div className={widgetCls.recordTitle}>{course.time} · {course.title}</div>
                 <div className={widgetCls.recordSub}>{course.type} · 教练 {course.coach}</div>

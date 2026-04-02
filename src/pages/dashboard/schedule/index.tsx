@@ -18,7 +18,7 @@ export default function DashboardSchedulePage() {
   ));
 
   return (
-    <div className={pageCls.page}>
+    <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
       <PageHeader
         title="教练排班明细"
         subtitle="查看本周关键教练时段分布，快速识别高峰与空档。"

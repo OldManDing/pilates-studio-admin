@@ -196,7 +196,7 @@ export default function MembersPage() {
   };
 
   return (
-    <div className={pageCls.page}>
+    <div className={`${pageCls.page} ${pageCls.workPage}`}>
       {contextHolder}
       <PageHeader
         title="会员管理"
@@ -228,9 +228,9 @@ export default function MembersPage() {
       </div>
 
       {filteredMembers.length ? (
-        <div className={widgetCls.recordList}>
+        <div className={`${widgetCls.recordList} ${pageCls.workSection}`}>
           {filteredMembers.map((member) => (
-            <div key={member.key} className={`${widgetCls.recordItem} ${pageCls.surface} ${pageCls.memberRecordItem}`}>
+            <div key={member.key} className={`${widgetCls.recordItem} ${widgetCls.workRecordItem} ${pageCls.surface} ${pageCls.memberRecordItem}`}>
               <div className={widgetCls.recordMeta}>
                 <MemberAvatar name={member.name} tone={member.tone} />
                 <div className={pageCls.memberRecordHead}>

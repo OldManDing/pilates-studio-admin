@@ -159,7 +159,7 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className={pageCls.page}>
+    <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
       <PageHeader
         title="仪表盘"
         subtitle="欢迎回来，今天门店运营状态健康，课程、预约与会员增长都在稳定上升。"

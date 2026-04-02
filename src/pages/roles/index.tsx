@@ -202,7 +202,7 @@ export default function RolesPage() {
   ];
 
   return (
-    <div className={pageCls.page}>
+    <div className={`${pageCls.page} ${pageCls.workPage}`}>
       <PageHeader
         title="角色与权限"
         subtitle="统一管理门店角色分工，确保每个岗位只访问必要功能。当前修改仅作用于本次预览会话。"
@@ -215,9 +215,9 @@ export default function RolesPage() {
 
       <SectionCard title="角色列表" subtitle={`当前岗位分配与权限范围 · 本地角色 ${roles.length} 个`}>
         {roles.length ? (
-          <div className={cls.roleGrid}>
+          <div className={`${cls.roleGrid} ${pageCls.workSection}`}>
             {roles.map((item) => (
-              <div key={item.key} className={`${widgetCls.settingBlock} ${cls.roleCard}`}>
+              <div key={item.key} className={`${widgetCls.settingBlock} ${widgetCls.workRecordItem} ${cls.roleCard}`}>
                 <div className={widgetCls.detailHeader}>
                   <div>
                     <h3 className={widgetCls.detailTitle}>{item.name}</h3>

@@ -20,7 +20,7 @@ export default function DashboardBookingsPage() {
   const priorityCourse = fullCourses[0] ?? todayCourses[0];
 
   return (
-    <div className={pageCls.page}>
+    <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
       <PageHeader
         title="今日预约明细"
         subtitle="聚焦仪表盘内的预约跟进事项，快速确认、联系与处理异常。"
@@ -93,7 +93,7 @@ export default function DashboardBookingsPage() {
         >
           <div className={widgetCls.recordList}>
             {todayBookings.map((item) => (
-              <div key={item.name} className={widgetCls.recordItem}>
+              <div key={item.name} className={`${widgetCls.recordItem} ${widgetCls.showcaseRecordItem}`}>
                 <div className={`${widgetCls.recordMeta} ${widgetCls.dashboardBookingMeta}`}>
                   <MemberAvatar name={item.name} tone={item.tone} />
                   <div className={`${widgetCls.dashboardBookingBody} ${widgetCls.detailCourseMeta}`}>
@@ -120,7 +120,7 @@ export default function DashboardBookingsPage() {
           <SectionCard title="预约关联课程" subtitle="今日课程容量与预约状态保持同页联动。">
             <div className={widgetCls.recordListDense}>
               {todayCourses.map((course) => (
-                <div key={`${course.time}-${course.title}`} className={widgetCls.recordItem}>
+                <div key={`${course.time}-${course.title}`} className={`${widgetCls.recordItem} ${widgetCls.showcaseRecordItem}`}>
                   <div className={widgetCls.detailCourseMeta}>
                     <div className={widgetCls.recordTitle}>{course.title}</div>
                     <div className={widgetCls.recordSub}>{course.time} · {course.type} · 教练 {course.coach}</div>
