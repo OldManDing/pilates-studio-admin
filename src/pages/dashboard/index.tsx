@@ -175,6 +175,7 @@ export default function DashboardPage() {
         <SectionCard
           title="今日课程"
           subtitle="2026 年 4 月 1 日 · 共 18 节课程"
+          extra={<Button type="text" className={widgetCls.dashboardCardAction} onClick={() => go('/dashboard/courses')}>查看全部</Button>}
         >
           {courseCarouselEnabled ? (
             <div className={widgetCls.dashboardCourseCarousel}>
@@ -300,6 +301,11 @@ export default function DashboardPage() {
                 <Line type="monotone" dataKey="active" name={memberTrendLabels.active} stroke={activeTrendTone.solid} strokeWidth={3} dot={false} />
               </AreaChart>
             </ResponsiveContainer>
+          </div>
+
+          <div className={widgetCls.detailFooterRow}>
+            <div className={widgetCls.smallText}>继续查看增长趋势的月度变化与活跃率细分，再决定是否进入完整会员模块执行跟进。</div>
+            <Button type="text" className={widgetCls.dashboardCardAction} onClick={() => go('/dashboard/growth')}>进入趋势子页</Button>
           </div>
 
           <div className={pageCls.summaryGrid}>

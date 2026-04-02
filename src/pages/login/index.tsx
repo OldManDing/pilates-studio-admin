@@ -44,7 +44,7 @@ export default function LoginPage() {
       <div className={cls.panel}>
         <div className={cls.brand}>Pilates Studio</div>
         <h1 className={cls.title}>欢迎登录门店管理后台</h1>
-        <p className={cls.subtitle}>演示环境：输入任意账号与密码即可创建本地会话。</p>
+        <p className={cls.subtitle}>使用任意邮箱或手机号与密码即可进入预览环境，便于体验不同角色下的后台界面。</p>
 
         <Form<LoginValues> className={cls.form} layout="vertical" onFinish={handleFinish} initialValues={{ account: 'admin@pilates.com' }}>
           <Form.Item

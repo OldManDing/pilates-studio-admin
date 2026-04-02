@@ -205,7 +205,7 @@ export default function RolesPage() {
     <div className={pageCls.page}>
       <PageHeader
         title="角色与权限"
-        subtitle="统一管理门店角色分工，确保每个岗位只访问必要功能。"
+        subtitle="统一管理门店角色分工，确保每个岗位只访问必要功能。当前修改仅作用于本次预览会话。"
         extra={
           <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>
             新增角色
