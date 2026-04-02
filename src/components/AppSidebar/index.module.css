@@ -62,7 +62,7 @@
 
 .menu::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: rgba(148, 163, 184, 0.24);
+  background: rgba(130, 146, 166, 0.22);
 }
 
 .menu::-webkit-scrollbar-track {
