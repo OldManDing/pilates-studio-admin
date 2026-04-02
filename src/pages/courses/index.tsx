@@ -1,5 +1,5 @@
 import { AppstoreOutlined, DeleteOutlined, EditOutlined, EyeOutlined, CalendarOutlined, PlusOutlined, SearchOutlined, StarOutlined } from '@ant-design/icons';
-import { Button, Descriptions, Drawer, Form, Input, Modal, Popconfirm, Select, message } from 'antd';
+import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Popconfirm, Row, Select, message } from 'antd';
 import { useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import PageHeader from '@/components/PageHeader';
@@ -48,6 +48,7 @@ const defaultCourseFormValues: CourseFormValues = {
 const parseScheduleText = (value: string) => value.split(/\n|,|，/).map((item) => item.trim()).filter(Boolean);
 
 const createCourseId = () => `course-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const CRUD_MODAL_WIDTH = 780;
 
 export default function CoursesPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -158,7 +159,7 @@ export default function CoursesPage() {
       <PageHeader
         title="课程管理"
         subtitle="管理所有课程设置和排期。"
-        extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>创建课程</ActionButton>}
+        extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增课程</ActionButton>}
       />
 
       <div className={pageCls.heroGrid}>
@@ -251,39 +252,59 @@ export default function CoursesPage() {
       ) : null}
 
       <Modal
-        title={editingCourse ? '编辑课程' : '创建课程'}
+        className={pageCls.crudModal}
+        title={editingCourse ? '编辑课程' : '新增课程'}
         open={isFormOpen}
+        width={CRUD_MODAL_WIDTH}
         onCancel={closeFormModal}
         onOk={handleSaveCourse}
-        okText={editingCourse ? '保存修改' : '创建课程'}
+        okText={editingCourse ? '保存修改' : '新增课程'}
         cancelText="取消"
         destroyOnHidden
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 20 }}>
-          <Form.Item name="name" label="课程名称" rules={[{ required: true, message: '请输入课程名称' }]}>
-            <Input className={pageCls.settingsInput} />
-          </Form.Item>
-          <Form.Item name="type" label="课程类型" rules={[{ required: true, message: '请输入课程类型' }]}>
-            <Input className={pageCls.settingsInput} />
-          </Form.Item>
-          <Form.Item name="level" label="课程难度" rules={[{ required: true, message: '请输入课程难度' }]}>
-            <Input className={pageCls.settingsInput} />
-          </Form.Item>
-          <Form.Item name="coach" label="授课教练" rules={[{ required: true, message: '请输入授课教练' }]}>
-            <Input className={pageCls.settingsInput} />
-          </Form.Item>
-          <Form.Item name="duration" label="课程时长" rules={[{ required: true, message: '请输入课程时长' }]}>
-            <Input className={pageCls.settingsInput} />
-          </Form.Item>
-          <Form.Item name="capacity" label="课程容量" rules={[{ required: true, message: '请输入课程容量' }]}>
-            <Input className={pageCls.settingsInput} />
-          </Form.Item>
-          <Form.Item name="weekly" label="每周频次" rules={[{ required: true, message: '请输入每周频次' }]}>
-            <Input className={pageCls.settingsInput} />
-          </Form.Item>
-          <Form.Item name="scheduleText" label="排期安排" rules={[{ required: true, message: '请输入排期安排' }]}>
-            <TextArea className={pageCls.settingsInput} rows={4} placeholder="每行一个时间，例如：周一 08:00" />
-          </Form.Item>
+        <Form form={form} className={pageCls.crudModalForm} layout="vertical">
+          <Row gutter={18}>
+            <Col xs={24} md={12}>
+              <Form.Item name="name" label="课程名称" rules={[{ required: true, message: '请输入课程名称' }]}>
+                <Input className={pageCls.settingsInput} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="type" label="课程类型" rules={[{ required: true, message: '请输入课程类型' }]}>
+                <Input className={pageCls.settingsInput} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="level" label="课程难度" rules={[{ required: true, message: '请输入课程难度' }]}>
+                <Input className={pageCls.settingsInput} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="coach" label="授课教练" rules={[{ required: true, message: '请输入授课教练' }]}>
+                <Input className={pageCls.settingsInput} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="duration" label="课程时长" rules={[{ required: true, message: '请输入课程时长' }]}>
+                <Input className={pageCls.settingsInput} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="capacity" label="课程容量" rules={[{ required: true, message: '请输入课程容量' }]}>
+                <Input className={pageCls.settingsInput} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="weekly" label="每周频次" rules={[{ required: true, message: '请输入每周频次' }]}>
+                <Input className={pageCls.settingsInput} />
+              </Form.Item>
+            </Col>
+            <Col xs={24}>
+              <Form.Item name="scheduleText" label="排期安排" rules={[{ required: true, message: '请输入排期安排' }]}>
+                <TextArea className={pageCls.settingsInput} rows={4} placeholder="每行一个时间，例如：周一 08:00" />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
 

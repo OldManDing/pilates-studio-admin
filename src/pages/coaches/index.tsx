@@ -1,5 +1,5 @@
 import { CalendarOutlined, DeleteOutlined, EditOutlined, EyeOutlined, HeartOutlined, PlusOutlined, SearchOutlined, StarOutlined, TeamOutlined } from '@ant-design/icons';
-import { Button, Descriptions, Drawer, Form, Input, Modal, Popconfirm, Select, message } from 'antd';
+import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Popconfirm, Row, Select, message } from 'antd';
 import { useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import MemberAvatar from '@/components/MemberAvatar';
@@ -67,6 +67,7 @@ const coachStatusOptions: CoachStatus[] = ['在职', '休假中'];
 const parseListText = (value: string) => value.split(/\n|,|，/).map((item) => item.trim()).filter(Boolean);
 
 const createCoachId = () => `coach-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const CRUD_MODAL_WIDTH = 780;
 
 export default function CoachesPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -172,7 +173,7 @@ export default function CoachesPage() {
       <PageHeader
         title="教练管理"
         subtitle="管理教练信息、排班和绩效。"
-        extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>添加教练</ActionButton>}
+        extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增教练</ActionButton>}
       />
 
       <div className={pageCls.heroGrid}>
@@ -274,48 +275,74 @@ export default function CoachesPage() {
       ) : null}
 
       <Modal
-        title={editingCoach ? '编辑教练' : '添加教练'}
+        className={pageCls.crudModal}
+        title={editingCoach ? '编辑教练' : '新增教练'}
         open={isFormOpen}
+        width={CRUD_MODAL_WIDTH}
         onCancel={closeFormModal}
         onOk={handleSaveCoach}
-        okText={editingCoach ? '保存修改' : '添加教练'}
+        okText={editingCoach ? '保存修改' : '新增教练'}
         cancelText="取消"
         destroyOnHidden
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 20 }}>
-          <Form.Item name="name" label="教练姓名" rules={[{ required: true, message: '请输入教练姓名' }]}>
-            <Input className={pageCls.settingsInput} />
-          </Form.Item>
-          <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
-            <Select className={pageCls.settingsInput} options={coachStatusOptions.map((item) => ({ label: item, value: item }))} />
-          </Form.Item>
-          <Form.Item name="experience" label="经验信息" rules={[{ required: true, message: '请输入经验信息' }]}>
-            <Input className={pageCls.settingsInput} />
-          </Form.Item>
-          <Form.Item name="rating" label="评分" rules={[{ required: true, message: '请输入评分' }]}>
-            <Input className={pageCls.settingsInput} />
-          </Form.Item>
-          <Form.Item name="phone" label="电话" rules={[{ required: true, message: '请输入电话' }]}>
-            <Input className={pageCls.settingsInput} />
-          </Form.Item>
-          <Form.Item name="email" label="邮箱" rules={[{ required: true, message: '请输入邮箱' }, { type: 'email', message: '请输入有效邮箱地址' }]}>
-            <Input className={pageCls.settingsInput} />
-          </Form.Item>
-          <Form.Item name="specialtiesText" label="专长领域" rules={[{ required: true, message: '请输入至少一个专长领域' }]}>
-            <TextArea className={pageCls.settingsInput} rows={3} placeholder="每行一个专长领域" />
-          </Form.Item>
-          <Form.Item name="certificatesText" label="资质认证" rules={[{ required: true, message: '请输入至少一个资质认证' }]}>
-            <TextArea className={pageCls.settingsInput} rows={3} placeholder="每行一个资质认证" />
-          </Form.Item>
-          <Form.Item name="totalCourses" label="总课程数" rules={[{ required: true, message: '请输入总课程数' }]}>
-            <Input className={pageCls.settingsInput} />
-          </Form.Item>
-          <Form.Item name="weeklyCourses" label="本周课程" rules={[{ required: true, message: '请输入本周课程' }]}>
-            <Input className={pageCls.settingsInput} />
-          </Form.Item>
-          <Form.Item name="tone" label="头像色系" rules={[{ required: true, message: '请选择头像色系' }]}>
-            <Select className={pageCls.settingsInput} options={toneOptions} />
-          </Form.Item>
+        <Form form={form} className={pageCls.crudModalForm} layout="vertical">
+          <Row gutter={18}>
+            <Col xs={24} md={12}>
+              <Form.Item name="name" label="教练姓名" rules={[{ required: true, message: '请输入教练姓名' }]}>
+                <Input className={pageCls.settingsInput} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
+                <Select className={pageCls.settingsInput} options={coachStatusOptions.map((item) => ({ label: item, value: item }))} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="experience" label="经验信息" rules={[{ required: true, message: '请输入经验信息' }]}>
+                <Input className={pageCls.settingsInput} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="rating" label="评分" rules={[{ required: true, message: '请输入评分' }]}>
+                <Input className={pageCls.settingsInput} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="phone" label="电话" rules={[{ required: true, message: '请输入电话' }]}>
+                <Input className={pageCls.settingsInput} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="email" label="邮箱" rules={[{ required: true, message: '请输入邮箱' }, { type: 'email', message: '请输入有效邮箱地址' }]}>
+                <Input className={pageCls.settingsInput} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="totalCourses" label="总课程数" rules={[{ required: true, message: '请输入总课程数' }]}>
+                <Input className={pageCls.settingsInput} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="weeklyCourses" label="本周课程" rules={[{ required: true, message: '请输入本周课程' }]}>
+                <Input className={pageCls.settingsInput} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="tone" label="头像色系" rules={[{ required: true, message: '请选择头像色系' }]}>
+                <Select className={pageCls.settingsInput} options={toneOptions} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="specialtiesText" label="专长领域" rules={[{ required: true, message: '请输入至少一个专长领域' }]}>
+                <TextArea className={pageCls.settingsInput} rows={4} placeholder="每行一个专长领域" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="certificatesText" label="资质认证" rules={[{ required: true, message: '请输入至少一个资质认证' }]}>
+                <TextArea className={pageCls.settingsInput} rows={4} placeholder="每行一个资质认证" />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
 
