@@ -10,7 +10,7 @@ import {
   SearchOutlined,
   WalletOutlined
 } from '@ant-design/icons';
-import { Button, Descriptions, Drawer, Form, Input, Modal, Popconfirm, Select, message } from 'antd';
+import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Popconfirm, Row, Select, message } from 'antd';
 import { useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import ActionButton from '@/components/ActionButton';
@@ -84,6 +84,7 @@ const toneOptions: Array<{ label: string; value: TransactionTone }> = [
 ];
 
 const createTransactionId = () => `transaction-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const CRUD_MODAL_WIDTH = 780;
 
 export default function FinancePage() {
   const isMobile = useIsMobile();
@@ -413,36 +414,52 @@ export default function FinancePage() {
       </SectionCard>
 
       <Modal
+        className={pageCls.crudModal}
         title={editingTransaction ? '编辑交易' : '新增交易'}
         open={isFormOpen}
+        width={CRUD_MODAL_WIDTH}
         onCancel={closeFormModal}
         onOk={handleSaveTransaction}
-        okText={editingTransaction ? '保存修改' : '创建交易'}
+        okText={editingTransaction ? '保存修改' : '新增交易'}
         cancelText="取消"
         destroyOnHidden
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 20 }}>
-          <Form.Item name="name" label="会员姓名" rules={[{ required: true, message: '请输入会员姓名' }]}>
-            <Input className={pageCls.settingsInput} placeholder="例如：林若溪" />
-          </Form.Item>
-          <Form.Item name="type" label="交易类型" rules={[{ required: true, message: '请输入交易类型' }]}>
-            <Input className={pageCls.settingsInput} placeholder="例如：会员年卡续费" />
-          </Form.Item>
-          <Form.Item name="status" label="交易状态" rules={[{ required: true, message: '请选择交易状态' }]}>
-            <Select
-              className={pageCls.settingsInput}
-              options={transactionStatusOptions.map((item) => ({ label: item, value: item }))}
-            />
-          </Form.Item>
-          <Form.Item name="date" label="交易日期" rules={[{ required: true, message: '请输入交易日期' }]}>
-            <Input className={pageCls.settingsInput} placeholder="格式：YYYY-MM-DD" />
-          </Form.Item>
-          <Form.Item name="amount" label="交易金额" rules={[{ required: true, message: '请输入交易金额' }, { pattern: /^¥\d[\d,]*(\.\d{1,2})?$/, message: '请使用金额格式，例如：¥12,800' }]}>
-            <Input className={pageCls.settingsInput} placeholder="例如：¥12,800" />
-          </Form.Item>
-          <Form.Item name="tone" label="头像色系" rules={[{ required: true, message: '请选择头像色系' }]}>
-            <Select className={pageCls.settingsInput} options={toneOptions} />
-          </Form.Item>
+        <Form form={form} className={pageCls.crudModalForm} layout="vertical">
+          <Row gutter={18}>
+            <Col xs={24} md={12}>
+              <Form.Item name="name" label="会员姓名" rules={[{ required: true, message: '请输入会员姓名' }]}>
+                <Input className={pageCls.settingsInput} placeholder="例如：林若溪" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="type" label="交易类型" rules={[{ required: true, message: '请输入交易类型' }]}>
+                <Input className={pageCls.settingsInput} placeholder="例如：会员年卡续费" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="status" label="交易状态" rules={[{ required: true, message: '请选择交易状态' }]}>
+                <Select
+                  className={pageCls.settingsInput}
+                  options={transactionStatusOptions.map((item) => ({ label: item, value: item }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="date" label="交易日期" rules={[{ required: true, message: '请输入交易日期' }]}>
+                <Input className={pageCls.settingsInput} placeholder="格式：YYYY-MM-DD" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="amount" label="交易金额" rules={[{ required: true, message: '请输入交易金额' }, { pattern: /^¥\d[\d,]*(\.\d{1,2})?$/, message: '请使用金额格式，例如：¥12,800' }]}>
+                <Input className={pageCls.settingsInput} placeholder="例如：¥12,800" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="tone" label="头像色系" rules={[{ required: true, message: '请选择头像色系' }]}>
+                <Select className={pageCls.settingsInput} options={toneOptions} />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
 

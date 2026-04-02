@@ -9,6 +9,7 @@ import type { ColumnsType } from 'antd/es/table';
 import {
   App,
   Button,
+  Col,
   Descriptions,
   Drawer,
   Form,
@@ -16,6 +17,7 @@ import {
   InputNumber,
   Modal,
   Popconfirm,
+  Row,
   Select,
   Switch,
   Table
@@ -61,6 +63,8 @@ const parseScopes = (value: string) => value
   .split(/[、,，\n]+/)
   .map((item) => item.trim())
   .filter(Boolean);
+
+const CRUD_MODAL_WIDTH = 780;
 
 export default function RolesPage() {
   const [form] = Form.useForm<RoleFormValues>();
@@ -277,43 +281,57 @@ export default function RolesPage() {
       </SectionCard>
 
       <Modal
+        className={pageCls.crudModal}
         title={editingRole ? '编辑角色' : '新增角色'}
         open={isRoleFormOpen}
+        width={CRUD_MODAL_WIDTH}
         onCancel={closeRoleFormModal}
         onOk={handleSaveRole}
-        okText={editingRole ? '保存修改' : '创建角色'}
+        okText={editingRole ? '保存修改' : '新增角色'}
         cancelText="取消"
         destroyOnHidden
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 20 }}>
-          <Form.Item name="name" label="角色名称" rules={[{ required: true, message: '请输入角色名称' }]}> 
-            <Input className={pageCls.settingsInput} placeholder="例如：运营主管" />
-          </Form.Item>
-          <Form.Item name="status" label="角色状态" rules={[{ required: true, message: '请选择角色状态' }]}> 
-            <Select className={pageCls.settingsInput} options={roleStatusOptions.map((item) => ({ label: item, value: item }))} />
-          </Form.Item>
-          <Form.Item name="users" label="使用人数" rules={[{ required: true, message: '请输入使用人数' }]}> 
-            <InputNumber className={pageCls.settingsInput} style={{ width: '100%' }} min={0} precision={0} />
-          </Form.Item>
-          <Form.Item name="description" label="角色说明" rules={[{ required: true, message: '请输入角色说明' }]}> 
-            <Input.TextArea className={pageCls.settingsInput} rows={4} placeholder="概述该岗位的主要职责与协作范围" />
-          </Form.Item>
-          <Form.Item
-            name="scopesText"
-            label="权限范围"
-            rules={[
-              { required: true, message: '请输入至少一个权限范围' },
-              {
-                validator: async (_, value: string | undefined) => {
-                  if (parseScopes(value ?? '').length === 0) {
-                    throw new Error('请输入至少一个权限范围');
+        <Form form={form} className={pageCls.crudModalForm} layout="vertical">
+          <Row gutter={18}>
+            <Col xs={24} md={12}>
+              <Form.Item name="name" label="角色名称" rules={[{ required: true, message: '请输入角色名称' }]}>
+                <Input className={pageCls.settingsInput} placeholder="例如：运营主管" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="status" label="角色状态" rules={[{ required: true, message: '请选择角色状态' }]}>
+                <Select className={pageCls.settingsInput} options={roleStatusOptions.map((item) => ({ label: item, value: item }))} />
+              </Form.Item>
+            </Col>
+            <Col xs={24}>
+              <Form.Item name="users" label="使用人数" rules={[{ required: true, message: '请输入使用人数' }]}>
+                <InputNumber className={pageCls.settingsInput} style={{ width: '100%' }} min={0} precision={0} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="description" label="角色说明" rules={[{ required: true, message: '请输入角色说明' }]}>
+                <Input.TextArea className={pageCls.settingsInput} rows={4} placeholder="概述该岗位的主要职责与协作范围" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item
+                name="scopesText"
+                label="权限范围"
+                rules={[
+                  { required: true, message: '请输入至少一个权限范围' },
+                  {
+                    validator: async (_, value: string | undefined) => {
+                      if (parseScopes(value ?? '').length === 0) {
+                        throw new Error('请输入至少一个权限范围');
+                      }
+                    }
                   }
-                }
-              }
-            ]}
-          >
-            <Input.TextArea className={pageCls.settingsInput} rows={4} placeholder="例如：门店总览、排班审批、会员管理" />
-          </Form.Item>
+                ]}
+              >
+                <Input.TextArea className={pageCls.settingsInput} rows={4} placeholder="例如：门店总览、排班审批、会员管理" />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
 
