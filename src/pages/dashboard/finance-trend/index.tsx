@@ -47,9 +47,12 @@ export default function DashboardFinanceTrendPage() {
     <div className={pageCls.page}>
       <PageHeader
         title="财务趋势钻取"
-        subtitle="来自仪表盘的财务深看视图，聚焦营收变化与结构分布。"
+        subtitle="来自仪表盘的财务摘要页，聚焦营收变化与结构分布。"
         extra={<ActionButton ghost onClick={() => go('/dashboard')}>返回仪表盘</ActionButton>}
       />
+
+      <div className={widgetCls.dashboardSubpageTag}>仪表盘子页 · 财务摘要</div>
+      <div className={widgetCls.dashboardSubpageHint}>这里用于快速放大营收趋势和收入结构，帮助你判断是否需要进入正式财务模块继续核对交易与明细。</div>
 
       <div className={pageCls.heroGrid}>
         {financeStats.map((item) => (

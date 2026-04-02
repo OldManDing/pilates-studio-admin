@@ -125,6 +125,25 @@
   scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
 }
 
+.dashboardSubpageTag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(83, 191, 168, 0.12);
+  color: var(--text-mint);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.dashboardSubpageHint {
+  margin-top: 8px;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
 .dashboardCourseCarouselViewport:hover,
 .dashboardCourseCarouselViewport:focus-within {
   -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 5%, #000 95%, transparent 100%);

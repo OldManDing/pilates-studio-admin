@@ -22,6 +22,9 @@ export default function DashboardCoursesPage() {
         extra={<ActionButton ghost onClick={() => go('/dashboard')}>返回仪表盘</ActionButton>}
       />
 
+      <div className={widgetCls.dashboardSubpageTag}>仪表盘子页 · 课程摘要</div>
+      <div className={widgetCls.dashboardSubpageHint}>这里用于放大今日课程概况，帮助你快速判断排期与容量节奏；如需编辑课程或排班，请进入正式课程模块。</div>
+
       <div className={pageCls.balancedTwoCol}>
         <SectionCard
           title="课程总览"

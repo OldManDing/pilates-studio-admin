@@ -23,6 +23,9 @@ export default function DashboardGrowthPage() {
         extra={<ActionButton ghost onClick={() => go('/dashboard')}>返回仪表盘</ActionButton>}
       />
 
+      <div className={widgetCls.dashboardSubpageTag}>仪表盘子页 · 增长摘要</div>
+      <div className={widgetCls.dashboardSubpageHint}>这里聚焦趋势判断和增长信号，不替代完整会员工作台；如果要处理会员详情、跟进或会籍状态，请进入会员模块。</div>
+
       <div className={pageCls.balancedTwoCol}>
         <SectionCard title="趋势摘要" subtitle="这是一层分析型子页，用来帮助你决定是否进入完整会员模块。">
           <div className={widgetCls.detailOverviewGrid}>

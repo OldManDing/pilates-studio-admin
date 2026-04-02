@@ -27,6 +27,9 @@ export default function DashboardBookingsPage() {
         extra={<ActionButton ghost onClick={() => go('/dashboard')}>返回仪表盘</ActionButton>}
       />
 
+      <div className={widgetCls.dashboardSubpageTag}>仪表盘子页 · 预约摘要</div>
+      <div className={widgetCls.dashboardSubpageHint}>这里保留的是仪表盘延展视角，重点帮助你快速识别待确认、容量冲突和优先处理对象；如需完整处理预约，请进入正式预约模块。</div>
+
       <div className={pageCls.balancedTwoCol}>
         <SectionCard title="预约总览" subtitle="保持与首页相同的运营视角，先看整体节奏再逐条处理。">
           <div className={widgetCls.detailOverviewGrid}>

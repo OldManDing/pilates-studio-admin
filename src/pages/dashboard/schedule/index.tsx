@@ -25,6 +25,9 @@ export default function DashboardSchedulePage() {
         extra={<ActionButton ghost onClick={() => go('/dashboard')}>返回仪表盘</ActionButton>}
       />
 
+      <div className={widgetCls.dashboardSubpageTag}>仪表盘子页 · 排班摘要</div>
+      <div className={widgetCls.dashboardSubpageHint}>这里保留的是排班视角的摘要分析，重点帮助你快速识别高负载教练与空档时段；如需查看完整教练资料和排班管理，请进入教练模块。</div>
+
       <div className={pageCls.balancedTwoCol}>
         <SectionCard title="排班总览" subtitle="用首页一致的指标块先建立本周工作量与覆盖范围感知。">
           <div className={widgetCls.detailOverviewGrid}>
