@@ -1,0 +1,93 @@
+# ============================================
+# Pilates Studio - Production Docker Compose
+# ============================================
+# Usage:
+#   cp backend/.env.example backend/.env
+#   # Edit backend/.env with production values
+#   docker-compose up -d
+#
+# Services:
+#   - mysql:     Database
+#   - backend:   NestJS API server
+#   - admin:     Nginx serving admin frontend (optional, build first)
+#
+# ============================================
+
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: pilates-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-changeme}
+      MYSQL_DATABASE: pilates_studio
+      MYSQL_USER: pilates
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pilates-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pilates-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      API_PREFIX: api
+      DATABASE_URL: mysql://pilates:${MYSQL_PASSWORD:-changeme}@mysql:3306/pilates_studio
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      LOG_LEVEL: ${LOG_LEVEL:-log}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
+    ports:
+      - "3000:3000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - backend_logs:/app/logs
+    networks:
+      - pilates-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r)=>{process.exit(r.statusCode===200?0:1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  admin:
+    image: nginx:alpine
+    container_name: pilates-admin
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./dist:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+    networks:
+      - pilates-network
+
+volumes:
+  mysql_data:
+  backend_logs:
+
+networks:
+  pilates-network:
+    driver: bridge

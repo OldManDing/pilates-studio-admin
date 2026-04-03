@@ -1,13 +1,14 @@
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { App, Form, Input } from 'antd';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
-import { demoRoleExamples, getSafeRedirectPath, isDemoAuthed, saveDemoSession } from '@/utils/mockAuth';
+import { authApi, setTokens } from '@/services/auth';
+import { getSafeRedirectPath } from '@/utils/mockAuth';
 import cls from './index.module.css';
 
 type LoginValues = {
-  account: string;
+  email: string;
   password: string;
 };
 
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { message } = App.useApp();
+  const [loading, setLoading] = useState(false);
 
   const redirectPath = useMemo(() => {
     const from = location.state as { from?: string } | undefined;
@@ -22,20 +24,27 @@ export default function LoginPage() {
   }, [location.state]);
 
   useEffect(() => {
-    if (isDemoAuthed()) {
+    const token = localStorage.getItem('pilates_access_token');
+    if (token) {
       navigate(redirectPath, { replace: true });
     }
   }, [navigate, redirectPath]);
 
-  const handleFinish = (values: LoginValues) => {
-    const ok = saveDemoSession(values.account, values.password);
-    if (!ok) {
-      message.warning('请输入账号和密码后再登录');
-      return;
+  const handleFinish = async (values: LoginValues) => {
+    setLoading(true);
+    try {
+      const res = await authApi.login({
+        email: values.email,
+        password: values.password,
+      });
+      setTokens(res.accessToken, res.refreshToken);
+      message.success('登录成功，欢迎回来');
+      navigate(redirectPath, { replace: true });
+    } catch (err: any) {
+      message.error(err.message || '登录失败');
+    } finally {
+      setLoading(false);
     }
-
-    message.success('登录成功，欢迎回来');
-    navigate(redirectPath, { replace: true });
   };
 
   return (
@@ -44,48 +53,31 @@ export default function LoginPage() {
       <div className={cls.panel}>
         <div className={cls.brand}>Pilates Studio</div>
         <h1 className={cls.title}>欢迎登录门店管理后台</h1>
-        <p className={cls.subtitle}>使用任意邮箱或手机号与密码即可进入预览环境，便于体验不同角色下的后台界面。</p>
+        <p className={cls.subtitle}>请使用管理员账号密码登录。</p>
 
-          <div className={cls.demoAccounts}>
-            <div className={cls.demoAccountsTitle}>推荐体验账号</div>
-            <div className={cls.demoAccountsHint}>点击任一身份可直接进入对应预览权限，无需手动输入账号密码。</div>
-            <div className={cls.demoAccountList}>
-              {demoRoleExamples.map((item) => (
-              <button
-                key={item.role}
-                type="button"
-                className={cls.demoAccountButton}
-                onClick={() => {
-                  saveDemoSession(item.account, '123456');
-                  message.success(`已切换到 ${item.label} 预览账号`);
-                  navigate(redirectPath, { replace: true });
-                }}
-              >
-                <span>{item.label}</span>
-                <span>{item.account}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <Form<LoginValues> className={cls.form} layout="vertical" onFinish={handleFinish} initialValues={{ account: 'admin@pilates.com' }}>
+        <Form<LoginValues>
+          className={cls.form}
+          layout="vertical"
+          onFinish={handleFinish}
+          initialValues={{ email: 'owner@pilates.com' }}
+        >
           <Form.Item
-            label="账号"
-            name="account"
-            rules={[{ required: true, message: '请输入登录账号' }]}
+            label="邮箱"
+            name="email"
+            rules={[{ required: true, message: '请输入邮箱' }]}
           >
             <Input
               size="large"
               prefix={<UserOutlined />}
               className={cls.input}
-              placeholder="请输入邮箱或手机号"
+              placeholder="请输入邮箱"
             />
           </Form.Item>
 
           <Form.Item
             label="密码"
             name="password"
-            rules={[{ required: true, message: '请输入登录密码' }]}
+            rules={[{ required: true, message: '请输入密码' }]}
           >
             <Input.Password
               size="large"
@@ -99,7 +91,9 @@ export default function LoginPage() {
             <Link className={cls.helperLink} to="/forgot-password">忘记密码？</Link>
           </div>
 
-          <ActionButton icon={<LockOutlined />} htmlType="submit">进入管理后台</ActionButton>
+          <ActionButton icon={<LockOutlined />} htmlType="submit" loading={loading}>
+            进入管理后台
+          </ActionButton>
         </Form>
       </div>
     </div>

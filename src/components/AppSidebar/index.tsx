@@ -4,7 +4,8 @@ import { App } from 'antd';
 import { DownOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons';
 import cls from './index.module.css';
 import { isOwnerOnlyPath, menuItems } from '@/utils/menu';
-import { clearDemoSession, formatLoginTime, getDemoSession } from '@/utils/mockAuth';
+import { clearTokens } from '@/services/auth';
+import { authApi } from '@/services/auth';
 
 type Props = {
   pathname: string;
@@ -12,13 +13,26 @@ type Props = {
 };
 
 const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
-  const session = getDemoSession();
   const { message } = App.useApp();
   const [accountOpen, setAccountOpen] = useState(false);
+  const [user, setUser] = useState<{ displayName: string; email: string; role: { code: string } } | null>(null);
+  const [loginTime] = useState(() => new Date().toISOString());
   const accountWrapRef = useRef<HTMLDivElement | null>(null);
   const accountButtonRef = useRef<HTMLButtonElement | null>(null);
   const settingsActionRef = useRef<HTMLButtonElement | null>(null);
   const logoutActionRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const me = await authApi.getMe();
+        setUser(me);
+      } catch {
+        // ignore
+      }
+    };
+    fetchUser();
+  }, []);
 
   useEffect(() => {
     setAccountOpen(false);
@@ -63,12 +77,12 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
   }, [accountOpen]);
 
   const visibleMenuItems = menuItems.filter((item) => {
-    if (!session) {
+    if (!user) {
       return !isOwnerOnlyPath(item.key);
     }
 
     if (isOwnerOnlyPath(item.key)) {
-      return session.role === 'owner';
+      return user.role.code === 'OWNER';
     }
 
     return true;
@@ -81,10 +95,23 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
       return;
     }
 
-    clearDemoSession();
+    clearTokens();
     setAccountOpen(false);
-    message.success('已退出当前演示账号');
+    message.success('已退出登录');
     onNavigate('/login');
+  };
+
+  const formatLoginTime = (loginAt: string) => {
+    try {
+      return new Intl.DateTimeFormat('zh-CN', {
+        month: 'numeric',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(new Date(loginAt));
+    } catch {
+      return loginAt;
+    }
   };
 
   return (
@@ -138,15 +165,15 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
             }
           }}
         >
-          <div className={cls.avatar}>{(session?.name ?? '管理员').slice(0, 1)}</div>
+          <div className={cls.avatar}>{(user?.displayName ?? '管理员').slice(0, 1)}</div>
           <div className={cls.userContent}>
             <div className={cls.userNameRow}>
-              <div className={cls.userName}>{session?.name ?? '管理员'}</div>
-              <span className={cls.userRole}>{session?.role === 'owner' ? '最高权限' : '受限权限'}</span>
+              <div className={cls.userName}>{user?.displayName ?? '管理员'}</div>
+              <span className={cls.userRole}>{user?.role.code === 'OWNER' ? '最高权限' : '受限权限'}</span>
             </div>
             <div className={cls.userMetaRowCompact}>
-              <div className={cls.userMeta}>{session?.account ?? 'admin@pilates.com'}</div>
-              <div className={cls.userLoginMeta}>登录 {session ? formatLoginTime(session.loginAt) : '--'}</div>
+              <div className={cls.userMeta}>{user?.email ?? 'admin@pilates.com'}</div>
+              <div className={cls.userLoginMeta}>登录 {formatLoginTime(loginTime)}</div>
             </div>
           </div>
           <span className={cls.chevron}><DownOutlined /></span>
@@ -174,7 +201,7 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
             </button>
             <div className={cls.accountMetaRow}>
               <UserOutlined />
-              <span>当前身份：{session?.name ?? '管理员'}</span>
+              <span>当前身份：{user?.displayName ?? '管理员'}</span>
             </div>
           </div>
         </div>

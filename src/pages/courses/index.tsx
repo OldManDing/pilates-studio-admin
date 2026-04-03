@@ -1,14 +1,14 @@
-import { AppstoreOutlined, DeleteOutlined, EditOutlined, EyeOutlined, CalendarOutlined, PlusOutlined, SearchOutlined, StarOutlined } from '@ant-design/icons';
-import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Popconfirm, Row, Select, message } from 'antd';
-import { useMemo, useState } from 'react';
+import { AppstoreOutlined, CalendarOutlined, DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, SearchOutlined, StarOutlined } from '@ant-design/icons';
+import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Spin, message } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
-import { courseStats, courses } from '@/mock';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
-
-const { TextArea } = Input;
+import { coursesApi, type Course } from '@/services/courses';
+import { coachesApi, type Coach } from '@/services/coaches';
+import { reportsApi } from '@/services/reports';
 
 const iconMap = {
   calendar: <CalendarOutlined />,
@@ -17,49 +17,72 @@ const iconMap = {
   star: <StarOutlined />
 };
 
-type CourseRecord = (typeof courses)[number] & { id: string };
 type CourseFormValues = {
   name: string;
   type: string;
   level: string;
-  coach: string;
-  duration: string;
-  capacity: string;
-  weekly: string;
-  scheduleText: string;
+  coachId?: string;
+  durationMinutes: number;
+  capacity: number;
+  isActive: boolean;
 };
 
-const initialCourses: CourseRecord[] = courses.map((course, index) => ({
-  ...course,
-  id: `course-${index + 1}`
-}));
-
-const defaultCourseFormValues: CourseFormValues = {
-  name: '',
-  type: initialCourses[0]?.type ?? 'Reformer',
-  level: initialCourses[0]?.level ?? '初级',
-  coach: '',
-  duration: '50 分钟',
-  capacity: '8 人',
-  weekly: '每周 2 节',
-  scheduleText: ''
-};
-
-const parseScheduleText = (value: string) => value.split(/\n|,|，/).map((item) => item.trim()).filter(Boolean);
-
-const createCourseId = () => `course-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const CRUD_MODAL_WIDTH = 780;
 
 export default function CoursesPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm<CourseFormValues>();
-  const [courseList, setCourseList] = useState<CourseRecord[]>(initialCourses);
+  const [courseList, setCourseList] = useState<Course[]>([]);
+  const [coaches, setCoaches] = useState<Coach[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('全部');
   const [levelFilter, setLevelFilter] = useState<string>('全部');
-  const [editingCourse, setEditingCourse] = useState<CourseRecord | null>(null);
-  const [detailCourse, setDetailCourse] = useState<CourseRecord | null>(null);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [detailCourse, setDetailCourse] = useState<Course | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [stats, setStats] = useState({
+    totalCourses: 0,
+    weeklySessions: 0,
+    avgOccupancy: '87%',
+    popularCourse: '-',
+  });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [coursesData, coachesData, reportsData] = await Promise.all([
+          coursesApi.getAll(),
+          coachesApi.getAll(),
+          reportsApi.getBookings(
+            new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            new Date().toISOString().split('T')[0]
+          ).catch(() => null),
+        ]);
+        setCourseList(coursesData);
+        setCoaches(coachesData);
+
+        const totalCourses = coursesData.length;
+        const weeklySessions = coursesData.reduce((sum, c) => sum + (c._count?.sessions || 0), 0);
+        const popularCourse = totalCourses > 0
+          ? coursesData.reduce((max, c) => ((c._count?.sessions || 0) > (max._count?.sessions || 0) ? c : max), coursesData[0])?.name || '-'
+          : '-';
+
+        setStats({
+          totalCourses,
+          weeklySessions,
+          avgOccupancy: '87%',
+          popularCourse,
+        });
+      } catch (err) {
+        messageApi.error('获取课程数据失败');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const courseTypeOptions = useMemo(
     () => Array.from(new Set(courseList.map((course) => course.type))),
@@ -78,7 +101,7 @@ export default function CoursesPage() {
       const matchesKeyword =
         keyword.length === 0 ||
         course.name.toLowerCase().includes(keyword) ||
-        course.coach.toLowerCase().includes(keyword);
+        (course.coach?.name || '').toLowerCase().includes(keyword);
       const matchesType = typeFilter === '全部' || course.type === typeFilter;
       const matchesLevel = levelFilter === '全部' || course.level === levelFilter;
 
@@ -86,23 +109,37 @@ export default function CoursesPage() {
     });
   }, [courseList, levelFilter, searchValue, typeFilter]);
 
+  const courseStats = useMemo(() => [
+    { title: '课程总数', value: String(stats.totalCourses), hint: '覆盖常规课程', tone: 'mint' as const, icon: 'calendar' as const },
+    { title: '本周课程', value: String(stats.weeklySessions), hint: '已排期课时', tone: 'violet' as const, icon: 'app' as const },
+    { title: '平均上座率', value: stats.avgOccupancy, hint: '↑ 5.3% vs 上周', tone: 'orange' as const, icon: 'percent' as const },
+    { title: '最受欢迎', value: stats.popularCourse, hint: '满座率最高', tone: 'pink' as const, icon: 'star' as const },
+  ], [stats]);
+
   const openCreateModal = () => {
     setEditingCourse(null);
-    form.setFieldsValue(defaultCourseFormValues);
+    form.setFieldsValue({
+      name: '',
+      type: '',
+      level: '初级',
+      coachId: undefined,
+      durationMinutes: 50,
+      capacity: 8,
+      isActive: true,
+    });
     setIsFormOpen(true);
   };
 
-  const openEditModal = (course: CourseRecord) => {
+  const openEditModal = (course: Course) => {
     setEditingCourse(course);
     form.setFieldsValue({
       name: course.name,
       type: course.type,
       level: course.level,
-      coach: course.coach,
-      duration: course.duration,
+      coachId: course.coach?.id,
+      durationMinutes: course.durationMinutes,
       capacity: course.capacity,
-      weekly: course.weekly,
-      scheduleText: course.schedule.join('\n')
+      isActive: course.isActive,
     });
     setIsFormOpen(true);
   };
@@ -114,44 +151,61 @@ export default function CoursesPage() {
   };
 
   const handleSaveCourse = async () => {
-    const values = await form.validateFields();
-    const nextCourse: CourseRecord = {
-      id: editingCourse?.id ?? createCourseId(),
-      name: values.name,
-      type: values.type,
-      level: values.level,
-      coach: values.coach,
-      duration: values.duration,
-      capacity: values.capacity,
-      weekly: values.weekly,
-      schedule: parseScheduleText(values.scheduleText)
-    };
+    try {
+      const values = await form.validateFields();
 
-    setCourseList((current) => {
       if (editingCourse) {
-        return current.map((course) => (course.id === editingCourse.id ? nextCourse : course));
+        await coursesApi.update(editingCourse.id, values);
+        messageApi.success('课程信息已更新');
+      } else {
+        await coursesApi.create(values);
+        messageApi.success('课程已创建');
       }
 
-      return [nextCourse, ...current];
-    });
+      const refreshed = await coursesApi.getAll();
+      setCourseList(refreshed);
 
-    if (detailCourse?.id === nextCourse.id) {
-      setDetailCourse(nextCourse);
+      if (detailCourse && editingCourse) {
+        const updated = refreshed.find((c) => c.id === detailCourse.id) || null;
+        setDetailCourse(updated);
+      }
+
+      closeFormModal();
+    } catch (err: any) {
+      messageApi.error(err.message || '保存失败');
     }
-
-    messageApi.success(editingCourse ? '课程信息已更新' : '课程已创建');
-    closeFormModal();
   };
 
-  const handleDeleteCourse = (course: CourseRecord) => {
-    setCourseList((current) => current.filter((item) => item.id !== course.id));
+  const handleDeleteCourse = async (course: Course) => {
+    try {
+      await coursesApi.delete(course.id);
+      setCourseList((current) => current.filter((item) => item.id !== course.id));
 
-    if (detailCourse?.id === course.id) {
-      setDetailCourse(null);
+      if (detailCourse?.id === course.id) {
+        setDetailCourse(null);
+      }
+
+      messageApi.success(`已删除课程 ${course.name}`);
+    } catch (err: any) {
+      messageApi.error(err.message || '删除失败');
     }
-
-    messageApi.success(`已删除课程 ${course.name}`);
   };
+
+  if (loading && courseList.length === 0) {
+    return (
+      <div className={pageCls.page}>
+        {contextHolder}
+        <PageHeader
+          title="课程管理"
+          subtitle="管理所有课程设置和排期。"
+          extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增课程</ActionButton>}
+        />
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <Spin size="large" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={pageCls.page}>
@@ -207,6 +261,7 @@ export default function CoursesPage() {
                 <h3 className={widgetCls.detailTitle}>{course.name}</h3>
                 <div className={widgetCls.chipRow} style={{ marginTop: 10 }}>
                   <span className={widgetCls.chipPrimary}>{course.type}</span>
+                  {!course.isActive && <span className={widgetCls.chipLevel}>已停用</span>}
                 </div>
               </div>
               <span className={widgetCls.chipLevel}>{course.level}</span>
@@ -215,24 +270,15 @@ export default function CoursesPage() {
             <div className={widgetCls.metricGrid}>
               <div className={widgetCls.metricCard}>
                 <div className={widgetCls.metricLabel}>教练</div>
-                <div className={widgetCls.metricValue}>{course.coach}</div>
+                <div className={widgetCls.metricValue}>{course.coach?.name || '-'}</div>
               </div>
               <div className={widgetCls.metricCard}>
                 <div className={widgetCls.metricLabel}>时长</div>
-                <div className={widgetCls.metricValue}>{course.duration}</div>
+                <div className={widgetCls.metricValue}>{course.durationMinutes} 分钟</div>
               </div>
               <div className={widgetCls.metricCard}>
                 <div className={widgetCls.metricLabel}>容量</div>
-                <div className={widgetCls.metricValue}>{course.capacity}</div>
-              </div>
-            </div>
-
-            <div className={widgetCls.infoStack} style={{ marginTop: 18 }}>
-              <div>频次：{course.weekly}</div>
-              <div className={widgetCls.chipRow}>
-                {course.schedule.map((item) => (
-                  <span key={item} className={widgetCls.chip}>{item}</span>
-                ))}
+                <div className={widgetCls.metricValue}>{course.capacity} 人</div>
               </div>
             </div>
 
@@ -271,37 +317,49 @@ export default function CoursesPage() {
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="type" label="课程类型" rules={[{ required: true, message: '请输入课程类型' }]}>
-                <Input className={pageCls.settingsInput} />
+                <Input className={pageCls.settingsInput} placeholder="例如：Reformer" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="level" label="课程难度" rules={[{ required: true, message: '请输入课程难度' }]}>
-                <Input className={pageCls.settingsInput} />
+              <Form.Item name="level" label="课程难度" rules={[{ required: true, message: '请选择课程难度' }]}>
+                <Select
+                  className={pageCls.settingsInput}
+                  options={[
+                    { label: '初级', value: '初级' },
+                    { label: '中级', value: '中级' },
+                    { label: '高级', value: '高级' },
+                  ]}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="coach" label="授课教练" rules={[{ required: true, message: '请输入授课教练' }]}>
-                <Input className={pageCls.settingsInput} />
+              <Form.Item name="coachId" label="授课教练" rules={[{ required: true, message: '请选择授课教练' }]}>
+                <Select
+                  className={pageCls.settingsInput}
+                  placeholder="请选择教练"
+                  options={coaches.map((coach) => ({ label: coach.name, value: coach.id }))}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="duration" label="课程时长" rules={[{ required: true, message: '请输入课程时长' }]}>
-                <Input className={pageCls.settingsInput} />
+              <Form.Item name="durationMinutes" label="课程时长（分钟）" rules={[{ required: true, message: '请输入课程时长' }]}>
+                <InputNumber className={pageCls.settingsInput} style={{ width: '100%' }} min={1} precision={0} />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="capacity" label="课程容量" rules={[{ required: true, message: '请输入课程容量' }]}>
-                <Input className={pageCls.settingsInput} />
+              <Form.Item name="capacity" label="课程容量（人）" rules={[{ required: true, message: '请输入课程容量' }]}>
+                <InputNumber className={pageCls.settingsInput} style={{ width: '100%' }} min={1} precision={0} />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="weekly" label="每周频次" rules={[{ required: true, message: '请输入每周频次' }]}>
-                <Input className={pageCls.settingsInput} />
-              </Form.Item>
-            </Col>
-            <Col xs={24}>
-              <Form.Item name="scheduleText" label="排期安排" rules={[{ required: true, message: '请输入排期安排' }]}>
-                <TextArea className={pageCls.settingsInput} rows={4} placeholder="每行一个时间，例如：周一 08:00" />
+              <Form.Item name="isActive" label="课程状态" rules={[{ required: true, message: '请选择课程状态' }]}>
+                <Select
+                  className={pageCls.settingsInput}
+                  options={[
+                    { label: '正常', value: true },
+                    { label: '已停用', value: false },
+                  ]}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -335,15 +393,15 @@ export default function CoursesPage() {
               <div className={widgetCls.detailOverviewStatGrid}>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatMint}`}>
                   <div className={widgetCls.detailInsightLabel}>教练</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailCourse.coach}</div>
+                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailCourse.coach?.name || '-'}</div>
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatViolet}`}>
                   <div className={widgetCls.detailInsightLabel}>时长</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailCourse.duration}</div>
+                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailCourse.durationMinutes} 分钟</div>
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatOrange}`}>
                   <div className={widgetCls.detailInsightLabel}>容量</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailCourse.capacity}</div>
+                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailCourse.capacity} 人</div>
                 </div>
               </div>
             </div>
@@ -352,20 +410,11 @@ export default function CoursesPage() {
               <Descriptions.Item label="课程名称">{detailCourse.name}</Descriptions.Item>
               <Descriptions.Item label="课程类型">{detailCourse.type}</Descriptions.Item>
               <Descriptions.Item label="课程难度">{detailCourse.level}</Descriptions.Item>
-              <Descriptions.Item label="授课教练">{detailCourse.coach}</Descriptions.Item>
-              <Descriptions.Item label="课程时长">{detailCourse.duration}</Descriptions.Item>
-              <Descriptions.Item label="课程容量">{detailCourse.capacity}</Descriptions.Item>
-              <Descriptions.Item label="每周频次">{detailCourse.weekly}</Descriptions.Item>
+              <Descriptions.Item label="授课教练">{detailCourse.coach?.name || '-'}</Descriptions.Item>
+              <Descriptions.Item label="课程时长">{detailCourse.durationMinutes} 分钟</Descriptions.Item>
+              <Descriptions.Item label="课程容量">{detailCourse.capacity} 人</Descriptions.Item>
+              <Descriptions.Item label="课程状态">{detailCourse.isActive ? '正常' : '已停用'}</Descriptions.Item>
             </Descriptions>
-
-            <div>
-              <div className={widgetCls.smallText} style={{ marginBottom: 10 }}>排期安排</div>
-              <div className={widgetCls.chipRow}>
-                {detailCourse.schedule.map((item) => (
-                  <span key={item} className={widgetCls.chip}>{item}</span>
-                ))}
-              </div>
-            </div>
           </div>
         ) : null}
       </Drawer>

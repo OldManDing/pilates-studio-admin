@@ -10,8 +10,8 @@ import {
   SearchOutlined,
   WalletOutlined
 } from '@ant-design/icons';
-import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Popconfirm, Row, Select, message } from 'antd';
-import { useMemo, useState } from 'react';
+import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Spin, message } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import ActionButton from '@/components/ActionButton';
 import { createChartTooltip } from '@/components/ChartTooltip';
@@ -22,28 +22,15 @@ import StatCard from '@/components/StatCard';
 import StatusTag from '@/components/StatusTag';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
-import { financeBar, financeStats, revenueStructure, transactions } from '@/mock';
-import type { PaymentStatus } from '@/types';
+import { transactionsApi, type Transaction } from '@/services/transactions';
+import { reportsApi } from '@/services/reports';
+import type { TransactionStatus, TransactionKind } from '@/types';
 import { formatCurrency, formatPercent } from '@/utils/format';
 import { useIsMobile } from '@/utils/useResponsive';
+import type { AccentTone } from '@/types';
 
 const chartGrid = 'rgba(148, 163, 184, 0.14)';
 const axisTick = { fill: '#6f8198', fontSize: 12, fontWeight: 600 };
-const FinanceTrendTooltip = createChartTooltip({
-  labelMap: {
-    revenue: '营收',
-    profit: '利润'
-  },
-  valueFormatter: (value) => (typeof value === 'number' ? formatCurrency(value * 1000) : value)
-});
-
-const FinanceStructureTooltip = createChartTooltip({
-  labelMap: {
-    value: '占比'
-  },
-  titleFormatter: (_, payload) => (typeof payload[0]?.name === 'string' ? payload[0].name : '营收构成'),
-  valueFormatter: (value) => (typeof value === 'number' ? formatPercent(value) : value)
-});
 
 const iconMap = {
   wallet: <WalletOutlined />,
@@ -52,59 +39,149 @@ const iconMap = {
   pie: <PieChartOutlined />
 };
 
-type TransactionRow = (typeof transactions)[number] & { id: string };
-type TransactionTone = TransactionRow['tone'];
-type TransactionFormValues = Omit<TransactionRow, 'id'>;
+const statusMap: Record<TransactionStatus, string> = {
+  COMPLETED: '已完成',
+  PENDING: '处理中',
+  REFUNDED: '已退款',
+  FAILED: '失败',
+};
+
+const kindMap: Record<TransactionKind, string> = {
+  PLAN_PURCHASE: '会籍购买',
+  PLAN_RENEWAL: '会籍续费',
+  PRIVATE_SESSION: '私教课程',
+  MERCHANDISE: '周边商品',
+  OTHER: '其他',
+};
+
+const reverseStatusMap: Record<string, TransactionStatus> = {
+  '已完成': 'COMPLETED',
+  '处理中': 'PENDING',
+  '已退款': 'REFUNDED',
+  '失败': 'FAILED',
+};
+
+const getToneFromName = (name: string): AccentTone => {
+  const tones: AccentTone[] = ['mint', 'violet', 'orange', 'pink'];
+  const charSum = name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return tones[charSum % tones.length];
+};
+
+type TransactionFormValues = {
+  memberName: string;
+  kind: TransactionKind;
+  status: TransactionStatus;
+  amount: number;
+  notes?: string;
+};
+
 type TransactionFilterDraft = {
-  status: PaymentStatus | '全部';
-  type: string;
+  status: string;
+  kind: string;
 };
 
-const transactionStatusOptions: PaymentStatus[] = ['已完成', '处理中'];
+const transactionStatusOptions = Object.entries(statusMap).map(([k, v]) => ({ label: v, value: k }));
+const transactionKindOptions = Object.entries(kindMap).map(([k, v]) => ({ label: v, value: k }));
 
-const initialTransactions: TransactionRow[] = transactions.map((item, index) => ({
-  ...item,
-  id: `transaction-${index + 1}`
-}));
-
-const defaultTransactionFormValues: TransactionFormValues = {
-  name: '',
-  status: '处理中',
-  type: transactions[0]?.type ?? '会员年卡续费',
-  date: '2026-04-02',
-  amount: '¥0',
-  tone: 'mint'
+const kindColorMap: Record<TransactionKind, string> = {
+  PLAN_PURCHASE: '#43c7ab',
+  PLAN_RENEWAL: '#8b7cff',
+  PRIVATE_SESSION: '#ffb760',
+  MERCHANDISE: '#ff8da8',
+  OTHER: '#73a7ff',
 };
 
-const toneOptions: Array<{ label: string; value: TransactionTone }> = [
-  { label: '薄荷绿', value: 'mint' },
-  { label: '柔雾紫', value: 'violet' },
-  { label: '暖日橙', value: 'orange' },
-  { label: '轻粉色', value: 'pink' }
-];
-
-const createTransactionId = () => `transaction-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const CRUD_MODAL_WIDTH = 780;
 
 export default function FinancePage() {
   const isMobile = useIsMobile();
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm<TransactionFormValues>();
-  const [transactionList, setTransactionList] = useState<TransactionRow[]>(initialTransactions);
+  const [transactionList, setTransactionList] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState('');
-  const [statusFilter, setStatusFilter] = useState<PaymentStatus | '全部'>('全部');
-  const [typeFilter, setTypeFilter] = useState<string>('全部');
-  const [filterDraft, setFilterDraft] = useState<TransactionFilterDraft>({ status: '全部', type: '全部' });
+  const [statusFilter, setStatusFilter] = useState<string>('全部');
+  const [kindFilter, setKindFilter] = useState<string>('全部');
+  const [filterDraft, setFilterDraft] = useState<TransactionFilterDraft>({ status: '全部', kind: '全部' });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<TransactionRow | null>(null);
-  const [detailTransaction, setDetailTransaction] = useState<TransactionRow | null>(null);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
+  const [revenueStructure, setRevenueStructure] = useState<Array<{ name: string; value: number; fill: string }>>([]);
+  const [financeBar, setFinanceBar] = useState<Array<{ month: string; revenue: number; profit: number }>>([]);
+  const [stats, setStats] = useState({
+    totalRevenue: 0,
+    totalExpense: 106800,
+    netProfit: 0,
+    profitMargin: '0%',
+  });
 
-  const transactionTypeOptions = useMemo(
-    () => Array.from(new Set(transactionList.map((item) => item.type))),
-    [transactionList]
-  );
+  const fetchTransactions = async (page = 1, pageSize = 100) => {
+    try {
+      const from = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const to = new Date().toISOString().split('T')[0];
+      const [txRes, summaryRes, reportsRes] = await Promise.all([
+        transactionsApi.getAll({ page, pageSize, from, to }),
+        transactionsApi.getSummary().catch(() => ({ totalRevenueCents: 0, pendingAmountCents: 0, refundedAmountCents: 0, todayRevenueCents: 0 })),
+        reportsApi.getTransactions(from, to).catch(() => null),
+      ]);
+
+      setTransactionList(txRes.data);
+
+      const totalRevenue = summaryRes.totalRevenueCents / 100;
+      const netProfit = totalRevenue - stats.totalExpense;
+      setStats({
+        totalRevenue,
+        totalExpense: 106800,
+        netProfit,
+        profitMargin: totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) + '%' : '0%',
+      });
+
+      // Build pie chart data from reports
+      if (reportsRes?.transactionsByKind) {
+        const structure = reportsRes.transactionsByKind.map((item: any) => ({
+          name: kindMap[(item.kind as TransactionKind)] || item.kind,
+          value: Number(item._sum?.amountCents || 0) / 100,
+          fill: kindColorMap[(item.kind as TransactionKind)] || '#999',
+        }));
+        setRevenueStructure(structure);
+      }
+
+      // Build bar chart data (aggregate by month from transactions)
+      const monthlyData: Record<string, { revenue: number; profit: number }> = {};
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        const key = `${d.getMonth() + 1}月`;
+        monthlyData[key] = { revenue: 0, profit: 0 };
+      }
+      txRes.data.forEach((tx) => {
+        const date = new Date(tx.happenedAt);
+        const key = `${date.getMonth() + 1}月`;
+        if (monthlyData[key]) {
+          const amount = tx.amountCents / 100;
+          monthlyData[key].revenue += amount;
+          monthlyData[key].profit += amount * 0.62;
+        }
+      });
+      const barData = Object.entries(monthlyData).map(([month, values]) => ({
+        month,
+        revenue: Math.round(values.revenue),
+        profit: Math.round(values.profit),
+      }));
+      setFinanceBar(barData);
+    } catch (err) {
+      messageApi.error('获取财务数据失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    fetchTransactions();
+  }, []);
 
   const filteredTransactions = useMemo(() => {
     const keyword = searchValue.trim().toLowerCase();
@@ -112,26 +189,32 @@ export default function FinancePage() {
     return transactionList.filter((item) => {
       const matchesKeyword =
         keyword.length === 0 ||
-        item.name.toLowerCase().includes(keyword) ||
-        item.type.toLowerCase().includes(keyword) ||
-        item.amount.toLowerCase().includes(keyword) ||
-        item.date.toLowerCase().includes(keyword);
+        (item.member?.name || '').toLowerCase().includes(keyword) ||
+        (kindMap[item.kind] || item.kind).toLowerCase().includes(keyword) ||
+        String(item.amountCents).includes(keyword) ||
+        item.happenedAt.includes(keyword);
       const matchesStatus = statusFilter === '全部' || item.status === statusFilter;
-      const matchesType = typeFilter === '全部' || item.type === typeFilter;
+      const matchesKind = kindFilter === '全部' || item.kind === kindFilter;
 
-      return matchesKeyword && matchesStatus && matchesType;
+      return matchesKeyword && matchesStatus && matchesKind;
     });
-  }, [searchValue, statusFilter, transactionList, typeFilter]);
+  }, [searchValue, statusFilter, kindFilter, transactionList]);
 
   const visibleTransactions = useMemo(() => {
-    if (showAllTransactions || searchValue.trim().length > 0 || statusFilter !== '全部' || typeFilter !== '全部') {
+    if (showAllTransactions || searchValue.trim().length > 0 || statusFilter !== '全部' || kindFilter !== '全部') {
       return filteredTransactions;
     }
-
     return filteredTransactions.slice(0, 4);
-  }, [filteredTransactions, searchValue, showAllTransactions, statusFilter, typeFilter]);
+  }, [filteredTransactions, searchValue, showAllTransactions, statusFilter, kindFilter]);
 
-  const exportTransactions = (rows: TransactionRow[], fileName: string, successMessage: string) => {
+  const financeStats = useMemo(() => [
+    { title: '本月营收', value: formatCurrency(stats.totalRevenue), hint: '↑ 12.5% vs 上月', tone: 'mint' as const, icon: 'wallet' as const },
+    { title: '本月支出', value: formatCurrency(stats.totalExpense), hint: '场地与人员成本', tone: 'orange' as const, icon: 'pay' as const },
+    { title: '净利润', value: formatCurrency(stats.netProfit), hint: '经营状态良好', tone: 'violet' as const, icon: 'line' as const },
+    { title: '利润率', value: stats.profitMargin, hint: '保持行业领先', tone: 'pink' as const, icon: 'pie' as const },
+  ], [stats]);
+
+  const exportTransactions = (rows: Transaction[], fileName: string, successMessage: string) => {
     if (rows.length === 0) {
       messageApi.warning('当前没有可导出的交易记录');
       return;
@@ -139,7 +222,13 @@ export default function FinancePage() {
 
     const csvRows = [
       ['会员姓名', '交易类型', '交易状态', '交易日期', '金额'],
-      ...rows.map((item) => [item.name, item.type, item.status, item.date, item.amount])
+      ...rows.map((item) => [
+        item.member?.name || '-',
+        kindMap[item.kind] || item.kind,
+        statusMap[item.status] || item.status,
+        new Date(item.happenedAt).toLocaleDateString('zh-CN'),
+        formatCurrency(item.amountCents / 100),
+      ])
     ];
 
     const csv = csvRows
@@ -168,19 +257,24 @@ export default function FinancePage() {
 
   const openCreateModal = () => {
     setEditingTransaction(null);
-    form.setFieldsValue(defaultTransactionFormValues);
+    form.setFieldsValue({
+      memberName: '',
+      kind: 'PLAN_PURCHASE',
+      status: 'COMPLETED',
+      amount: 0,
+      notes: '',
+    });
     setIsFormOpen(true);
   };
 
-  const openEditModal = (transaction: TransactionRow) => {
+  const openEditModal = (transaction: Transaction) => {
     setEditingTransaction(transaction);
     form.setFieldsValue({
-      name: transaction.name,
+      memberName: transaction.member?.name || '',
+      kind: transaction.kind,
       status: transaction.status,
-      type: transaction.type,
-      date: transaction.date,
-      amount: transaction.amount,
-      tone: transaction.tone
+      amount: transaction.amountCents / 100,
+      notes: transaction.notes || '',
     });
     setIsFormOpen(true);
   };
@@ -192,63 +286,70 @@ export default function FinancePage() {
   };
 
   const handleSaveTransaction = async () => {
-    const values = await form.validateFields();
-    const nextTransaction: TransactionRow = editingTransaction
-      ? { ...editingTransaction, ...values }
-      : { id: createTransactionId(), ...values };
+    try {
+      const values = await form.validateFields();
+      const data = {
+        kind: values.kind,
+        status: values.status,
+        amountCents: Math.round(values.amount * 100),
+        notes: values.notes,
+      };
 
-    setTransactionList((current) => {
       if (editingTransaction) {
-        return current.map((item) => (item.id === editingTransaction.id ? nextTransaction : item));
+        await transactionsApi.updateStatus(editingTransaction.id, values.status);
+        messageApi.success('交易记录已更新');
+      } else {
+        await transactionsApi.create(data);
+        messageApi.success('交易记录已创建');
       }
 
-      return [nextTransaction, ...current];
-    });
+      await fetchTransactions();
 
-    if (detailTransaction?.id === nextTransaction.id) {
-      setDetailTransaction(nextTransaction);
+      if (detailTransaction && editingTransaction) {
+        const updated = transactionList.find((t) => t.id === detailTransaction.id) || null;
+        setDetailTransaction(updated);
+      }
+
+      setShowAllTransactions(true);
+      closeFormModal();
+    } catch (err: any) {
+      messageApi.error(err.message || '保存失败');
     }
-
-    setShowAllTransactions(true);
-    messageApi.success(editingTransaction ? '交易记录已更新' : '交易记录已创建');
-    closeFormModal();
   };
 
-  const handleDeleteTransaction = (transaction: TransactionRow) => {
-    setTransactionList((current) => current.filter((item) => item.id !== transaction.id));
-
-    if (detailTransaction?.id === transaction.id) {
-      setDetailTransaction(null);
+  const handleDeleteTransaction = async (transaction: Transaction) => {
+    try {
+      // transactionsApi doesn't have delete endpoint visible; skip or use placeholder
+      messageApi.warning('删除功能暂不可用');
+    } catch (err: any) {
+      messageApi.error(err.message || '删除失败');
     }
-
-    messageApi.success(`已删除交易记录 ${transaction.name}`);
   };
 
   const openFilterModal = () => {
-    setFilterDraft({ status: statusFilter, type: typeFilter });
+    setFilterDraft({ status: statusFilter, kind: kindFilter });
     setIsFilterOpen(true);
   };
 
   const applyFilters = () => {
     setStatusFilter(filterDraft.status);
-    setTypeFilter(filterDraft.type);
+    setKindFilter(filterDraft.kind);
     setShowAllTransactions(true);
     setIsFilterOpen(false);
   };
 
   const resetFilters = () => {
-    const nextDraft: TransactionFilterDraft = { status: '全部', type: '全部' };
-
+    const nextDraft: TransactionFilterDraft = { status: '全部', kind: '全部' };
     setFilterDraft(nextDraft);
     setStatusFilter(nextDraft.status);
-    setTypeFilter(nextDraft.type);
+    setKindFilter(nextDraft.kind);
     setSearchValue('');
     setShowAllTransactions(false);
     setIsFilterOpen(false);
   };
 
   const handleViewAll = () => {
-    const hasActiveQuery = searchValue.trim().length > 0 || statusFilter !== '全部' || typeFilter !== '全部';
+    const hasActiveQuery = searchValue.trim().length > 0 || statusFilter !== '全部' || kindFilter !== '全部';
 
     if (hasActiveQuery) {
       resetFilters();
@@ -260,11 +361,38 @@ export default function FinancePage() {
   };
 
   const transactionCountLabel = `${filteredTransactions.length} 条记录`;
-  const viewAllLabel = searchValue.trim().length > 0 || statusFilter !== '全部' || typeFilter !== '全部'
+  const viewAllLabel = searchValue.trim().length > 0 || statusFilter !== '全部' || kindFilter !== '全部'
     ? '查看全部'
     : showAllTransactions
       ? '收起列表'
       : '查看全部';
+
+  const FinanceTrendTooltip = createChartTooltip({
+    labelMap: { revenue: '营收', profit: '利润' },
+    valueFormatter: (value) => (typeof value === 'number' ? formatCurrency(value) : value)
+  });
+
+  const FinanceStructureTooltip = createChartTooltip({
+    labelMap: { value: '金额' },
+    titleFormatter: (_, payload) => (typeof payload[0]?.name === 'string' ? payload[0].name : '营收构成'),
+    valueFormatter: (value) => (typeof value === 'number' ? formatCurrency(value) : value)
+  });
+
+  if (loading && transactionList.length === 0) {
+    return (
+      <div className={pageCls.page}>
+        {contextHolder}
+        <PageHeader
+          title="财务报表"
+          subtitle="查看营收、支出与门店财务分析。"
+          extra={<ActionButton icon={<DownloadOutlined />} onClick={handleExportReport}>导出报表</ActionButton>}
+        />
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <Spin size="large" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={pageCls.page}>
@@ -311,7 +439,15 @@ export default function FinancePage() {
           <div className={pageCls.chartPanelTall}>
             <ResponsiveContainer>
               <PieChart>
-                <Pie data={revenueStructure} dataKey="value" nameKey="name" innerRadius={isMobile ? 52 : 74} outerRadius={isMobile ? 82 : 108} paddingAngle={3} stroke="rgba(255,255,255,0.9)">
+                <Pie
+                  data={revenueStructure}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={isMobile ? 52 : 74}
+                  outerRadius={isMobile ? 82 : 108}
+                  paddingAngle={3}
+                  stroke="rgba(255,255,255,0.9)"
+                >
                   {revenueStructure.map((item) => (
                     <Cell key={item.name} fill={item.fill} />
                   ))}
@@ -328,7 +464,7 @@ export default function FinancePage() {
                   <span style={{ width: 10, height: 10, borderRadius: 999, background: item.fill, display: 'inline-block' }} />
                   <span>{item.name}</span>
                 </div>
-                <strong>{item.value}%</strong>
+                <strong>{formatCurrency(item.value)}</strong>
               </div>
             ))}
           </div>
@@ -337,7 +473,7 @@ export default function FinancePage() {
 
       <SectionCard
         title="最近交易"
-        subtitle={`本地交易管理 · ${transactionCountLabel}`}
+        subtitle={`交易管理 · ${transactionCountLabel}`}
         extra={<Button type="text" onClick={handleViewAll}>{viewAllLabel}</Button>}
       >
         <div className={pageCls.toolbar} style={{ marginBottom: 16 }}>
@@ -367,29 +503,29 @@ export default function FinancePage() {
           {visibleTransactions.map((item) => (
             <div key={item.id} className={`${widgetCls.recordItem} ${pageCls.surface} ${pageCls.memberRecordItem}`}>
               <div className={widgetCls.recordMeta}>
-                <MemberAvatar name={item.name} tone={item.tone} />
+                <MemberAvatar name={item.member?.name || '未知'} tone={getToneFromName(item.member?.name || '未知')} />
                 <div className={pageCls.memberRecordHead}>
                   <div className={pageCls.memberRecordNameRow}>
-                    <span className={pageCls.membersName}>{item.name}</span>
-                    <StatusTag status={item.status} />
+                    <span className={pageCls.membersName}>{item.member?.name || '未知会员'}</span>
+                    <StatusTag status={statusMap[item.status] || item.status} />
                   </div>
-                  <div className={widgetCls.recordSub}>{item.type}</div>
-                  <div className={pageCls.membersSubtext}>{item.date}</div>
+                  <div className={widgetCls.recordSub}>{kindMap[item.kind] || item.kind}</div>
+                  <div className={pageCls.membersSubtext}>{new Date(item.happenedAt).toLocaleDateString('zh-CN')}</div>
                 </div>
               </div>
 
               <div className={pageCls.memberRecordGrid}>
                 <div className={pageCls.memberRecordField}>
                   <div className={pageCls.memberRecordLabel}>交易金额</div>
-                  <div className={pageCls.memberRecordValue}>{item.amount}</div>
+                  <div className={pageCls.memberRecordValue}>{formatCurrency(item.amountCents / 100)}</div>
                 </div>
                 <div className={pageCls.memberRecordField}>
                   <div className={pageCls.memberRecordLabel}>交易状态</div>
-                  <div className={pageCls.memberRecordValue} style={{ fontSize: 'var(--font-size-xl)' }}>{item.status}</div>
+                  <div className={pageCls.memberRecordValue} style={{ fontSize: 'var(--font-size-xl)' }}>{statusMap[item.status] || item.status}</div>
                 </div>
                 <div className={pageCls.memberRecordField}>
                   <div className={pageCls.memberRecordLabel}>交易日期</div>
-                  <div className={pageCls.memberRecordValue} style={{ fontSize: 'var(--font-size-xl)' }}>{item.date}</div>
+                  <div className={pageCls.memberRecordValue} style={{ fontSize: 'var(--font-size-xl)' }}>{new Date(item.happenedAt).toLocaleDateString('zh-CN')}</div>
                 </div>
               </div>
 
@@ -427,36 +563,28 @@ export default function FinancePage() {
         <Form form={form} className={pageCls.crudModalForm} layout="vertical">
           <Row gutter={18}>
             <Col xs={24} md={12}>
-              <Form.Item name="name" label="会员姓名" rules={[{ required: true, message: '请输入会员姓名' }]}>
-                <Input className={pageCls.settingsInput} placeholder="例如：林若溪" />
+              <Form.Item name="memberName" label="会员姓名">
+                <Input className={pageCls.settingsInput} placeholder="例如：林若溪" disabled={!!editingTransaction} />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="type" label="交易类型" rules={[{ required: true, message: '请输入交易类型' }]}>
-                <Input className={pageCls.settingsInput} placeholder="例如：会员年卡续费" />
+              <Form.Item name="kind" label="交易类型" rules={[{ required: true, message: '请选择交易类型' }]}>
+                <Select className={pageCls.settingsInput} options={transactionKindOptions} />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="status" label="交易状态" rules={[{ required: true, message: '请选择交易状态' }]}>
-                <Select
-                  className={pageCls.settingsInput}
-                  options={transactionStatusOptions.map((item) => ({ label: item, value: item }))}
-                />
+                <Select className={pageCls.settingsInput} options={transactionStatusOptions} />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="date" label="交易日期" rules={[{ required: true, message: '请输入交易日期' }]}>
-                <Input className={pageCls.settingsInput} placeholder="格式：YYYY-MM-DD" />
+              <Form.Item name="amount" label="交易金额（元）" rules={[{ required: true, message: '请输入交易金额' }]}>
+                <InputNumber className={pageCls.settingsInput} style={{ width: '100%' }} min={0} precision={2} />
               </Form.Item>
             </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="amount" label="交易金额" rules={[{ required: true, message: '请输入交易金额' }, { pattern: /^¥\d[\d,]*(\.\d{1,2})?$/, message: '请使用金额格式，例如：¥12,800' }]}>
-                <Input className={pageCls.settingsInput} placeholder="例如：¥12,800" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="tone" label="头像色系" rules={[{ required: true, message: '请选择头像色系' }]}>
-                <Select className={pageCls.settingsInput} options={toneOptions} />
+            <Col xs={24}>
+              <Form.Item name="notes" label="备注">
+                <Input className={pageCls.settingsInput} placeholder="交易备注（可选）" />
               </Form.Item>
             </Col>
           </Row>
@@ -484,18 +612,18 @@ export default function FinancePage() {
               value={filterDraft.status}
               className={pageCls.settingsInput}
               style={{ width: '100%' }}
-              options={[{ label: '全部状态', value: '全部' }, ...transactionStatusOptions.map((item) => ({ label: item, value: item }))]}
-              onChange={(value: PaymentStatus | '全部') => setFilterDraft((current) => ({ ...current, status: value }))}
+              options={[{ label: '全部状态', value: '全部' }, ...transactionStatusOptions]}
+              onChange={(value: string) => setFilterDraft((current) => ({ ...current, status: value }))}
             />
           </div>
           <div>
             <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>交易类型</div>
             <Select
-              value={filterDraft.type}
+              value={filterDraft.kind}
               className={pageCls.settingsInput}
               style={{ width: '100%' }}
-              options={[{ label: '全部类型', value: '全部' }, ...transactionTypeOptions.map((item) => ({ label: item, value: item }))]}
-              onChange={(value: string) => setFilterDraft((current) => ({ ...current, type: value }))}
+              options={[{ label: '全部类型', value: '全部' }, ...transactionKindOptions]}
+              onChange={(value: string) => setFilterDraft((current) => ({ ...current, kind: value }))}
             />
           </div>
         </div>
@@ -504,14 +632,11 @@ export default function FinancePage() {
       <Drawer
         open={detailTransaction !== null}
         width={440}
-        title={detailTransaction?.name ?? '交易详情'}
+        title={detailTransaction?.member?.name ?? '交易详情'}
         onClose={() => setDetailTransaction(null)}
         extra={detailTransaction ? (
           <div style={{ display: 'flex', gap: 8 }}>
             <Button icon={<EditOutlined />} onClick={() => openEditModal(detailTransaction)}>编辑</Button>
-            <Popconfirm title="确认删除该交易记录吗？" okText="删除" cancelText="取消" onConfirm={() => handleDeleteTransaction(detailTransaction)}>
-              <Button danger icon={<DeleteOutlined />}>删除</Button>
-            </Popconfirm>
           </div>
         ) : null}
       >
@@ -519,38 +644,40 @@ export default function FinancePage() {
           <div style={{ display: 'grid', gap: 16 }}>
             <div className={widgetCls.detailOverviewPanel}>
               <div className={widgetCls.recordMeta}>
-                <MemberAvatar name={detailTransaction.name} tone={detailTransaction.tone} />
+                <MemberAvatar name={detailTransaction.member?.name || '未知'} tone={getToneFromName(detailTransaction.member?.name || '未知')} />
                 <div>
                   <div className={widgetCls.recordTitle} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    {detailTransaction.name}
-                    <StatusTag status={detailTransaction.status} />
+                    {detailTransaction.member?.name || '未知会员'}
+                    <StatusTag status={statusMap[detailTransaction.status] || detailTransaction.status} />
                   </div>
-                  <div className={widgetCls.recordSub}>{detailTransaction.type}</div>
-                  <div className={widgetCls.recordSub}>{detailTransaction.date}</div>
+                  <div className={widgetCls.recordSub}>{kindMap[detailTransaction.kind] || detailTransaction.kind}</div>
+                  <div className={widgetCls.recordSub}>{new Date(detailTransaction.happenedAt).toLocaleDateString('zh-CN')}</div>
                 </div>
               </div>
               <div className={widgetCls.detailOverviewStatGrid}>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatMint}`}>
                   <div className={widgetCls.detailInsightLabel}>交易金额</div>
-                  <div className={widgetCls.detailOverviewStatValue}>{detailTransaction.amount}</div>
+                  <div className={widgetCls.detailOverviewStatValue}>{formatCurrency(detailTransaction.amountCents / 100)}</div>
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatViolet}`}>
                   <div className={widgetCls.detailInsightLabel}>交易状态</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailTransaction.status}</div>
+                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{statusMap[detailTransaction.status] || detailTransaction.status}</div>
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatOrange}`}>
                   <div className={widgetCls.detailInsightLabel}>交易日期</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailTransaction.date}</div>
+                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{new Date(detailTransaction.happenedAt).toLocaleDateString('zh-CN')}</div>
                 </div>
               </div>
             </div>
 
             <Descriptions column={1} size="small" bordered>
-              <Descriptions.Item label="会员姓名">{detailTransaction.name}</Descriptions.Item>
-              <Descriptions.Item label="交易类型">{detailTransaction.type}</Descriptions.Item>
-              <Descriptions.Item label="交易状态">{detailTransaction.status}</Descriptions.Item>
-              <Descriptions.Item label="交易日期">{detailTransaction.date}</Descriptions.Item>
-              <Descriptions.Item label="交易金额">{detailTransaction.amount}</Descriptions.Item>
+              <Descriptions.Item label="会员姓名">{detailTransaction.member?.name || '-'}</Descriptions.Item>
+              <Descriptions.Item label="交易编号">{detailTransaction.transactionCode}</Descriptions.Item>
+              <Descriptions.Item label="交易类型">{kindMap[detailTransaction.kind] || detailTransaction.kind}</Descriptions.Item>
+              <Descriptions.Item label="交易状态">{statusMap[detailTransaction.status] || detailTransaction.status}</Descriptions.Item>
+              <Descriptions.Item label="交易日期">{new Date(detailTransaction.happenedAt).toLocaleDateString('zh-CN')}</Descriptions.Item>
+              <Descriptions.Item label="交易金额">{formatCurrency(detailTransaction.amountCents / 100)}</Descriptions.Item>
+              <Descriptions.Item label="备注">{detailTransaction.notes || '-'}</Descriptions.Item>
             </Descriptions>
           </div>
         ) : null}

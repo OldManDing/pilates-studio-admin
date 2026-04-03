@@ -1,0 +1,33 @@
+# ============================================
+# Pilates Studio - Development Docker Compose
+# ============================================
+# Usage: docker-compose -f docker-compose.dev.yml up -d
+#
+# This only starts MySQL for local development.
+# Run backend locally with: npm run dev
+# ============================================
+
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: pilates-mysql-dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: pilates_studio
+      MYSQL_USER: pilates
+      MYSQL_PASSWORD: pilates123
+    volumes:
+      - mysql_dev_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql_dev_data:

@@ -10,9 +10,10 @@ type Props = {
   htmlType?: 'button' | 'submit' | 'reset';
   onClick?: () => void;
   disabled?: boolean;
+  loading?: boolean;
 };
 
-const ActionButton: FC<Props> = ({ children, icon, ghost, text, htmlType = 'button', onClick, disabled }) => (
+const ActionButton: FC<Props> = ({ children, icon, ghost, text, htmlType = 'button', onClick, disabled, loading }) => (
   <Button
     className={cls.button}
     icon={icon}
@@ -20,6 +21,7 @@ const ActionButton: FC<Props> = ({ children, icon, ghost, text, htmlType = 'butt
     htmlType={htmlType}
     onClick={onClick}
     disabled={disabled}
+    loading={loading}
     type={text ? 'text' : ghost ? 'default' : 'primary'}
   >
     {children}

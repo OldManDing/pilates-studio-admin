@@ -1,0 +1,319 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum AdminRoleCode {
+  OWNER
+  FRONTDESK
+  COACH
+  FINANCE
+}
+
+enum MemberStatus {
+  ACTIVE
+  PENDING
+  EXPIRED
+  SUSPENDED
+}
+
+enum CoachStatus {
+  ACTIVE
+  ON_LEAVE
+  INACTIVE
+}
+
+enum MiniUserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum MembershipPlanCategory {
+  TIME_CARD
+  PERIOD_CARD
+  PRIVATE_PACKAGE
+}
+
+enum BookingSource {
+  ADMIN
+  MINI_PROGRAM
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum AttendanceStatus {
+  PENDING
+  CHECKED_IN
+  COMPLETED
+  ABSENT
+  CANCELLED
+}
+
+enum TransactionKind {
+  MEMBERSHIP_PURCHASE
+  MEMBERSHIP_RENEWAL
+  CLASS_PACKAGE_PURCHASE
+  PRIVATE_CLASS_PURCHASE
+  REFUND
+  ADJUSTMENT
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum NotificationChannel {
+  SMS
+  EMAIL
+  MINI_PROGRAM
+  INTERNAL
+}
+
+model AdminUser {
+  id             String        @id @default(cuid())
+  email          String        @unique
+  phone          String?       @unique
+  passwordHash   String
+  displayName    String
+  roleId         String
+  role           Role          @relation(fields: [roleId], references: [id])
+  refreshTokens  RefreshToken[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model RefreshToken {
+  id          String    @id @default(cuid())
+  adminUserId String
+  adminUser   AdminUser @relation(fields: [adminUserId], references: [id])
+  tokenHash   String
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  code        AdminRoleCode    @unique
+  name        String
+  description String?
+  admins      AdminUser[]
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  module      String
+  action      String
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+}
+
+model MiniUser {
+  id             String         @id @default(cuid())
+  openId         String         @unique
+  unionId        String?        @unique
+  nickname       String?
+  avatarUrl      String?
+  phone          String?
+  status         MiniUserStatus @default(ACTIVE)
+  member         Member?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model MembershipPlan {
+  id             String                 @id @default(cuid())
+  code           String                 @unique
+  name           String
+  category       MembershipPlanCategory
+  durationDays   Int?
+  totalCredits   Int?
+  priceCents     Int
+  description    String?
+  isActive       Boolean                @default(true)
+  members        Member[]
+  transactions   Transaction[]
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+}
+
+model Member {
+  id               String            @id @default(cuid())
+  memberCode       String            @unique
+  name             String
+  phone            String            @unique
+  email            String?
+  status           MemberStatus      @default(ACTIVE)
+  joinedAt         DateTime
+  remainingCredits Int               @default(0)
+  planId           String?
+  plan             MembershipPlan?   @relation(fields: [planId], references: [id])
+  miniUserId       String?           @unique
+  miniUser         MiniUser?         @relation(fields: [miniUserId], references: [id])
+  bookings         Booking[]
+  attendance       Attendance[]
+  transactions     Transaction[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+}
+
+model Coach {
+  id            String        @id @default(cuid())
+  coachCode     String        @unique
+  name          String
+  phone         String        @unique
+  email         String?
+  status        CoachStatus   @default(ACTIVE)
+  experience    String?
+  rating        Decimal?      @db.Decimal(3, 2)
+  bio           String?       @db.Text
+  specialties   CoachTag[]
+  certificates  CoachCertificate[]
+  courses       Course[]
+  sessions      CourseSession[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model CoachTag {
+  id       String @id @default(cuid())
+  coachId  String
+  coach    Coach  @relation(fields: [coachId], references: [id])
+  value    String
+}
+
+model CoachCertificate {
+  id       String @id @default(cuid())
+  coachId  String
+  coach    Coach  @relation(fields: [coachId], references: [id])
+  value    String
+}
+
+model Course {
+  id              String          @id @default(cuid())
+  courseCode      String          @unique
+  name            String
+  type            String
+  level           String
+  durationMinutes Int
+  capacity        Int
+  coachId         String?
+  coach           Coach?          @relation(fields: [coachId], references: [id])
+  isActive        Boolean         @default(true)
+  sessions        CourseSession[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model CourseSession {
+  id          String       @id @default(cuid())
+  sessionCode String       @unique
+  courseId    String
+  course      Course       @relation(fields: [courseId], references: [id])
+  coachId     String
+  coach       Coach        @relation(fields: [coachId], references: [id])
+  startsAt    DateTime
+  endsAt      DateTime
+  capacity    Int
+  bookedCount Int          @default(0)
+  location    String?
+  bookings    Booking[]
+  attendance  Attendance[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Booking {
+  id          String        @id @default(cuid())
+  bookingCode String        @unique
+  memberId    String
+  member      Member        @relation(fields: [memberId], references: [id])
+  sessionId   String
+  session     CourseSession @relation(fields: [sessionId], references: [id])
+  source      BookingSource @default(ADMIN)
+  status      BookingStatus @default(PENDING)
+  bookedAt    DateTime
+  attendance  Attendance?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Attendance {
+  id          String           @id @default(cuid())
+  bookingId   String           @unique
+  booking     Booking          @relation(fields: [bookingId], references: [id])
+  memberId    String
+  member      Member           @relation(fields: [memberId], references: [id])
+  sessionId   String
+  session     CourseSession    @relation(fields: [sessionId], references: [id])
+  status      AttendanceStatus @default(PENDING)
+  checkedInAt DateTime?
+  completedAt DateTime?
+  notes       String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Transaction {
+  id              String            @id @default(cuid())
+  transactionCode String            @unique
+  memberId        String?
+  member          Member?           @relation(fields: [memberId], references: [id])
+  planId          String?
+  plan            MembershipPlan?   @relation(fields: [planId], references: [id])
+  kind            TransactionKind
+  status          TransactionStatus @default(PENDING)
+  amountCents     Int
+  happenedAt      DateTime
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model StudioSetting {
+  id            String   @id @default(cuid())
+  studioName    String
+  phone         String
+  email         String
+  businessHours String
+  address       String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model NotificationSetting {
+  id          String              @id @default(cuid())
+  key         String              @unique
+  title       String
+  description String?
+  channel     NotificationChannel
+  enabled     Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}

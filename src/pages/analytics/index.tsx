@@ -1,5 +1,6 @@
 import { HeartOutlined, RiseOutlined, SmileOutlined } from '@ant-design/icons';
-import { Progress } from 'antd';
+import { Progress, Spin } from 'antd';
+import { useEffect, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { createChartTooltip } from '@/components/ChartTooltip';
 import PageHeader from '@/components/PageHeader';
@@ -7,7 +8,9 @@ import SectionCard from '@/components/SectionCard';
 import StatCard from '@/components/StatCard';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
-import { analyticsStats, bookingDistribution, peakPeriodData, popularityData, radarData, retentionData } from '@/mock';
+import { popularityData, radarData, bookingDistribution, retentionData, peakPeriodData } from '@/mock';
+import { reportsApi } from '@/services/reports';
+import { bookingsApi } from '@/services/bookings';
 import { useIsMobile } from '@/utils/useResponsive';
 
 const chartGrid = 'rgba(148, 163, 184, 0.14)';
@@ -55,6 +58,67 @@ const iconMap = {
 
 export default function AnalyticsPage() {
   const isMobile = useIsMobile();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    goalAchievement: '112%',
+    retentionRate: '94.2%',
+    avgOccupancy: '87.3%',
+    satisfaction: '4.8 / 5',
+  });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const to = new Date().toISOString().split('T')[0];
+
+        const [membersReport, bookingsReport] = await Promise.all([
+          reportsApi.getMembers().catch(() => null),
+          reportsApi.getBookings(from, to).catch(() => null),
+        ]);
+
+        // Calculate derived metrics
+        const totalMembers = membersReport?.totalMembers || 0;
+        const activeMembers = membersReport?.activeMembers || 0;
+        const retentionRate = totalMembers > 0 ? ((activeMembers / totalMembers) * 100).toFixed(1) : '0';
+
+        const totalBookings = bookingsReport?.totalBookings || 0;
+        const confirmedBookings = bookingsReport?.confirmedBookings || 0;
+        const occupancyRate = totalBookings > 0 ? ((confirmedBookings / totalBookings) * 100).toFixed(1) : '0';
+
+        setStats({
+          goalAchievement: '112%',
+          retentionRate: `${retentionRate}%`,
+          avgOccupancy: `${occupancyRate}%`,
+          satisfaction: '4.8 / 5',
+        });
+      } catch (err) {
+        // ignore
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const analyticsStats = [
+    { title: '目标达成率', value: stats.goalAchievement, hint: '超额完成月度目标', tone: 'mint' as const, icon: 'target' as const },
+    { title: '会员留存率', value: stats.retentionRate, hint: '↑ 1.8% 环比', tone: 'violet' as const, icon: 'retention' as const },
+    { title: '平均上座率', value: stats.avgOccupancy, hint: '高峰时段表现突出', tone: 'orange' as const, icon: 'seat' as const },
+    { title: '整体满意度', value: stats.satisfaction, hint: '基于会员问卷', tone: 'pink' as const, icon: 'smile' as const },
+  ];
+
+  if (loading) {
+    return (
+      <div className={pageCls.page}>
+        <PageHeader title="数据分析" subtitle="深度洞察业务数据和运营指标。" />
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <Spin size="large" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={pageCls.page}>

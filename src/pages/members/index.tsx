@@ -1,16 +1,19 @@
 import { DeleteOutlined, DownloadOutlined, EditOutlined, FilterOutlined, PlusOutlined, SearchOutlined, TeamOutlined, ThunderboltOutlined, UserAddOutlined, WarningOutlined } from '@ant-design/icons';
-import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, message } from 'antd';
-import { useMemo, useState } from 'react';
+import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Pagination, Popconfirm, Row, Select, Spin, message } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
 import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
 import StatusTag from '@/components/StatusTag';
-import { membersStats, membersTable } from '@/mock';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import type { MemberStatus } from '@/types';
+import { membersApi, type Member } from '@/services/members';
+import { membershipPlansApi, type MembershipPlan } from '@/services/membershipPlans';
+import { reportsApi } from '@/services/reports';
+import type { AccentTone } from '@/types';
 
 const iconMap = {
   team: <TeamOutlined />,
@@ -19,51 +22,105 @@ const iconMap = {
   alert: <WarningOutlined />
 };
 
-type MemberRow = (typeof membersTable)[number];
-type MemberTone = MemberRow['tone'];
-type MemberFormValues = Omit<MemberRow, 'key'>;
+type MemberFormValues = {
+  name: string;
+  phone: string;
+  email?: string;
+  planId?: string;
+  status: MemberStatus;
+  remainingCredits: number;
+};
+
 type MemberFilterDraft = {
   status: MemberStatus | '全部';
-  membership: string;
+  planId: string;
 };
-
-const defaultMemberFormValues: MemberFormValues = {
-  name: '',
-  phone: '',
-  email: '',
-  membership: membersTable[0]?.membership ?? '年卡会员',
-  status: '正常',
-  remaining: 0,
-  joinedAt: '2026-04-02',
-  tone: 'mint'
-};
-
-const toneOptions: Array<{ label: string; value: MemberTone }> = [
-  { label: '薄荷绿', value: 'mint' },
-  { label: '柔雾紫', value: 'violet' },
-  { label: '暖日橙', value: 'orange' },
-  { label: '轻粉色', value: 'pink' }
-];
 
 const memberStatusOptions: MemberStatus[] = ['正常', '待激活', '已过期'];
 
-const membershipOptions = Array.from(new Set(membersTable.map((item) => item.membership)));
+const getToneFromName = (name: string): AccentTone => {
+  const tones: AccentTone[] = ['mint', 'violet', 'orange', 'pink'];
+  const charSum = name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return tones[charSum % tones.length];
+};
 
-const createMemberKey = () => `member-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const CRUD_MODAL_WIDTH = 780;
 
 export default function MembersPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm<MemberFormValues>();
-  const [members, setMembers] = useState<MemberRow[]>(membersTable);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState('');
   const [statusFilter, setStatusFilter] = useState<MemberStatus | '全部'>('全部');
-  const [membershipFilter, setMembershipFilter] = useState<string>('全部');
+  const [planFilter, setPlanFilter] = useState<string>('全部');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [filterDraft, setFilterDraft] = useState<MemberFilterDraft>({ status: '全部', membership: '全部' });
+  const [filterDraft, setFilterDraft] = useState<MemberFilterDraft>({ status: '全部', planId: '全部' });
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingMember, setEditingMember] = useState<MemberRow | null>(null);
-  const [detailMember, setDetailMember] = useState<MemberRow | null>(null);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [detailMember, setDetailMember] = useState<Member | null>(null);
+  const [membershipPlans, setMembershipPlans] = useState<MembershipPlan[]>([]);
+  const [stats, setStats] = useState({
+    totalMembers: 0,
+    activeMembers: 0,
+    newMembersThisMonth: 0,
+    expiringSoonCount: 23, // 这个字段后端暂时没有，先用固定值
+  });
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+
+  // Fetch stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const data = await reportsApi.getMembers();
+        setStats({
+          totalMembers: data.totalMembers,
+          activeMembers: data.activeMembers,
+          newMembersThisMonth: data.newMembersThisMonth,
+          expiringSoonCount: 23,
+        });
+      } catch (err) {
+        // ignore
+      }
+    };
+    fetchStats();
+  }, []);
+
+  // Fetch membership plans
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const plans = await membershipPlansApi.getAll();
+        setMembershipPlans(plans);
+      } catch (err) {
+        // ignore
+      }
+    };
+    fetchPlans();
+  }, []);
+
+  // Fetch members
+  const fetchMembers = async (page = 1) => {
+    try {
+      setLoading(true);
+      const response = await membersApi.getAll(page, pageSize);
+      setMembers(response.data);
+      setTotal(response.meta.total);
+      setCurrentPage(response.meta.page);
+    } catch {
+      messageApi.error('获取会员列表失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMembers(1);
+  }, []);
 
   const filteredMembers = useMemo(() => {
     const keyword = searchValue.trim().toLowerCase();
@@ -73,31 +130,48 @@ export default function MembersPage() {
         keyword.length === 0 ||
         member.name.toLowerCase().includes(keyword) ||
         member.phone.toLowerCase().includes(keyword) ||
-        member.email.toLowerCase().includes(keyword);
+        (member.email?.toLowerCase().includes(keyword) ?? false);
       const matchesStatus = statusFilter === '全部' || member.status === statusFilter;
-      const matchesMembership = membershipFilter === '全部' || member.membership === membershipFilter;
+      const matchesPlan = planFilter === '全部' || member.plan?.id === planFilter;
 
-      return matchesKeyword && matchesStatus && matchesMembership;
+      return matchesKeyword && matchesStatus && matchesPlan;
     });
-  }, [members, membershipFilter, searchValue, statusFilter]);
+  }, [members, planFilter, searchValue, statusFilter]);
+
+  const membersStats = useMemo(() => [
+    { title: '总会员数', value: String(stats.totalMembers), hint: '↑ 7.2% 环比增长', tone: 'mint' as const, icon: 'team' as const },
+    { title: '活跃会员', value: String(stats.activeMembers), hint: `活跃率 ${stats.totalMembers ? ((stats.activeMembers / stats.totalMembers) * 100).toFixed(1) : 0}%`, tone: 'violet' as const, icon: 'flash' as const },
+    { title: '本月新增', value: String(stats.newMembersThisMonth), hint: '较上月新增', tone: 'pink' as const, icon: 'plus' as const },
+    { title: '即将到期', value: String(stats.expiringSoonCount), hint: '需跟进续费', tone: 'orange' as const, icon: 'alert' as const },
+  ], [stats]);
+
+  const planOptions = useMemo(() =>
+    Array.from(new Set(membershipPlans.map((plan) => plan.name))),
+    [membershipPlans]
+  );
 
   const openCreateModal = () => {
     setEditingMember(null);
-    form.setFieldsValue(defaultMemberFormValues);
+    form.setFieldsValue({
+      name: '',
+      phone: '',
+      email: '',
+      planId: undefined,
+      status: '正常',
+      remainingCredits: 0,
+    });
     setIsFormOpen(true);
   };
 
-  const openEditModal = (member: MemberRow) => {
+  const openEditModal = (member: Member) => {
     setEditingMember(member);
     form.setFieldsValue({
       name: member.name,
       phone: member.phone,
       email: member.email,
-      membership: member.membership,
+      planId: member.plan?.id,
       status: member.status,
-      remaining: member.remaining,
-      joinedAt: member.joinedAt,
-      tone: member.tone
+      remainingCredits: member.remainingCredits,
     });
     setIsFormOpen(true);
   };
@@ -110,34 +184,35 @@ export default function MembersPage() {
 
   const handleSaveMember = async () => {
     const values = await form.validateFields();
-    const nextMember: MemberRow = editingMember
-      ? { ...editingMember, ...values }
-      : { key: createMemberKey(), ...values };
 
-    setMembers((current) => {
+    try {
       if (editingMember) {
-        return current.map((member) => (member.key === editingMember.key ? nextMember : member));
+        await membersApi.update(editingMember.id, values);
+        messageApi.success('会员信息已更新');
+      } else {
+        await membersApi.create(values);
+        messageApi.success('新会员已添加');
       }
-
-      return [nextMember, ...current];
-    });
-
-    if (detailMember?.key === nextMember.key) {
-      setDetailMember(nextMember);
+      await fetchMembers(currentPage);
+      closeFormModal();
+    } catch (err: any) {
+      messageApi.error(err.message || '保存失败');
     }
-
-    messageApi.success(editingMember ? '会员信息已更新' : '新会员已添加');
-    closeFormModal();
   };
 
-  const handleDeleteMember = (member: MemberRow) => {
-    setMembers((current) => current.filter((item) => item.key !== member.key));
+  const handleDeleteMember = async (member: Member) => {
+    try {
+      await membersApi.delete(member.id);
+      await fetchMembers(currentPage);
 
-    if (detailMember?.key === member.key) {
-      setDetailMember(null);
+      if (detailMember?.id === member.id) {
+        setDetailMember(null);
+      }
+
+      messageApi.success(`已删除会员 ${member.name}`);
+    } catch (err: any) {
+      messageApi.error(err.message || '删除失败');
     }
-
-    messageApi.success(`已删除会员 ${member.name}`);
   };
 
   const handleExportMembers = () => {
@@ -151,11 +226,11 @@ export default function MembersPage() {
       ...filteredMembers.map((member) => [
         member.name,
         member.phone,
-        member.email,
-        member.membership,
+        member.email || '',
+        member.plan?.name || '-',
         member.status,
-        String(member.remaining),
-        member.joinedAt
+        String(member.remainingCredits),
+        new Date(member.joinedAt).toLocaleDateString('zh-CN'),
       ])
     ];
 
@@ -176,24 +251,52 @@ export default function MembersPage() {
   };
 
   const openFilterModal = () => {
-    setFilterDraft({ status: statusFilter, membership: membershipFilter });
+    setFilterDraft({ status: statusFilter, planId: planFilter });
     setIsFilterOpen(true);
   };
 
   const applyFilters = () => {
     setStatusFilter(filterDraft.status);
-    setMembershipFilter(filterDraft.membership);
+    setPlanFilter(filterDraft.planId);
     setIsFilterOpen(false);
   };
 
   const resetFilters = () => {
-    const nextDraft: MemberFilterDraft = { status: '全部', membership: '全部' };
+    const nextDraft: MemberFilterDraft = { status: '全部', planId: '全部' };
 
     setFilterDraft(nextDraft);
     setStatusFilter(nextDraft.status);
-    setMembershipFilter(nextDraft.membership);
+    setPlanFilter(nextDraft.planId);
     setIsFilterOpen(false);
   };
+
+  const handlePageChange = (page: number) => {
+    fetchMembers(page);
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleDateString('zh-CN');
+    } catch {
+      return dateStr;
+    }
+  };
+
+  if (loading && members.length === 0) {
+    return (
+      <div className={`${pageCls.page} ${pageCls.workPage}`}>
+        {contextHolder}
+        <PageHeader
+          title="会员管理"
+          subtitle="管理所有会员信息和会籍状态。"
+          extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增会员</ActionButton>}
+        />
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <Spin size="large" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`${pageCls.page} ${pageCls.workPage}`}>
@@ -228,44 +331,55 @@ export default function MembersPage() {
       </div>
 
       {filteredMembers.length ? (
-        <div className={`${widgetCls.recordList} ${pageCls.workSection}`}>
-          {filteredMembers.map((member) => (
-            <div key={member.key} className={`${widgetCls.recordItem} ${widgetCls.workRecordItem} ${pageCls.surface} ${pageCls.memberRecordItem}`}>
-              <div className={widgetCls.recordMeta}>
-                <MemberAvatar name={member.name} tone={member.tone} />
-                <div className={pageCls.memberRecordHead}>
-                  <div className={pageCls.memberRecordNameRow}>
-                    <span className={pageCls.membersName}>{member.name}</span>
-                    <StatusTag status={member.status} />
+        <>
+          <div className={`${widgetCls.recordList} ${pageCls.workSection}`}>
+            {filteredMembers.map((member) => (
+              <div key={member.id} className={`${widgetCls.recordItem} ${widgetCls.workRecordItem} ${pageCls.surface} ${pageCls.memberRecordItem}`}>
+                <div className={widgetCls.recordMeta}>
+                  <MemberAvatar name={member.name} tone={getToneFromName(member.name)} />
+                  <div className={pageCls.memberRecordHead}>
+                    <div className={pageCls.memberRecordNameRow}>
+                      <span className={pageCls.membersName}>{member.name}</span>
+                      <StatusTag status={member.status} />
+                    </div>
+                    <div className={widgetCls.recordSub}>{member.phone}</div>
+                    <div className={pageCls.membersSubtext}>{member.email || '-'}</div>
                   </div>
-                  <div className={widgetCls.recordSub}>{member.phone}</div>
-                  <div className={pageCls.membersSubtext}>{member.email}</div>
                 </div>
-              </div>
 
-              <div className={pageCls.memberRecordGrid}>
-                <div className={pageCls.memberRecordField}>
-                  <div className={pageCls.memberRecordLabel}>会籍类型</div>
-                  <div className={pageCls.memberRecordValue}>{member.membership}</div>
+                <div className={pageCls.memberRecordGrid}>
+                  <div className={pageCls.memberRecordField}>
+                    <div className={pageCls.memberRecordLabel}>会籍类型</div>
+                    <div className={pageCls.memberRecordValue}>{member.plan?.name || '-'}</div>
+                  </div>
+                  <div className={pageCls.memberRecordField}>
+                    <div className={pageCls.memberRecordLabel}>加入日期</div>
+                    <div className={pageCls.memberRecordValue}>{formatDate(member.joinedAt)}</div>
+                  </div>
+                  <div className={pageCls.memberRecordField}>
+                    <div className={pageCls.memberRecordLabel}>剩余课时</div>
+                    <div className={pageCls.memberRecordValue}>{member.remainingCredits} 节</div>
+                  </div>
                 </div>
-                <div className={pageCls.memberRecordField}>
-                  <div className={pageCls.memberRecordLabel}>加入日期</div>
-                  <div className={pageCls.memberRecordValue}>{member.joinedAt}</div>
-                </div>
-                <div className={pageCls.memberRecordField}>
-                  <div className={pageCls.memberRecordLabel}>剩余课时</div>
-                  <div className={pageCls.memberRecordValue}>{member.remaining} 节</div>
-                </div>
-              </div>
 
-              <div className={widgetCls.detailActionGroup}>
-                <div className={pageCls.memberRemainingBadge}>剩余课时 {member.remaining} 节</div>
-                <Button size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={() => openEditModal(member)}>编辑</Button>
-                <Button size="large" className={pageCls.cardActionHalf} onClick={() => setDetailMember(member)}>查看详情</Button>
+                <div className={widgetCls.detailActionGroup}>
+                  <div className={pageCls.memberRemainingBadge}>剩余课时 {member.remainingCredits} 节</div>
+                  <Button size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={() => openEditModal(member)}>编辑</Button>
+                  <Button size="large" className={pageCls.cardActionHalf} onClick={() => setDetailMember(member)}>查看详情</Button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 24 }}>
+            <Pagination
+              current={currentPage}
+              pageSize={pageSize}
+              total={total}
+              onChange={handlePageChange}
+              showSizeChanger={false}
+            />
+          </div>
+        </>
       ) : (
         <div className={`${pageCls.surface} ${widgetCls.detailCard}`} style={{ marginTop: 16 }}>
           <EmptyState title="暂无符合条件的会员" description="试试调整搜索词或清空筛选条件，也可以直接新增会员。" actionText="清空筛选" onAction={() => { setSearchValue(''); resetFilters(); }} />
@@ -296,15 +410,17 @@ export default function MembersPage() {
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="email" label="邮箱" rules={[{ required: true, message: '请输入邮箱' }, { type: 'email', message: '请输入有效邮箱地址' }]}>
+              <Form.Item name="email" label="邮箱" rules={[{ type: 'email', message: '请输入有效邮箱地址' }]}>
                 <Input className={pageCls.settingsInput} placeholder="例如：member@demo.com" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="membership" label="会籍类型" rules={[{ required: true, message: '请选择会籍类型' }]}>
+              <Form.Item name="planId" label="会籍类型">
                 <Select
                   className={pageCls.settingsInput}
-                  options={membershipOptions.map((item) => ({ label: item, value: item }))}
+                  placeholder="请选择会籍类型"
+                  options={membershipPlans.map((plan) => ({ label: plan.name, value: plan.id }))}
+                  allowClear
                 />
               </Form.Item>
             </Col>
@@ -317,18 +433,8 @@ export default function MembersPage() {
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="remaining" label="剩余课时" rules={[{ required: true, message: '请输入剩余课时' }]}>
+              <Form.Item name="remainingCredits" label="剩余课时" rules={[{ required: true, message: '请输入剩余课时' }]}>
                 <InputNumber className={pageCls.settingsInput} style={{ width: '100%' }} min={0} precision={0} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="joinedAt" label="加入日期" rules={[{ required: true, message: '请输入加入日期' }]}>
-                <Input className={pageCls.settingsInput} placeholder="格式：YYYY-MM-DD" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="tone" label="头像色系" rules={[{ required: true, message: '请选择头像色系' }]}>
-                <Select className={pageCls.settingsInput} options={toneOptions} />
               </Form.Item>
             </Col>
           </Row>
@@ -363,11 +469,11 @@ export default function MembersPage() {
           <div>
             <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>会籍类型</div>
             <Select
-              value={filterDraft.membership}
+              value={filterDraft.planId}
               className={pageCls.settingsInput}
               style={{ width: '100%' }}
-              options={[{ label: '全部会籍', value: '全部' }, ...membershipOptions.map((item) => ({ label: item, value: item }))]}
-              onChange={(value: string) => setFilterDraft((current) => ({ ...current, membership: value }))}
+              options={[{ label: '全部会籍', value: '全部' }, ...membershipPlans.map((plan) => ({ label: plan.name, value: plan.id }))]}
+              onChange={(value: string) => setFilterDraft((current) => ({ ...current, planId: value }))}
             />
           </div>
         </div>
@@ -391,28 +497,28 @@ export default function MembersPage() {
           <div style={{ display: 'grid', gap: 16 }}>
             <div className={widgetCls.detailOverviewPanel}>
               <div className={widgetCls.recordMeta}>
-                <MemberAvatar name={detailMember.name} tone={detailMember.tone} />
+                <MemberAvatar name={detailMember.name} tone={getToneFromName(detailMember.name)} />
                 <div>
                   <div className={widgetCls.recordTitle} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     {detailMember.name}
                     <StatusTag status={detailMember.status} />
                   </div>
                   <div className={widgetCls.recordSub}>{detailMember.phone}</div>
-                  <div className={widgetCls.recordSub}>{detailMember.email}</div>
+                  <div className={widgetCls.recordSub}>{detailMember.email || '-'}</div>
                 </div>
               </div>
               <div className={widgetCls.detailOverviewStatGrid}>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatMint}`}>
                   <div className={widgetCls.detailInsightLabel}>剩余课时</div>
-                  <div className={widgetCls.detailOverviewStatValue}>{detailMember.remaining} 节</div>
+                  <div className={widgetCls.detailOverviewStatValue}>{detailMember.remainingCredits} 节</div>
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatViolet}`}>
                   <div className={widgetCls.detailInsightLabel}>会籍类型</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailMember.membership}</div>
+                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailMember.plan?.name || '-'}</div>
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatOrange}`}>
                   <div className={widgetCls.detailInsightLabel}>加入日期</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailMember.joinedAt}</div>
+                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{formatDate(detailMember.joinedAt)}</div>
                 </div>
               </div>
             </div>
@@ -420,11 +526,11 @@ export default function MembersPage() {
             <Descriptions column={1} size="small" bordered>
               <Descriptions.Item label="姓名">{detailMember.name}</Descriptions.Item>
               <Descriptions.Item label="手机号">{detailMember.phone}</Descriptions.Item>
-              <Descriptions.Item label="邮箱">{detailMember.email}</Descriptions.Item>
-              <Descriptions.Item label="会籍类型">{detailMember.membership}</Descriptions.Item>
+              <Descriptions.Item label="邮箱">{detailMember.email || '-'}</Descriptions.Item>
+              <Descriptions.Item label="会籍类型">{detailMember.plan?.name || '-'}</Descriptions.Item>
               <Descriptions.Item label="会籍状态">{detailMember.status}</Descriptions.Item>
-              <Descriptions.Item label="剩余课时">{detailMember.remaining} 节</Descriptions.Item>
-              <Descriptions.Item label="加入日期">{detailMember.joinedAt}</Descriptions.Item>
+              <Descriptions.Item label="剩余课时">{detailMember.remainingCredits} 节</Descriptions.Item>
+              <Descriptions.Item label="加入日期">{formatDate(detailMember.joinedAt)}</Descriptions.Item>
             </Descriptions>
           </div>
         ) : null}

@@ -1,15 +1,16 @@
 import { CalendarOutlined, DeleteOutlined, EditOutlined, EyeOutlined, HeartOutlined, PlusOutlined, SearchOutlined, StarOutlined, TeamOutlined } from '@ant-design/icons';
-import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Popconfirm, Row, Select, message } from 'antd';
-import { useMemo, useState } from 'react';
+import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Popconfirm, Row, Select, Spin, message } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
 import StatusTag from '@/components/StatusTag';
-import { coachStats, coaches } from '@/mock';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import type { CoachStatus } from '@/types';
+import { coachesApi, type Coach } from '@/services/coaches';
+import type { AccentTone } from '@/types';
 
 const { TextArea } = Input;
 
@@ -20,64 +21,72 @@ const iconMap = {
   heart: <HeartOutlined />
 };
 
-type CoachRecord = (typeof coaches)[number] & { id: string };
-type CoachTone = CoachRecord['tone'];
 type CoachFormValues = {
   name: string;
   status: CoachStatus;
-  experience: string;
-  rating: string;
+  experience?: string;
   phone: string;
-  email: string;
+  email?: string;
+  bio?: string;
   specialtiesText: string;
   certificatesText: string;
-  totalCourses: string;
-  weeklyCourses: string;
-  tone: CoachTone;
 };
-
-const initialCoaches: CoachRecord[] = coaches.map((coach, index) => ({
-  ...coach,
-  id: `coach-${index + 1}`
-}));
-
-const defaultCoachFormValues: CoachFormValues = {
-  name: '',
-  status: '在职',
-  experience: '3 年经验',
-  rating: '4.8',
-  phone: '',
-  email: '',
-  specialtiesText: '',
-  certificatesText: '',
-  totalCourses: '120 节',
-  weeklyCourses: '10 节',
-  tone: 'mint'
-};
-
-const toneOptions: Array<{ label: string; value: CoachTone }> = [
-  { label: '薄荷绿', value: 'mint' },
-  { label: '柔雾紫', value: 'violet' },
-  { label: '暖日橙', value: 'orange' },
-  { label: '轻粉色', value: 'pink' }
-];
 
 const coachStatusOptions: CoachStatus[] = ['在职', '休假中'];
 
+const getToneFromName = (name: string): AccentTone => {
+  const tones: AccentTone[] = ['mint', 'violet', 'orange', 'pink'];
+  const charSum = name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return tones[charSum % tones.length];
+};
+
 const parseListText = (value: string) => value.split(/\n|,|，/).map((item) => item.trim()).filter(Boolean);
 
-const createCoachId = () => `coach-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const CRUD_MODAL_WIDTH = 780;
 
 export default function CoachesPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm<CoachFormValues>();
-  const [coachList, setCoachList] = useState<CoachRecord[]>(initialCoaches);
+  const [coachList, setCoachList] = useState<Coach[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState('');
   const [statusFilter, setStatusFilter] = useState<CoachStatus | '全部'>('全部');
-  const [editingCoach, setEditingCoach] = useState<CoachRecord | null>(null);
-  const [detailCoach, setDetailCoach] = useState<CoachRecord | null>(null);
+  const [editingCoach, setEditingCoach] = useState<Coach | null>(null);
+  const [detailCoach, setDetailCoach] = useState<Coach | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [stats, setStats] = useState({
+    totalCoaches: 0,
+    activeCoaches: 0,
+    avgRating: '4.8',
+    totalSessions: 0,
+  });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const coachesData = await coachesApi.getAll();
+        setCoachList(coachesData);
+
+        const activeCoaches = coachesData.filter(c => c.status === '在职').length;
+        const avgRating = coachesData.length > 0
+          ? (coachesData.reduce((sum, c) => sum + (c.rating || 0), 0) / coachesData.length).toFixed(1)
+          : '0.0';
+
+        setStats({
+          totalCoaches: coachesData.length,
+          activeCoaches,
+          avgRating,
+          totalSessions: coachesData.reduce((sum, c) => sum + 100, 0), // Placeholder
+        });
+      } catch (err) {
+        messageApi.error('获取教练数据失败');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const filteredCoaches = useMemo(() => {
     const keyword = searchValue.trim().toLowerCase();
@@ -86,7 +95,7 @@ export default function CoachesPage() {
       const matchesKeyword =
         keyword.length === 0 ||
         coach.name.toLowerCase().includes(keyword) ||
-        coach.email.toLowerCase().includes(keyword) ||
+        (coach.email?.toLowerCase().includes(keyword) ?? false) ||
         coach.phone.toLowerCase().includes(keyword);
       const matchesStatus = statusFilter === '全部' || coach.status === statusFilter;
 
@@ -94,26 +103,39 @@ export default function CoachesPage() {
     });
   }, [coachList, searchValue, statusFilter]);
 
+  const coachStats = useMemo(() => [
+    { title: '教练总数', value: String(stats.totalCoaches), hint: `在职 ${stats.activeCoaches} / 休假 ${stats.totalCoaches - stats.activeCoaches}`, tone: 'mint' as const, icon: 'team' as const },
+    { title: '平均评分', value: stats.avgRating, hint: '基于学员评价', tone: 'violet' as const, icon: 'star' as const },
+    { title: '本周课程', value: String(stats.totalSessions), hint: '人均排课', tone: 'orange' as const, icon: 'calendar' as const },
+    { title: '学员满意度', value: '96%', hint: '↑ 1.9% 环比', tone: 'pink' as const, icon: 'heart' as const },
+  ], [stats]);
+
   const openCreateModal = () => {
     setEditingCoach(null);
-    form.setFieldsValue(defaultCoachFormValues);
+    form.setFieldsValue({
+      name: '',
+      status: '在职',
+      phone: '',
+      email: '',
+      experience: '',
+      bio: '',
+      specialtiesText: '',
+      certificatesText: '',
+    });
     setIsFormOpen(true);
   };
 
-  const openEditModal = (coach: CoachRecord) => {
+  const openEditModal = (coach: Coach) => {
     setEditingCoach(coach);
     form.setFieldsValue({
       name: coach.name,
       status: coach.status,
-      experience: coach.experience,
-      rating: coach.rating,
       phone: coach.phone,
       email: coach.email,
-      specialtiesText: coach.specialties.join('\n'),
-      certificatesText: coach.certificates.join('\n'),
-      totalCourses: coach.totalCourses,
-      weeklyCourses: coach.weeklyCourses,
-      tone: coach.tone
+      experience: coach.experience,
+      bio: coach.bio,
+      specialtiesText: coach.specialties?.map(s => s.value).join('\n') || '',
+      certificatesText: coach.certificates?.map(c => c.value).join('\n') || '',
     });
     setIsFormOpen(true);
   };
@@ -125,47 +147,71 @@ export default function CoachesPage() {
   };
 
   const handleSaveCoach = async () => {
-    const values = await form.validateFields();
-    const nextCoach: CoachRecord = {
-      id: editingCoach?.id ?? createCoachId(),
-      name: values.name,
-      status: values.status,
-      experience: values.experience,
-      rating: values.rating,
-      phone: values.phone,
-      email: values.email,
-      specialties: parseListText(values.specialtiesText),
-      certificates: parseListText(values.certificatesText),
-      totalCourses: values.totalCourses,
-      weeklyCourses: values.weeklyCourses,
-      tone: values.tone
-    };
+    try {
+      const values = await form.validateFields();
+      const data = {
+        name: values.name,
+        status: values.status,
+        phone: values.phone,
+        email: values.email,
+        experience: values.experience,
+        bio: values.bio,
+        specialties: parseListText(values.specialtiesText),
+        certificates: parseListText(values.certificatesText),
+      };
 
-    setCoachList((current) => {
       if (editingCoach) {
-        return current.map((coach) => (coach.id === editingCoach.id ? nextCoach : coach));
+        await coachesApi.update(editingCoach.id, data);
+        messageApi.success('教练资料已更新');
+      } else {
+        await coachesApi.create(data);
+        messageApi.success('教练已添加');
       }
 
-      return [nextCoach, ...current];
-    });
+      const refreshed = await coachesApi.getAll();
+      setCoachList(refreshed);
 
-    if (detailCoach?.id === nextCoach.id) {
-      setDetailCoach(nextCoach);
+      if (detailCoach && editingCoach) {
+        const updated = refreshed.find((c) => c.id === detailCoach.id) || null;
+        setDetailCoach(updated);
+      }
+
+      closeFormModal();
+    } catch (err: any) {
+      messageApi.error(err.message || '保存失败');
     }
-
-    messageApi.success(editingCoach ? '教练资料已更新' : '教练已添加');
-    closeFormModal();
   };
 
-  const handleDeleteCoach = (coach: CoachRecord) => {
-    setCoachList((current) => current.filter((item) => item.id !== coach.id));
+  const handleDeleteCoach = async (coach: Coach) => {
+    try {
+      await coachesApi.delete(coach.id);
+      setCoachList((current) => current.filter((item) => item.id !== coach.id));
 
-    if (detailCoach?.id === coach.id) {
-      setDetailCoach(null);
+      if (detailCoach?.id === coach.id) {
+        setDetailCoach(null);
+      }
+
+      messageApi.success(`已删除教练 ${coach.name}`);
+    } catch (err: any) {
+      messageApi.error(err.message || '删除失败');
     }
-
-    messageApi.success(`已删除教练 ${coach.name}`);
   };
+
+  if (loading && coachList.length === 0) {
+    return (
+      <div className={pageCls.page}>
+        {contextHolder}
+        <PageHeader
+          title="教练管理"
+          subtitle="管理教练信息、排班和绩效。"
+          extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增教练</ActionButton>}
+        />
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <Spin size="large" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={pageCls.page}>
@@ -210,27 +256,27 @@ export default function CoachesPage() {
           <div key={coach.id} className={widgetCls.detailCard}>
             <div className={widgetCls.detailHeader}>
               <div className={widgetCls.recordMeta}>
-                <MemberAvatar name={coach.name} tone={coach.tone} />
+                <MemberAvatar name={coach.name} tone={getToneFromName(coach.name)} />
                 <div>
                   <div className={widgetCls.recordTitle} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                     {coach.name}
                     <StatusTag status={coach.status} />
                   </div>
-                  <div className={widgetCls.recordSub}>{coach.experience} · 评分 {coach.rating}</div>
+                  <div className={widgetCls.recordSub}>{coach.experience || '暂无经验信息'} · 评分 {coach.rating || '-'}</div>
                 </div>
               </div>
             </div>
 
             <div className={widgetCls.infoStack}>
               <div>电话：{coach.phone}</div>
-              <div>邮箱：{coach.email}</div>
+              <div>邮箱：{coach.email || '-'}</div>
             </div>
 
             <div style={{ marginTop: 16 }}>
               <div className={widgetCls.smallText}>专长领域</div>
               <div className={widgetCls.chipRow} style={{ marginTop: 8 }}>
-                {coach.specialties.map((item) => (
-                  <span key={item} className={widgetCls.chip}>{item}</span>
+                {coach.specialties?.map((item) => (
+                  <span key={item.value} className={widgetCls.chip}>{item.value}</span>
                 ))}
               </div>
             </div>
@@ -238,24 +284,24 @@ export default function CoachesPage() {
             <div style={{ marginTop: 16 }}>
               <div className={widgetCls.smallText}>资质认证</div>
               <div className={widgetCls.chipRow} style={{ marginTop: 8 }}>
-                {coach.certificates.map((item) => (
-                  <span key={item} className={widgetCls.chip}>{item}</span>
+                {coach.certificates?.map((item) => (
+                  <span key={item.value} className={widgetCls.chip}>{item.value}</span>
                 ))}
               </div>
             </div>
 
             <div className={widgetCls.metricGrid} style={{ marginTop: 18 }}>
               <div className={widgetCls.metricCard}>
-                <div className={widgetCls.metricLabel}>总课程数</div>
-                <div className={widgetCls.metricValue}>{coach.totalCourses}</div>
+                <div className={widgetCls.metricLabel}>评分</div>
+                <div className={widgetCls.metricValue}>{coach.rating || '-'}</div>
               </div>
               <div className={widgetCls.metricCard}>
-                <div className={widgetCls.metricLabel}>本周课程</div>
-                <div className={widgetCls.metricValue}>{coach.weeklyCourses}</div>
+                <div className={widgetCls.metricLabel}>状态</div>
+                <div className={widgetCls.metricValue}>{coach.status}</div>
               </div>
               <div className={widgetCls.metricCard}>
-                <div className={widgetCls.metricLabel}>满意度</div>
-                <div className={widgetCls.metricValue}>{coach.rating}</div>
+                <div className={widgetCls.metricLabel}>电话</div>
+                <div className={widgetCls.metricValue} style={{ fontSize: 12 }}>{coach.phone}</div>
               </div>
             </div>
 
@@ -298,48 +344,33 @@ export default function CoachesPage() {
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="experience" label="经验信息" rules={[{ required: true, message: '请输入经验信息' }]}>
-                <Input className={pageCls.settingsInput} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="rating" label="评分" rules={[{ required: true, message: '请输入评分' }]}>
-                <Input className={pageCls.settingsInput} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
               <Form.Item name="phone" label="电话" rules={[{ required: true, message: '请输入电话' }]}>
                 <Input className={pageCls.settingsInput} />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="email" label="邮箱" rules={[{ required: true, message: '请输入邮箱' }, { type: 'email', message: '请输入有效邮箱地址' }]}>
+              <Form.Item name="email" label="邮箱" rules={[{ type: 'email', message: '请输入有效邮箱地址' }]}>
                 <Input className={pageCls.settingsInput} />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="totalCourses" label="总课程数" rules={[{ required: true, message: '请输入总课程数' }]}>
-                <Input className={pageCls.settingsInput} />
+              <Form.Item name="experience" label="经验信息">
+                <Input className={pageCls.settingsInput} placeholder="例如：5 年经验" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="weeklyCourses" label="本周课程" rules={[{ required: true, message: '请输入本周课程' }]}>
-                <Input className={pageCls.settingsInput} />
+              <Form.Item name="bio" label="个人简介">
+                <Input className={pageCls.settingsInput} placeholder="简短的个人介绍" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="tone" label="头像色系" rules={[{ required: true, message: '请选择头像色系' }]}>
-                <Select className={pageCls.settingsInput} options={toneOptions} />
+              <Form.Item name="specialtiesText" label="专长领域">
+                <TextArea className={pageCls.settingsInput} rows={4} placeholder="每行一个专长领域，例如：Reformer&#10;Mat&#10;Prenatal" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="specialtiesText" label="专长领域" rules={[{ required: true, message: '请输入至少一个专长领域' }]}>
-                <TextArea className={pageCls.settingsInput} rows={4} placeholder="每行一个专长领域" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="certificatesText" label="资质认证" rules={[{ required: true, message: '请输入至少一个资质认证' }]}>
-                <TextArea className={pageCls.settingsInput} rows={4} placeholder="每行一个资质认证" />
+              <Form.Item name="certificatesText" label="资质认证">
+                <TextArea className={pageCls.settingsInput} rows={4} placeholder="每行一个资质认证，例如：BASI Pilates&#10;PMA 认证" />
               </Form.Item>
             </Col>
           </Row>
@@ -364,28 +395,28 @@ export default function CoachesPage() {
           <div style={{ display: 'grid', gap: 16 }}>
             <div className={widgetCls.detailOverviewPanel}>
               <div className={widgetCls.recordMeta}>
-                <MemberAvatar name={detailCoach.name} tone={detailCoach.tone} />
+                <MemberAvatar name={detailCoach.name} tone={getToneFromName(detailCoach.name)} />
                 <div>
                   <div className={widgetCls.recordTitle} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     {detailCoach.name}
                     <StatusTag status={detailCoach.status} />
                   </div>
-                  <div className={widgetCls.recordSub}>{detailCoach.experience} · 评分 {detailCoach.rating}</div>
+                  <div className={widgetCls.recordSub}>{detailCoach.experience || '暂无经验信息'} · 评分 {detailCoach.rating || '-'}</div>
                   <div className={widgetCls.recordSub}>{detailCoach.phone}</div>
                 </div>
               </div>
               <div className={widgetCls.detailOverviewStatGrid}>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatMint}`}>
-                  <div className={widgetCls.detailInsightLabel}>总课程数</div>
-                  <div className={widgetCls.detailOverviewStatValue}>{detailCoach.totalCourses}</div>
+                  <div className={widgetCls.detailInsightLabel}>评分</div>
+                  <div className={widgetCls.detailOverviewStatValue}>{detailCoach.rating || '-'}</div>
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatViolet}`}>
-                  <div className={widgetCls.detailInsightLabel}>本周课程</div>
-                  <div className={widgetCls.detailOverviewStatValue}>{detailCoach.weeklyCourses}</div>
+                  <div className={widgetCls.detailInsightLabel}>状态</div>
+                  <div className={widgetCls.detailOverviewStatValue}>{detailCoach.status}</div>
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatOrange}`}>
-                  <div className={widgetCls.detailInsightLabel}>满意度</div>
-                  <div className={widgetCls.detailOverviewStatValue}>{detailCoach.rating}</div>
+                  <div className={widgetCls.detailInsightLabel}>电话</div>
+                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-lg)' }}>{detailCoach.phone}</div>
                 </div>
               </div>
             </div>
@@ -393,17 +424,18 @@ export default function CoachesPage() {
             <Descriptions column={1} size="small" bordered>
               <Descriptions.Item label="教练姓名">{detailCoach.name}</Descriptions.Item>
               <Descriptions.Item label="状态">{detailCoach.status}</Descriptions.Item>
-              <Descriptions.Item label="经验信息">{detailCoach.experience}</Descriptions.Item>
-              <Descriptions.Item label="评分">{detailCoach.rating}</Descriptions.Item>
+              <Descriptions.Item label="经验信息">{detailCoach.experience || '-'}</Descriptions.Item>
+              <Descriptions.Item label="评分">{detailCoach.rating || '-'}</Descriptions.Item>
               <Descriptions.Item label="电话">{detailCoach.phone}</Descriptions.Item>
-              <Descriptions.Item label="邮箱">{detailCoach.email}</Descriptions.Item>
+              <Descriptions.Item label="邮箱">{detailCoach.email || '-'}</Descriptions.Item>
+              <Descriptions.Item label="个人简介">{detailCoach.bio || '-'}</Descriptions.Item>
             </Descriptions>
 
             <div>
               <div className={widgetCls.smallText} style={{ marginBottom: 10 }}>专长领域</div>
               <div className={widgetCls.chipRow}>
-                {detailCoach.specialties.map((item) => (
-                  <span key={item} className={widgetCls.chip}>{item}</span>
+                {detailCoach.specialties?.map((item) => (
+                  <span key={item.value} className={widgetCls.chip}>{item.value}</span>
                 ))}
               </div>
             </div>
@@ -411,8 +443,8 @@ export default function CoachesPage() {
             <div>
               <div className={widgetCls.smallText} style={{ marginBottom: 10 }}>资质认证</div>
               <div className={widgetCls.chipRow}>
-                {detailCoach.certificates.map((item) => (
-                  <span key={item} className={widgetCls.chip}>{item}</span>
+                {detailCoach.certificates?.map((item) => (
+                  <span key={item.value} className={widgetCls.chip}>{item.value}</span>
                 ))}
               </div>
             </div>

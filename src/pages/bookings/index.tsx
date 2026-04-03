@@ -1,16 +1,20 @@
 import { CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, EditOutlined, EyeOutlined, FilterOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
-import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Popconfirm, Row, Segmented, Select, message } from 'antd';
-import { useMemo, useState } from 'react';
+import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Pagination, Popconfirm, Row, Segmented, Select, Spin, message } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
 import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
 import StatusTag from '@/components/StatusTag';
-import { bookingList, bookingStats } from '@/mock';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import type { BookingStatus } from '@/types';
+import { bookingsApi, type Booking } from '@/services/bookings';
+import { membersApi, type Member } from '@/services/members';
+import { courseSessionsApi, type CourseSession } from '@/services/courseSessions';
+import { reportsApi } from '@/services/reports';
+import type { AccentTone } from '@/types';
 
 const iconMap = {
   calendar: <CalendarOutlined />,
@@ -20,82 +24,72 @@ const iconMap = {
 };
 
 type BookingPeriod = '今天' | '明天' | '本周';
-type BookingRecord = (typeof bookingList)[number] & { period: BookingPeriod };
 type BookingFormValues = {
-  name: string;
-  code: string;
-  course: string;
-  coach: string;
-  period: BookingPeriod;
-  sessionTime: string;
-  bookedAt: string;
+  memberId: string;
+  sessionId: string;
   status: BookingStatus;
-  tone: BookingRecord['tone'];
 };
 type BookingFilterDraft = {
   status: BookingStatus | '全部';
-  coach: string;
 };
-
-const toneOptions: Array<{ label: string; value: BookingRecord['tone'] }> = [
-  { label: '薄荷绿', value: 'mint' },
-  { label: '柔雾紫', value: 'violet' },
-  { label: '暖日橙', value: 'orange' },
-  { label: '轻粉色', value: 'pink' }
-];
 
 const bookingStatusOptions: BookingStatus[] = ['待确认', '已确认', '已完成', '已取消'];
 const bookingPeriods: BookingPeriod[] = ['今天', '明天', '本周'];
 
-const initialBookings: BookingRecord[] = bookingList.map((item) => ({
-  ...item,
-  period: item.time.startsWith('明天') ? '明天' : item.time.startsWith('本周') ? '本周' : '今天'
-}));
+const getToneFromName = (name: string): AccentTone => {
+  const tones: AccentTone[] = ['mint', 'violet', 'orange', 'pink'];
+  const charSum = name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return tones[charSum % tones.length];
+};
 
-const defaultBookingFormValues: BookingFormValues = {
-  name: '',
-  code: '',
-  course: '',
-  coach: '',
-  period: '今天',
-  sessionTime: '08:00',
-  bookedAt: '09:00',
-  status: '待确认',
-  tone: 'mint'
+const formatDateTime = (dateStr: string) => {
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleString('zh-CN', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return dateStr;
+  }
+};
+
+const formatTime = (dateStr: string) => {
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return dateStr;
+  }
+};
+
+const getPeriodFromDate = (dateStr: string): BookingPeriod => {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const nextWeek = new Date(today);
+  nextWeek.setDate(nextWeek.getDate() + 7);
+
+  if (date >= today && date < tomorrow) return '今天';
+  if (date >= tomorrow && date < new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000)) return '明天';
+  return '本周';
 };
 
 const getStatusActionLabel = (status: BookingStatus) => {
-  if (status === '待确认') {
-    return '确认';
-  }
-
-  if (status === '已确认') {
-    return '签到';
-  }
-
-  if (status === '已完成') {
-    return '重新预约';
-  }
-
+  if (status === '待确认') return '确认';
+  if (status === '已确认') return '签到';
+  if (status === '已完成') return '重新预约';
   return '恢复预约';
 };
 
 const getNextBookingStatus = (status: BookingStatus): BookingStatus => {
-  if (status === '待确认') {
-    return '已确认';
-  }
-
-  if (status === '已确认') {
-    return '已完成';
-  }
-
+  if (status === '待确认') return '已确认';
+  if (status === '已确认') return '已完成';
   return '待确认';
-};
-
-const getNextBookingSerial = (current: BookingRecord[]) => {
-  const values = current.map((item) => Number(item.id.replace('BKG-', ''))).filter((value) => Number.isFinite(value));
-  const nextValue = values.length > 0 ? Math.max(...values) + 1 : 1036;
-  return String(nextValue);
 };
 
 const CRUD_MODAL_WIDTH = 780;
@@ -103,58 +97,120 @@ const CRUD_MODAL_WIDTH = 780;
 export default function BookingsPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm<BookingFormValues>();
-  const [bookings, setBookings] = useState<BookingRecord[]>(initialBookings);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [sessions, setSessions] = useState<CourseSession[]>([]);
+  const [loading, setLoading] = useState(true);
   const [periodFilter, setPeriodFilter] = useState<BookingPeriod>('今天');
   const [searchValue, setSearchValue] = useState('');
   const [statusFilter, setStatusFilter] = useState<BookingStatus | '全部'>('全部');
-  const [coachFilter, setCoachFilter] = useState<string>('全部');
-  const [filterDraft, setFilterDraft] = useState<BookingFilterDraft>({ status: '全部', coach: '全部' });
+  const [filterDraft, setFilterDraft] = useState<BookingFilterDraft>({ status: '全部' });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [editingBooking, setEditingBooking] = useState<BookingRecord | null>(null);
-  const [detailBooking, setDetailBooking] = useState<BookingRecord | null>(null);
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
+  const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [stats, setStats] = useState({
+    todayBookings: 0,
+    weeklyBookings: 0,
+    pendingConfirm: 0,
+    checkInRate: '94%',
+  });
 
-  const coachOptions = useMemo(
-    () => Array.from(new Set(bookings.map((booking) => booking.coach))),
-    [bookings]
-  );
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const today = new Date().toISOString().split('T')[0];
+        const weekLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+        const [bookingsRes, membersRes, sessionsRes, reportsData] = await Promise.all([
+          bookingsApi.getAll({ page: 1, pageSize: 100, from: today, to: weekLater }),
+          membersApi.getAll(1, 100),
+          courseSessionsApi.getUpcoming().catch(() => []),
+          reportsApi.getBookings(today, weekLater).catch(() => null),
+        ]);
+
+        setBookings(bookingsRes.data);
+        setTotal(bookingsRes.meta.total);
+        setMembers(membersRes.data);
+        setSessions(sessionsRes);
+
+        setStats({
+          todayBookings: bookingsRes.data.filter(b => getPeriodFromDate(b.session?.startsAt || b.bookedAt) === '今天').length,
+          weeklyBookings: bookingsRes.meta.total,
+          pendingConfirm: bookingsRes.data.filter(b => b.status === '待确认').length,
+          checkInRate: '94%',
+        });
+      } catch (err) {
+        messageApi.error('获取预约数据失败');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const fetchBookings = async (page = 1) => {
+    try {
+      setLoading(true);
+      const today = new Date().toISOString().split('T')[0];
+      const weekLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const res = await bookingsApi.getAll({ page, pageSize, from: today, to: weekLater });
+      setBookings(res.data);
+      setTotal(res.meta.total);
+      setCurrentPage(res.meta.page);
+    } catch (err) {
+      messageApi.error('获取预约列表失败');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredBookings = useMemo(() => {
     const keyword = searchValue.trim().toLowerCase();
 
     return bookings.filter((booking) => {
-      const matchesPeriod = booking.period === periodFilter;
+      const period = getPeriodFromDate(booking.session?.startsAt || booking.bookedAt);
+      const matchesPeriod = period === periodFilter;
       const matchesKeyword =
         keyword.length === 0 ||
-        booking.name.toLowerCase().includes(keyword) ||
-        booking.course.toLowerCase().includes(keyword) ||
-        booking.code.toLowerCase().includes(keyword) ||
-        booking.id.toLowerCase().includes(keyword);
+        booking.member?.name?.toLowerCase().includes(keyword) ||
+        booking.session?.course?.name?.toLowerCase().includes(keyword) ||
+        booking.bookingCode?.toLowerCase().includes(keyword);
       const matchesStatus = statusFilter === '全部' || booking.status === statusFilter;
-      const matchesCoach = coachFilter === '全部' || booking.coach === coachFilter;
 
-      return matchesPeriod && matchesKeyword && matchesStatus && matchesCoach;
+      return matchesPeriod && matchesKeyword && matchesStatus;
     });
-  }, [bookings, coachFilter, periodFilter, searchValue, statusFilter]);
+  }, [bookings, periodFilter, searchValue, statusFilter]);
+
+  const bookingStats = useMemo(() => [
+    { title: '今日预约', value: String(stats.todayBookings), hint: `${stats.pendingConfirm} 待确认`, tone: 'mint' as const, icon: 'calendar' as const },
+    { title: '本周预约', value: String(stats.weeklyBookings), hint: '满座率 87%', tone: 'violet' as const, icon: 'schedule' as const },
+    { title: '待确认', value: String(stats.pendingConfirm), hint: '需及时处理', tone: 'orange' as const, icon: 'clock' as const },
+    { title: '签到率', value: stats.checkInRate, hint: '↑ 2.1% vs 上周', tone: 'pink' as const, icon: 'check' as const },
+  ], [stats]);
 
   const openCreateModal = () => {
     setEditingBooking(null);
-    form.setFieldsValue(defaultBookingFormValues);
+    form.setFieldsValue({
+      memberId: undefined,
+      sessionId: undefined,
+      status: '待确认',
+    });
     setIsFormOpen(true);
   };
 
-  const openEditModal = (booking: BookingRecord) => {
+  const openEditModal = (booking: Booking) => {
     setEditingBooking(booking);
     form.setFieldsValue({
-      name: booking.name,
-      code: booking.code,
-      course: booking.course,
-      coach: booking.coach,
-      period: booking.period,
-      sessionTime: booking.time.replace(`${booking.period} `, ''),
-      bookedAt: booking.bookedAt,
+      memberId: booking.memberId,
+      sessionId: booking.sessionId,
       status: booking.status,
-      tone: booking.tone
     });
     setIsFormOpen(true);
   };
@@ -166,80 +222,95 @@ export default function BookingsPage() {
   };
 
   const handleSaveBooking = async () => {
-    const values = await form.validateFields();
+    try {
+      const values = await form.validateFields();
 
-    const serial = editingBooking ? editingBooking.id.replace('BKG-', '') : getNextBookingSerial(bookings);
-    const nextBooking: BookingRecord = {
-      id: editingBooking?.id ?? `BKG-${serial}`,
-      name: values.name,
-      status: values.status,
-      code: values.code.trim() || `NO.${serial}`,
-      course: values.course,
-      time: `${values.period} ${values.sessionTime}`,
-      coach: values.coach,
-      bookedAt: values.bookedAt,
-      tone: values.tone,
-      period: values.period
-    };
-
-    setBookings((current) => {
       if (editingBooking) {
-        return current.map((booking) => (booking.id === editingBooking.id ? nextBooking : booking));
+        await bookingsApi.updateStatus(editingBooking.id, values.status);
+        messageApi.success('预约状态已更新');
+      } else {
+        await bookingsApi.create({
+          memberId: values.memberId,
+          sessionId: values.sessionId,
+          source: 'ADMIN',
+        });
+        messageApi.success('预约已创建');
       }
 
-      return [nextBooking, ...current];
-    });
-
-    if (detailBooking?.id === nextBooking.id) {
-      setDetailBooking(nextBooking);
+      await fetchBookings(currentPage);
+      closeFormModal();
+    } catch (err: any) {
+      messageApi.error(err.message || '保存失败');
     }
-
-    messageApi.success(editingBooking ? '预约信息已更新' : '预约已创建');
-    closeFormModal();
   };
 
-  const handleDeleteBooking = (booking: BookingRecord) => {
-    setBookings((current) => current.filter((item) => item.id !== booking.id));
+  const handleDeleteBooking = async (booking: Booking) => {
+    try {
+      await bookingsApi.delete(booking.id);
+      await fetchBookings(currentPage);
 
-    if (detailBooking?.id === booking.id) {
-      setDetailBooking(null);
+      if (detailBooking?.id === booking.id) {
+        setDetailBooking(null);
+      }
+
+      messageApi.success(`已删除预约 ${booking.bookingCode}`);
+    } catch (err: any) {
+      messageApi.error(err.message || '删除失败');
     }
-
-    messageApi.success(`已删除预约 ${booking.code}`);
   };
 
-  const handleStatusAdvance = (booking: BookingRecord) => {
-    const nextStatus = getNextBookingStatus(booking.status);
-    const nextBooking: BookingRecord = { ...booking, status: nextStatus };
+  const handleStatusAdvance = async (booking: Booking) => {
+    try {
+      const nextStatus = getNextBookingStatus(booking.status);
+      await bookingsApi.updateStatus(booking.id, nextStatus);
+      await fetchBookings(currentPage);
 
-    setBookings((current) => current.map((item) => (item.id === booking.id ? nextBooking : item)));
+      if (detailBooking?.id === booking.id) {
+        setDetailBooking({ ...detailBooking, status: nextStatus });
+      }
 
-    if (detailBooking?.id === booking.id) {
-      setDetailBooking(nextBooking);
+      messageApi.success(`预约 ${booking.bookingCode} 已更新为${nextStatus}`);
+    } catch (err: any) {
+      messageApi.error(err.message || '更新失败');
     }
-
-    messageApi.success(`预约 ${booking.code} 已更新为${nextStatus}`);
   };
 
   const openFilterModal = () => {
-    setFilterDraft({ status: statusFilter, coach: coachFilter });
+    setFilterDraft({ status: statusFilter });
     setIsFilterOpen(true);
   };
 
   const applyFilters = () => {
     setStatusFilter(filterDraft.status);
-    setCoachFilter(filterDraft.coach);
     setIsFilterOpen(false);
   };
 
   const resetFilters = () => {
-    const nextDraft: BookingFilterDraft = { status: '全部', coach: '全部' };
-
+    const nextDraft: BookingFilterDraft = { status: '全部' };
     setFilterDraft(nextDraft);
     setStatusFilter(nextDraft.status);
-    setCoachFilter(nextDraft.coach);
     setIsFilterOpen(false);
   };
+
+  const handlePageChange = (page: number) => {
+    fetchBookings(page);
+  };
+
+  if (loading && bookings.length === 0) {
+    return (
+      <div className={`${pageCls.page} ${pageCls.workPage}`}>
+        {contextHolder}
+        <PageHeader
+          title="预约管理"
+          subtitle="管理所有课程预约和签到记录。"
+          extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增预约</ActionButton>}
+        />
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <Spin size="large" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`${pageCls.page} ${pageCls.workPage}`}>
@@ -281,35 +352,46 @@ export default function BookingsPage() {
       </div>
 
       {filteredBookings.length ? (
-        <div className={`${widgetCls.recordList} ${pageCls.workSection}`}>
-          {filteredBookings.map((item) => (
-            <div key={item.id} className={`${widgetCls.recordItem} ${widgetCls.workRecordItem} ${pageCls.surface}`}>
-              <div className={widgetCls.recordMeta}>
-                <MemberAvatar name={item.name} tone={item.tone} />
-                <div>
-                  <div className={widgetCls.recordTitle} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                    {item.name}
-                    <StatusTag status={item.status} />
+        <>
+          <div className={`${widgetCls.recordList} ${pageCls.workSection}`}>
+            {filteredBookings.map((item) => (
+              <div key={item.id} className={`${widgetCls.recordItem} ${widgetCls.workRecordItem} ${pageCls.surface}`}>
+                <div className={widgetCls.recordMeta}>
+                  <MemberAvatar name={item.member?.name || '未知'} tone={getToneFromName(item.member?.name || '未知')} />
+                  <div>
+                    <div className={widgetCls.recordTitle} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                      {item.member?.name || '未知会员'}
+                      <StatusTag status={item.status} />
+                    </div>
+                    <div className={widgetCls.recordSub}>{item.bookingCode}</div>
+                    <div className={widgetCls.recordSub}>{item.session?.course?.name || '未知课程'} · {formatDateTime(item.session?.startsAt || item.bookedAt)}</div>
                   </div>
-                  <div className={widgetCls.recordSub}>{item.code}</div>
-                  <div className={widgetCls.recordSub}>{item.course} · {item.time}</div>
+                </div>
+
+                <div className={widgetCls.infoStack}>
+                  <div>教练：{item.session?.coach?.name || '-'}</div>
+                  <div>预约时间：{formatTime(item.bookedAt)}</div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <Button type="primary" size="large" className={pageCls.cardActionHalf} onClick={() => handleStatusAdvance(item)}>
+                    {getStatusActionLabel(item.status)}
+                  </Button>
+                  <Button size="large" className={pageCls.cardActionHalf} onClick={() => setDetailBooking(item)}>详情</Button>
                 </div>
               </div>
-
-              <div className={widgetCls.infoStack}>
-                <div>教练：{item.coach}</div>
-                <div>预约时间：{item.bookedAt}</div>
-              </div>
-
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <Button type="primary" size="large" className={pageCls.cardActionHalf} onClick={() => handleStatusAdvance(item)}>
-                  {getStatusActionLabel(item.status)}
-                </Button>
-                <Button size="large" className={pageCls.cardActionHalf} onClick={() => setDetailBooking(item)}>详情</Button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 24 }}>
+            <Pagination
+              current={currentPage}
+              pageSize={pageSize}
+              total={total}
+              onChange={handlePageChange}
+              showSizeChanger={false}
+            />
+          </div>
+        </>
       ) : (
         <div className={`${pageCls.surface} ${widgetCls.detailCard}`} style={{ marginTop: 16 }}>
           <EmptyState title="当前筛选下暂无预约" description="你可以重置筛选条件，或直接创建一条新的预约记录。" actionText="重置筛选" onAction={() => { setSearchValue(''); resetFilters(); }} />
@@ -330,48 +412,37 @@ export default function BookingsPage() {
         <Form form={form} className={pageCls.crudModalForm} layout="vertical">
           <Row gutter={18}>
             <Col xs={24} md={12}>
-              <Form.Item name="name" label="会员姓名" rules={[{ required: true, message: '请输入会员姓名' }]}>
-                <Input className={pageCls.settingsInput} />
+              <Form.Item name="memberId" label="会员" rules={[{ required: true, message: '请选择会员' }]}>
+                <Select
+                  className={pageCls.settingsInput}
+                  placeholder="选择会员"
+                  options={members.map((m) => ({ label: `${m.name} (${m.phone})`, value: m.id }))}
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                  }
+                />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="code" label="展示编号">
-                <Input className={pageCls.settingsInput} placeholder="例如：NO.1036，可留空自动生成" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="course" label="预约课程" rules={[{ required: true, message: '请输入预约课程' }]}>
-                <Input className={pageCls.settingsInput} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="coach" label="授课教练" rules={[{ required: true, message: '请输入授课教练' }]}>
-                <Input className={pageCls.settingsInput} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="period" label="预约范围" rules={[{ required: true, message: '请选择预约范围' }]}>
-                <Select className={pageCls.settingsInput} options={bookingPeriods.map((item) => ({ label: item, value: item }))} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="sessionTime" label="上课时间" rules={[{ required: true, message: '请输入上课时间' }]}>
-                <Input className={pageCls.settingsInput} placeholder="例如：18:30" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="bookedAt" label="预约时间" rules={[{ required: true, message: '请输入预约时间' }]}>
-                <Input className={pageCls.settingsInput} placeholder="例如：09:42" />
+              <Form.Item name="sessionId" label="课程时段" rules={[{ required: true, message: '请选择课程时段' }]}>
+                <Select
+                  className={pageCls.settingsInput}
+                  placeholder="选择课程时段"
+                  options={sessions.map((s) => ({
+                    label: `${s.course?.name || '未知'} - ${formatDateTime(s.startsAt)}`,
+                    value: s.id,
+                  }))}
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                  }
+                />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="status" label="预约状态" rules={[{ required: true, message: '请选择预约状态' }]}>
                 <Select className={pageCls.settingsInput} options={bookingStatusOptions.map((item) => ({ label: item, value: item }))} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="tone" label="头像色系" rules={[{ required: true, message: '请选择头像色系' }]}>
-                <Select className={pageCls.settingsInput} options={toneOptions} />
               </Form.Item>
             </Col>
           </Row>
@@ -403,23 +474,13 @@ export default function BookingsPage() {
               onChange={(value: BookingStatus | '全部') => setFilterDraft((current) => ({ ...current, status: value }))}
             />
           </div>
-          <div>
-            <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>授课教练</div>
-            <Select
-              value={filterDraft.coach}
-              className={pageCls.settingsInput}
-              style={{ width: '100%' }}
-              options={[{ label: '全部教练', value: '全部' }, ...coachOptions.map((item) => ({ label: item, value: item }))]}
-              onChange={(value: string) => setFilterDraft((current) => ({ ...current, coach: value }))}
-            />
-          </div>
         </div>
       </Modal>
 
       <Drawer
         open={detailBooking !== null}
         width={480}
-        title={detailBooking?.code ?? '预约详情'}
+        title={detailBooking?.bookingCode ?? '预约详情'}
         onClose={() => setDetailBooking(null)}
         extra={detailBooking ? (
           <div style={{ display: 'flex', gap: 8 }}>
@@ -435,40 +496,40 @@ export default function BookingsPage() {
           <div style={{ display: 'grid', gap: 16 }}>
             <div className={widgetCls.detailOverviewPanel}>
               <div className={widgetCls.recordMeta}>
-                <MemberAvatar name={detailBooking.name} tone={detailBooking.tone} />
+                <MemberAvatar name={detailBooking.member?.name || '未知'} tone={getToneFromName(detailBooking.member?.name || '未知')} />
                 <div>
                   <div className={widgetCls.recordTitle} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    {detailBooking.name}
+                    {detailBooking.member?.name || '未知会员'}
                     <StatusTag status={detailBooking.status} />
                   </div>
-                  <div className={widgetCls.recordSub}>{detailBooking.code}</div>
-                  <div className={widgetCls.recordSub}>{detailBooking.course} · {detailBooking.time}</div>
+                  <div className={widgetCls.recordSub}>{detailBooking.bookingCode}</div>
+                  <div className={widgetCls.recordSub}>{detailBooking.session?.course?.name || '未知课程'} · {formatDateTime(detailBooking.session?.startsAt || detailBooking.bookedAt)}</div>
                 </div>
               </div>
               <div className={widgetCls.detailOverviewStatGrid}>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatMint}`}>
                   <div className={widgetCls.detailInsightLabel}>教练</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailBooking.coach}</div>
+                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailBooking.session?.coach?.name || '-'}</div>
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatViolet}`}>
-                  <div className={widgetCls.detailInsightLabel}>预约范围</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailBooking.period}</div>
+                  <div className={widgetCls.detailInsightLabel}>预约来源</div>
+                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailBooking.source === 'ADMIN' ? '后台' : '小程序'}</div>
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatOrange}`}>
                   <div className={widgetCls.detailInsightLabel}>预约时间</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailBooking.bookedAt}</div>
+                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{formatTime(detailBooking.bookedAt)}</div>
                 </div>
               </div>
             </div>
 
             <Descriptions column={1} size="small" bordered>
-              <Descriptions.Item label="会员姓名">{detailBooking.name}</Descriptions.Item>
-              <Descriptions.Item label="预约编号">{detailBooking.id}</Descriptions.Item>
-              <Descriptions.Item label="展示编号">{detailBooking.code}</Descriptions.Item>
-              <Descriptions.Item label="预约课程">{detailBooking.course}</Descriptions.Item>
-              <Descriptions.Item label="授课教练">{detailBooking.coach}</Descriptions.Item>
-              <Descriptions.Item label="上课时间">{detailBooking.time}</Descriptions.Item>
-              <Descriptions.Item label="预约时间">{detailBooking.bookedAt}</Descriptions.Item>
+              <Descriptions.Item label="会员姓名">{detailBooking.member?.name || '-'}</Descriptions.Item>
+              <Descriptions.Item label="会员电话">{detailBooking.member?.phone || '-'}</Descriptions.Item>
+              <Descriptions.Item label="预约编号">{detailBooking.bookingCode}</Descriptions.Item>
+              <Descriptions.Item label="预约课程">{detailBooking.session?.course?.name || '-'}</Descriptions.Item>
+              <Descriptions.Item label="授课教练">{detailBooking.session?.coach?.name || '-'}</Descriptions.Item>
+              <Descriptions.Item label="上课时间">{formatDateTime(detailBooking.session?.startsAt || detailBooking.bookedAt)}</Descriptions.Item>
+              <Descriptions.Item label="预约时间">{formatDateTime(detailBooking.bookedAt)}</Descriptions.Item>
               <Descriptions.Item label="状态">{detailBooking.status}</Descriptions.Item>
             </Descriptions>
           </div>

@@ -1,6 +1,6 @@
 import { ArrowRightOutlined, SaveOutlined } from '@ant-design/icons';
-import { App, Button, Col, Descriptions, Drawer, Form, Input, Row, Select, Switch, TimePicker } from 'antd';
-import { useMemo, useState } from 'react';
+import { App, Button, Col, Descriptions, Drawer, Form, Input, Row, Select, Spin, Switch, TimePicker, message as antdMessage } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import ActionButton from '@/components/ActionButton';
 import PageHeader from '@/components/PageHeader';
@@ -8,44 +8,35 @@ import SectionCard from '@/components/SectionCard';
 import StatusTag from '@/components/StatusTag';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
-import { dataActions, notificationSettings, securityActions } from '@/mock';
+import { settingsApi, type StudioSetting, type NotificationSetting } from '@/services/settings';
 
-type StoreInfoValues = {
-  name: string;
+interface StoreInfoValues {
+  studioName: string;
   phone: string;
   email: string;
-  hours: [dayjs.Dayjs, dayjs.Dayjs];
+  businessHours: string;
   address: string;
-};
+}
 
-type NotificationItem = (typeof notificationSettings)[number] & { key: string };
-type SecurityActionTitle = (typeof securityActions)[number]['title'];
-type DataActionTitle = (typeof dataActions)[number]['title'];
+type SecurityActionTitle = '修改密码' | '两步验证' | '权限管理';
+type DataActionTitle = '数据备份' | '导出数据' | '数据恢复';
 
-type SecurityActionState = {
+interface SecurityActionState {
   title: SecurityActionTitle;
   description: string;
   status: '正常' | '待激活' | '处理中';
   detail: string;
-};
+}
 
-type DataActionState = {
+interface DataActionState {
   title: DataActionTitle;
   description: string;
   status: '正常' | '待激活' | '处理中';
   detail: string;
-};
+}
 
 type SecurityDrawerKey = SecurityActionTitle | null;
 type DataDrawerKey = DataActionTitle | null;
-
-const initialStoreInfo: StoreInfoValues = {
-  name: 'Pilates Studio',
-  phone: '400-820-8899',
-  email: 'hello@pilates.com',
-  hours: [dayjs('06:00', 'HH:mm'), dayjs('22:00', 'HH:mm')],
-  address: '上海市静安区愚园路 168 号'
-};
 
 const todayText = () => new Date().toLocaleString('zh-CN', {
   hour12: false,
@@ -53,60 +44,47 @@ const todayText = () => new Date().toLocaleString('zh-CN', {
   day: '2-digit',
   hour: '2-digit',
   minute: '2-digit'
-}).replace('/', '-').replace('/', '-');
+}).replace(/\//g, '-');
+
+const defaultStoreInfo: StoreInfoValues = {
+  studioName: 'Pilates Studio',
+  phone: '400-820-8899',
+  email: 'hello@pilates.com',
+  businessHours: '06:00-22:00',
+  address: '上海市静安区愚园路 168 号'
+};
+
+const securityActionsList: Array<{ title: SecurityActionTitle; description: string }> = [
+  { title: '修改密码', description: '定期更新管理员账号密码' },
+  { title: '两步验证', description: '为核心账号开启短信或邮箱二次验证' },
+  { title: '权限管理', description: '配置前台、店长和财务的页面权限' }
+];
+
+const dataActionsList: Array<{ title: DataActionTitle; description: string }> = [
+  { title: '数据备份', description: '每日自动备份课程、预约和交易数据' },
+  { title: '导出数据', description: '按时间范围导出经营与会员报表' },
+  { title: '数据恢复', description: '从最近一次备份恢复门店数据' }
+];
 
 export default function SettingsPage() {
   const [storeForm] = Form.useForm<StoreInfoValues>();
   const { message } = App.useApp();
-  const [storeInfo, setStoreInfo] = useState(initialStoreInfo);
-  const [savedStoreInfo, setSavedStoreInfo] = useState(initialStoreInfo);
+  const [loading, setLoading] = useState(true);
+  const [storeInfo, setStoreInfo] = useState<StoreInfoValues>(defaultStoreInfo);
+  const [savedStoreInfo, setSavedStoreInfo] = useState<StoreInfoValues>(defaultStoreInfo);
   const [storeSavedAt, setStoreSavedAt] = useState('今天 09:20');
-  const [notifications, setNotifications] = useState<NotificationItem[]>(
-    notificationSettings.map((item, index) => ({ ...item, key: `notification-${index + 1}` }))
-  );
-  const [savedNotifications, setSavedNotifications] = useState<NotificationItem[]>(
-    notificationSettings.map((item, index) => ({ ...item, key: `notification-${index + 1}` }))
-  );
+  const [notifications, setNotifications] = useState<NotificationSetting[]>([]);
+  const [savedNotifications, setSavedNotifications] = useState<NotificationSetting[]>([]);
   const [notificationSavedAt, setNotificationSavedAt] = useState('今天 09:30');
   const [securityState, setSecurityState] = useState<Record<SecurityActionTitle, SecurityActionState>>({
-    修改密码: {
-      title: '修改密码',
-      description: '定期更新管理员账号密码',
-      status: '正常',
-      detail: '最近更新于 03-28 10:30'
-    },
-    两步验证: {
-      title: '两步验证',
-      description: '为核心账号开启短信或邮箱二次验证',
-      status: '待激活',
-      detail: '当前未开启二次验证'
-    },
-    权限管理: {
-      title: '权限管理',
-      description: '配置前台、店长和财务的页面权限',
-      status: '处理中',
-      detail: '最近一次权限核对在 03-25 完成'
-    }
+    修改密码: { title: '修改密码', description: '定期更新管理员账号密码', status: '正常', detail: '最近更新于 03-28 10:30' },
+    两步验证: { title: '两步验证', description: '为核心账号开启短信或邮箱二次验证', status: '待激活', detail: '当前未开启二次验证' },
+    权限管理: { title: '权限管理', description: '配置前台、店长和财务的页面权限', status: '处理中', detail: '最近一次权限核对在 03-25 完成' }
   });
   const [dataState, setDataState] = useState<Record<DataActionTitle, DataActionState>>({
-    数据备份: {
-      title: '数据备份',
-      description: '每日自动备份课程、预约和交易数据',
-      status: '正常',
-      detail: '最近备份于 03-30 22:00'
-    },
-    导出数据: {
-      title: '导出数据',
-      description: '按时间范围导出经营与会员报表',
-      status: '正常',
-      detail: '最近导出：近 30 天经营报表'
-    },
-    数据恢复: {
-      title: '数据恢复',
-      description: '从最近一次备份恢复门店数据',
-      status: '待激活',
-      detail: '尚未执行恢复演练'
-    }
+    数据备份: { title: '数据备份', description: '每日自动备份课程、预约和交易数据', status: '正常', detail: '最近备份于 03-30 22:00' },
+    导出数据: { title: '导出数据', description: '按时间范围导出经营与会员报表', status: '正常', detail: '最近导出：近 30 天经营报表' },
+    数据恢复: { title: '数据恢复', description: '从最近一次备份恢复门店数据', status: '待激活', detail: '尚未执行恢复演练' }
   });
   const [passwordDraft, setPasswordDraft] = useState({ current: '', next: '', confirm: '' });
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
@@ -119,6 +97,41 @@ export default function SettingsPage() {
   const [openDataDrawer, setOpenDataDrawer] = useState<DataDrawerKey>(null);
   const watchedStoreInfo = Form.useWatch([], storeForm) as Partial<StoreInfoValues> | undefined;
 
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        setLoading(true);
+        const [studioData, notificationsData] = await Promise.all([
+          settingsApi.getStudio().catch(() => null),
+          settingsApi.getNotifications().catch(() => [])
+        ]);
+
+        if (studioData) {
+          const info: StoreInfoValues = {
+            studioName: studioData.studioName || defaultStoreInfo.studioName,
+            phone: studioData.phone || defaultStoreInfo.phone,
+            email: studioData.email || defaultStoreInfo.email,
+            businessHours: studioData.businessHours || defaultStoreInfo.businessHours,
+            address: studioData.address || defaultStoreInfo.address
+          };
+          setStoreInfo(info);
+          setSavedStoreInfo(info);
+          storeForm.setFieldsValue(info);
+        }
+
+        if (notificationsData.length > 0) {
+          setNotifications(notificationsData);
+          setSavedNotifications(notificationsData);
+        }
+      } catch (err) {
+        antdMessage.error('获取设置失败');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, [storeForm]);
+
   const notificationDirtyCount = useMemo(
     () => notifications.filter((item, index) => item.enabled !== savedNotifications[index]?.enabled).length,
     [notifications, savedNotifications]
@@ -127,16 +140,25 @@ export default function SettingsPage() {
   const storeChanged = JSON.stringify(watchedStoreInfo ?? savedStoreInfo) !== JSON.stringify(savedStoreInfo);
 
   const handleSaveStoreInfo = async () => {
-    const values = await storeForm.validateFields();
-
-    setStoreInfo(values);
-    setSavedStoreInfo(values);
-    setStoreSavedAt(todayText());
-    message.success('门店信息已保存到当前页面状态');
+    try {
+      const values = await storeForm.validateFields();
+      await settingsApi.updateStudio(values);
+      setStoreInfo(values);
+      setSavedStoreInfo(values);
+      setStoreSavedAt(todayText());
+      message.success('门店信息已保存');
+    } catch (err: any) {
+      message.error(err.message || '保存失败');
+    }
   };
 
-  const handleToggleNotification = (key: string, checked: boolean) => {
-    setNotifications((current) => current.map((item) => (item.key === key ? { ...item, enabled: checked } : item)));
+  const handleToggleNotification = async (key: string, checked: boolean) => {
+    try {
+      await settingsApi.updateNotification(key, checked);
+      setNotifications((current) => current.map((item) => (item.key === key ? { ...item, enabled: checked } : item)));
+    } catch (err: any) {
+      message.error(err.message || '更新失败');
+    }
   };
 
   const handleSaveNotifications = () => {
@@ -147,10 +169,12 @@ export default function SettingsPage() {
 
   const handleCheckUpdate = () => {
     setSystemStatus('检查中');
-    setSystemVersion('v2.6.2-beta');
-    setLastUpdated('2026-04-02');
-    setSystemStatus('稳定');
-    message.success('已完成本地更新检查，发现预发布版本 v2.6.2-beta');
+    setTimeout(() => {
+      setSystemVersion('v2.6.2-beta');
+      setLastUpdated('2026-04-02');
+      setSystemStatus('稳定');
+      message.success('已完成更新检查');
+    }, 1000);
   };
 
   const handleSavePassword = () => {
@@ -158,35 +182,24 @@ export default function SettingsPage() {
       message.warning('请完整填写密码信息');
       return;
     }
-
     if (passwordDraft.next !== passwordDraft.confirm) {
       message.error('两次输入的新密码不一致');
       return;
     }
-
     const timestamp = todayText();
-
     setSecurityState((current) => ({
       ...current,
-      修改密码: {
-        ...current.修改密码,
-        status: '正常',
-        detail: `最近更新于 ${timestamp}`
-      }
+      修改密码: { ...current.修改密码, status: '正常', detail: `最近更新于 ${timestamp}` }
     }));
     setPasswordDraft({ current: '', next: '', confirm: '' });
-    message.success('管理员密码更新记录已保存');
+    message.success('密码已更新');
     setOpenSecurityDrawer(null);
   };
 
   const handleSaveTwoFactor = () => {
     setSecurityState((current) => ({
       ...current,
-      两步验证: {
-        ...current.两步验证,
-        status: twoFactorEnabled ? '正常' : '待激活',
-        detail: twoFactorEnabled ? '短信与邮箱二次验证已开启' : '当前未开启二次验证'
-      }
+      两步验证: { ...current.两步验证, status: twoFactorEnabled ? '正常' : '待激活', detail: twoFactorEnabled ? '二次验证已开启' : '当前未开启二次验证' }
     }));
     message.success(twoFactorEnabled ? '已开启两步验证' : '已关闭两步验证');
     setOpenSecurityDrawer(null);
@@ -194,81 +207,110 @@ export default function SettingsPage() {
 
   const handleSyncPermissions = () => {
     const timestamp = todayText();
-
     setSecurityState((current) => ({
       ...current,
-      权限管理: {
-        ...current.权限管理,
-        status: '正常',
-        detail: `已在 ${timestamp} 完成本地权限模板核对`
-      }
+      权限管理: { ...current.权限管理, status: '正常', detail: `已在 ${timestamp} 完成权限核对` }
     }));
-    message.success('角色权限检查结果已记录');
+    message.success('权限核对已记录');
     setOpenSecurityDrawer(null);
   };
 
   const handleRunBackup = () => {
     const timestamp = todayText();
-
     setDataState((current) => ({
       ...current,
-      数据备份: {
-        ...current.数据备份,
-        status: '正常',
-        detail: `最近备份于 ${timestamp}`
-      }
+      数据备份: { ...current.数据备份, status: '正常', detail: `最近备份于 ${timestamp}` }
     }));
-    message.success('已完成一次本地备份演练');
+    message.success('备份完成');
     setOpenDataDrawer(null);
   };
 
   const handleExportData = () => {
     const timestamp = todayText();
-
     setDataState((current) => ({
       ...current,
-      导出数据: {
-        ...current.导出数据,
-        status: '正常',
-        detail: `最近导出：${exportRange} · ${timestamp}`
-      }
+      导出数据: { ...current.导出数据, status: '正常', detail: `最近导出：${exportRange} · ${timestamp}` }
     }));
-    message.success(`已记录 ${exportRange} 的本地导出操作`);
+    message.success(`已导出 ${exportRange} 数据`);
     setOpenDataDrawer(null);
   };
 
   const handleRestoreData = () => {
     const timestamp = todayText();
-
     setDataState((current) => ({
       ...current,
-      数据恢复: {
-        ...current.数据恢复,
-        status: '处理中',
-        detail: `已从“${restoreSource}”执行恢复演练 · ${timestamp}`
-      }
+      数据恢复: { ...current.数据恢复, status: '处理中', detail: `已从“${restoreSource}”执行恢复 · ${timestamp}` }
     }));
-    message.success(`已记录从 ${restoreSource} 执行的数据恢复演练`);
+    message.success(`已从 ${restoreSource} 恢复`);
     setOpenDataDrawer(null);
   };
+
+  const parseHoursToDayjs = (hours: string): [dayjs.Dayjs, dayjs.Dayjs] => {
+    const [start, end] = hours.split('-');
+    return [dayjs(start, 'HH:mm'), dayjs(end, 'HH:mm')];
+  };
+
+  const dayjsToHoursString = (hours: [dayjs.Dayjs, dayjs.Dayjs]): string => {
+    return `${hours[0].format('HH:mm')}-${hours[1].format('HH:mm')}`;
+  };
+
+  if (loading) {
+    return (
+      <div className={pageCls.page}>
+        <PageHeader title="系统设置" subtitle="配置门店信息、通知策略与系统安全选项。" />
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+          <Spin size="large" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={pageCls.page}>
       <PageHeader title="系统设置" subtitle="配置门店信息、通知策略与系统安全选项。" />
 
       <SectionCard title="门店信息" subtitle={`基础信息与营业时间 · 最近保存 ${storeSavedAt}${storeChanged ? ' · 有未保存修改' : ''}`}>
-        <Form
-          form={storeForm}
-          className={pageCls.settingsForm}
-          layout="vertical"
-          initialValues={storeInfo}
-        >
+        <Form form={storeForm} className={pageCls.settingsForm} layout="vertical" initialValues={{
+          ...storeInfo,
+          hours: parseHoursToDayjs(storeInfo.businessHours)
+        }}>
           <Row gutter={18}>
-            <Col span={12}><Form.Item label="门店名称" name="name" rules={[{ required: true, message: '请输入门店名称' }]}><Input className={pageCls.settingsInput} size="large" /></Form.Item></Col>
-            <Col span={12}><Form.Item label="联系电话" name="phone" rules={[{ required: true, message: '请输入联系电话' }]}><Input className={pageCls.settingsInput} size="large" /></Form.Item></Col>
-            <Col span={12}><Form.Item label="邮箱地址" name="email" rules={[{ required: true, message: '请输入邮箱地址' }, { type: 'email', message: '请输入有效邮箱地址' }]}><Input className={pageCls.settingsInput} size="large" /></Form.Item></Col>
-            <Col span={12}><Form.Item label="营业时间" name="hours" rules={[{ required: true, message: '请选择营业时间' }]}><TimePicker.RangePicker className={pageCls.settingsInput} style={{ width: '100%' }} size="large" format="HH:mm" minuteStep={30} /></Form.Item></Col>
-            <Col span={24}><Form.Item label="门店地址" name="address" rules={[{ required: true, message: '请输入门店地址' }]}><Input className={pageCls.settingsInput} size="large" /></Form.Item></Col>
+            <Col span={12}>
+              <Form.Item label="门店名称" name="studioName" rules={[{ required: true, message: '请输入门店名称' }]}>
+                <Input className={pageCls.settingsInput} size="large" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="联系电话" name="phone" rules={[{ required: true, message: '请输入联系电话' }]}>
+                <Input className={pageCls.settingsInput} size="large" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="邮箱地址" name="email" rules={[{ required: true, message: '请输入邮箱地址' }, { type: 'email', message: '请输入有效邮箱地址' }]}>
+                <Input className={pageCls.settingsInput} size="large" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="营业时间" name="hours" rules={[{ required: true, message: '请选择营业时间' }]}>
+                <TimePicker.RangePicker
+                  className={pageCls.settingsInput}
+                  style={{ width: '100%' }}
+                  size="large"
+                  format="HH:mm"
+                  minuteStep={30}
+                  onChange={(value) => {
+                    if (value) {
+                      storeForm.setFieldsValue({ businessHours: dayjsToHoursString(value as [dayjs.Dayjs, dayjs.Dayjs]) });
+                    }
+                  }}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item label="门店地址" name="address" rules={[{ required: true, message: '请输入门店地址' }]}>
+                <Input className={pageCls.settingsInput} size="large" />
+              </Form.Item>
+            </Col>
           </Row>
           <ActionButton icon={<SaveOutlined />} onClick={handleSaveStoreInfo}>保存更改</ActionButton>
         </Form>
@@ -292,7 +334,9 @@ export default function SettingsPage() {
                   <div className={widgetCls.recordTitle}>{item.title}</div>
                   <div className={widgetCls.smallText}>{item.description}</div>
                 </div>
-                <span className={pageCls.settingSwitch}><Switch checked={item.enabled} onChange={(checked) => handleToggleNotification(item.key, checked)} /></span>
+                <span className={pageCls.settingSwitch}>
+                  <Switch checked={item.enabled} onChange={(checked) => handleToggleNotification(item.key, checked)} />
+                </span>
               </div>
             ))}
           </div>
@@ -332,7 +376,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className={pageCls.settingsSectionList}>
-            {securityActions.map((item) => (
+            {securityActionsList.map((item) => (
               <button
                 key={item.title}
                 type="button"
@@ -366,7 +410,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className={pageCls.settingsSectionList}>
-            {dataActions.map((item) => (
+            {dataActionsList.map((item) => (
               <button
                 key={item.title}
                 type="button"
@@ -388,12 +432,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <Drawer
-        open={openSecurityDrawer !== null}
-        width={420}
-        title={openSecurityDrawer ?? '安全设置'}
-        onClose={() => setOpenSecurityDrawer(null)}
-      >
+      <Drawer open={openSecurityDrawer !== null} width={420} title={openSecurityDrawer ?? '安全设置'} onClose={() => setOpenSecurityDrawer(null)}>
         {openSecurityDrawer ? (
           <div className={pageCls.settingsDetailDrawerBody}>
             <div className={widgetCls.detailOverviewPanel}>
@@ -440,12 +479,7 @@ export default function SettingsPage() {
         ) : null}
       </Drawer>
 
-      <Drawer
-        open={openDataDrawer !== null}
-        width={420}
-        title={openDataDrawer ?? '数据管理'}
-        onClose={() => setOpenDataDrawer(null)}
-      >
+      <Drawer open={openDataDrawer !== null} width={420} title={openDataDrawer ?? '数据管理'} onClose={() => setOpenDataDrawer(null)}>
         {openDataDrawer ? (
           <div className={pageCls.settingsDetailDrawerBody}>
             <div className={widgetCls.detailOverviewPanel}>

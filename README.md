@@ -1,191 +1,225 @@
-# Pilates Studio Admin
+# Pilates Studio - 普拉提工作室管理系统
 
-一个基于 **React 18 + Umi 4 + Ant Design 5 + TypeScript + Recharts + CSS Modules** 构建的高保真 Pilates Studio SaaS 管理后台前端项目。
+完整的普拉提工作室管理解决方案，包含管理后台、后端 API 和小程序端。
 
-本项目根据一组 Pilates Studio 后台截图从 0 搭建，包含完整布局、8 个核心业务页面、统一设计系统、Mock 数据和可运行演示，适合作为管理后台展示项目、UI 还原练习项目和企业级中后台前端模板。
+## 系统架构
 
-## 在线预览说明
-
-当前仓库为前端演示版本，数据由本地 Mock 提供。克隆后可直接运行查看完整后台效果。
-
-## 当前迭代增强
-
-- 已补齐登录页、忘记密码页、403 页、404 页
-- 已支持角色权限页与预览身份切换
-- 已补齐 Dashboard 内部 drill-down 子页面
-- 已补充关键空状态、移动端适配与账户区交互优化
-
-## 项目预览
-
-### 仪表盘
-
-![仪表盘预览](./docs/screenshots/dashboard.png)
-
-### 会员管理
-
-![会员管理预览](./docs/screenshots/members.png)
-
-### 财务报表
-
-![财务报表预览](./docs/screenshots/finance.png)
-
-### 系统设置
-
-![系统设置预览](./docs/screenshots/settings.png)
-
-## 页面列表
-
-1. 仪表盘
-2. 会员管理
-3. 课程管理
-4. 预约管理
-5. 教练管理
-6. 财务报表
-7. 数据分析
-8. 系统设置
-9. 角色权限
-10. 登录页 / 忘记密码 / 403 / 404
-
-## 页面说明
-
-### 1. 仪表盘
-- 经营数据总览
-- 今日课程 / 今日预约
-- 教练排班
-- 会员增长趋势
-
-### 2. 会员管理
-- 会员列表
-- 会籍状态
-- 联系方式与剩余课时
-- 搜索 / 筛选 / 导出
-
-### 3. 课程管理
-- 课程卡片视图
-- 课程类型与难度标签
-- 教练 / 时长 / 容量指标
-- 排期时间展示
-
-### 4. 预约管理
-- 预约列表卡片
-- 时间筛选分段器
-- 状态标签
-- 签到 / 确认 / 详情操作
-
-### 5. 教练管理
-- 教练信息卡片
-- 专长领域 / 资质认证
-- 指标块展示
-- 编辑资料 / 排班管理
-
-### 6. 财务报表
-- 收支 KPI 卡片
-- 营收趋势柱状图
-- 营收构成环图
-- 最近交易列表
-
-### 7. 数据分析
-- 课程热度分析
-- 综合评分雷达图
-- 时段分布与留存趋势
-- 高峰时段指标卡
-
-### 8. 系统设置
-- 门店信息表单
-- 通知开关
-- 系统信息
-- 安全设置 / 数据管理
-
-### 9. 角色权限
-- 角色卡片管理
-- 权限矩阵开关
-- 角色详情 / 编辑 / 删除
-- owner 角色访问控制
-
-### 10. 辅助页面
-- 登录页
-- 忘记密码页（预览版）
-- 403 无权限页
-- 404 页面不存在页
-
-## 设计特点
-
-- 风格方向：高级、简洁、企业级 SaaS 后台
-- 主色：薄荷绿 / 青绿色
-- 辅助色：紫色 / 橙色 / 粉色 / 蓝色
-- 布局：固定侧边导航 + 顶部标题说明 + 卡片化内容区
-- 视觉特点：大圆角、轻阴影、暖白背景、柔和高亮、统一状态标签与按钮体系
-- 图表统一：全部基于 Recharts 实现
-- 样式方案：CSS Modules + 全局设计 Token
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Admin Frontend │────▶│   NestJS API    │────▶│   MySQL 8.0     │
+│  React + Umi 4  │     │   Node.js 20    │     │   Database      │
+└─────────────────┘     └────────┬────────┘     └─────────────────┘
+                                 │
+┌─────────────────┐              │
+│  Mini Program   │──────────────┘
+│  Taro 3.6       │     RESTful API
+└─────────────────┘
+```
 
 ## 技术栈
 
-- React 18
-- Umi 4
-- Ant Design 5
-- TypeScript
-- Recharts
-- CSS Modules
+- **管理后台**: React 18 + Umi 4 + Ant Design 5 + TypeScript + Recharts
+- **后端 API**: NestJS 10 + Prisma 5 + MySQL 8.0 + JWT Auth
+- **小程序**: Taro 3.6 + React 18 + TypeScript + SCSS
+- **部署**: Docker + Docker Compose + Nginx
 
-## 目录结构
+## 快速开始
 
-```text
-src/
-  layouts/
-  pages/
-    dashboard/
-    members/
-    courses/
-    bookings/
-    coaches/
-    finance/
-    analytics/
-    settings/
-  components/
-  styles/
-  utils/
-  mock/
-docs/
-  screenshots/
+### 使用 Docker Compose（推荐）
+
+```bash
+# 1. 克隆代码
+git clone <repository-url>
+cd pilates-studio-admin
+
+# 2. 配置环境变量
+cp backend/.env.example backend/.env
+# 编辑 backend/.env，设置强密码和 JWT Secret
+
+# 3. 编译前端
+npm install
+npm run build
+
+# 4. 启动服务
+docker-compose up -d
+
+# 5. 运行数据库迁移
+docker-compose exec backend npx prisma migrate deploy
+
+# 6. 访问系统
+# 管理后台: http://localhost
+# API 文档: http://localhost/api/docs
+# 健康检查: http://localhost:3000/api/health
 ```
 
-## 本地运行
+### 手动部署
 
-> Windows PowerShell 下建议使用 `npm.cmd`
+详见 [DEPLOYMENT.md](./DEPLOYMENT.md)
 
-```powershell
-cd C:\Users\MrDing\pilates-studio-admin
-npm.cmd install
-npm.cmd run dev
+## 项目结构
+
+```
+pilates-studio-admin/
+├── backend/                 # NestJS 后端
+│   ├── src/
+│   │   ├── modules/        # 功能模块 (auth, members, courses, bookings...)
+│   │   ├── common/         # 拦截器、过滤器、守卫、DTO
+│   │   └── config/         # 配置文件
+│   ├── prisma/
+│   │   ├── schema.prisma   # 数据库模型
+│   │   └── seed.ts         # 种子数据
+│   ├── Dockerfile          # 容器配置
+│   ├── docker-compose.yml  # 服务编排
+│   └── .env.example        # 环境变量模板
+├── src/                    # Umi 前端
+│   ├── pages/              # 页面
+│   ├── components/         # 组件
+│   └── services/           # API 服务
+├── docker-compose.yml      # Docker 编排 (根目录)
+├── nginx.conf              # Nginx 配置
+├── DEPLOYMENT.md           # 部署文档
+├── SECURITY.md             # 安全清单
+└── README.md               # 本文件
+
+pilates-studio-mini/        # 小程序 (独立目录)
+├── src/
+│   ├── pages/              # 9 个页面
+│   ├── components/         # 共享组件
+│   ├── api/                # API 封装
+│   └── constants/          # 品牌色、枚举
+├── RELEASE.md              # 发布指南
+└── .env.example            # 环境变量模板
 ```
 
-默认访问地址：
+## 管理后台页面
 
-- http://localhost:8000
+1. 仪表盘 - 经营数据总览、趋势图表
+2. 会员管理 - 会员 CRUD、会籍状态
+3. 课程管理 - 课程卡片、排期
+4. 预约管理 - 预约列表、签到确认
+5. 教练管理 - 教练资料、排班
+6. 财务报表 - 收支 KPI、交易记录
+7. 数据分析 - 课程热度、雷达图
+8. 系统设置 - 门店信息、通知开关
+9. 角色权限 - RBAC 权限矩阵
 
-## 常用命令
+## 小程序页面
 
-```powershell
-npm.cmd run dev
-npm.cmd run typecheck
-npm.cmd run build
+1. 首页 - 快捷入口、会员卡状态、精选课程/教练
+2. 课程列表 - 类型/难度筛选
+3. 课程详情 - 教练介绍、课程安排、预约
+4. 教练列表 - 专业标签、授课程
+5. 教练详情 - 简介、认证、近期排课
+6. 会员卡 - 我的会员卡/购买卡片
+7. 我的预约 - 状态筛选、取消预约
+8. 个人中心 - 统计、菜单导航
+9. 消费记录 - 累计消费、交易明细
+
+## 环境要求
+
+- Node.js 20+
+- MySQL 8.0+
+- Docker 20.10+ (推荐)
+
+## 开发命令
+
+```bash
+# 后端
+cd backend
+npm install
+npm run dev              # 开发模式 (http://localhost:3000)
+npm run build            # 构建
+npm run prisma:migrate:dev  # 数据库迁移
+npm run seed             # 注入种子数据
+
+# 前端
+cd pilates-studio-admin
+npm install
+npm run dev              # 开发服务器 (http://localhost:8000)
+npm run build            # 生产构建
+
+# 小程序
+cd pilates-studio-mini
+npm install
+npm run dev:weapp        # 微信开发模式
+npm run build:weapp      # 生产构建
 ```
 
-## 当前状态
+## 部署检查清单
 
-- 已完成完整前端搭建
-- 已完成多轮高保真视觉微调
-- 已通过类型检查与生产构建
-- 已支持 README 页面预览图展示
-- 已支持 demo 权限体验与 dashboard drill-down 结构
+部署前请务必完成 [SECURITY.md](./SECURITY.md) 中的所有检查项。
 
-## 适用场景
+关键事项：
+- [ ] 修改所有默认密码
+- [ ] 生成强 JWT Secret
+- [ ] 配置 HTTPS
+- [ ] 限制 CORS 域名
+- [ ] 启用数据库备份
 
-- 前端作品集展示
-- SaaS 后台 UI 还原练习
-- 企业管理后台原型项目
-- 后续接入真实 API 的前端基础模板
+## API 文档
 
-## 说明
+启动后端后访问 `http://localhost:3000/api/docs` 查看 Swagger 文档。
 
-本项目当前为前端演示版本，数据由本地 Mock 提供，便于后续快速接入真实 API、鉴权、上传、报表等真实业务能力。
+## 数据库
+
+### 迁移
+
+```bash
+# 开发
+docker-compose exec backend npx prisma migrate dev
+
+# 生产
+docker-compose exec backend npx prisma migrate deploy
+```
+
+### 备份与恢复
+
+```bash
+# 备份
+docker-compose exec mysql mysqldump -u root -p pilates_studio > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# 恢复
+docker-compose exec -T mysql mysql -u root -p pilates_studio < backup.sql
+```
+
+## 监控与健康检查
+
+```bash
+# API 健康
+curl http://localhost:3000/api/health
+
+# 数据库连接
+curl http://localhost:3000/api/health/db
+
+# 日志
+docker-compose logs -f backend
+```
+
+## 更新流程
+
+```bash
+# 1. 备份
+docker-compose exec mysql mysqldump -u root -p pilates_studio > backup.sql
+
+# 2. 更新代码并重建
+git pull
+docker-compose down
+docker-compose up --build -d
+
+# 3. 运行迁移
+docker-compose exec backend npx prisma migrate deploy
+
+# 4. 验证
+curl http://localhost:3000/api/health
+```
+
+## 文档导航
+
+- [DEPLOYMENT.md](./DEPLOYMENT.md) - 详细部署指南
+- [SECURITY.md](./SECURITY.md) - 生产安全清单
+- [backend/prisma/schema.prisma](./backend/prisma/schema.prisma) - 数据库模型
+- [pilates-studio-mini/RELEASE.md](../pilates-studio-mini/RELEASE.md) - 小程序发布指南
+
+## 许可证
+
+[MIT](LICENSE)
