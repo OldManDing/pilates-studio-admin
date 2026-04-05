@@ -1,6 +1,24 @@
 import { api } from '@/utils/request';
 import type { MemberStatus } from '@/types';
 
+const memberStatusToApi: Record<MemberStatus, string> = {
+  '正常': 'ACTIVE',
+  '待激活': 'PENDING',
+  '已过期': 'EXPIRED',
+};
+
+const memberStatusFromApi: Record<string, MemberStatus> = {
+  ACTIVE: '正常',
+  PENDING: '待激活',
+  EXPIRED: '已过期',
+  SUSPENDED: '已过期',
+};
+
+const mapMember = (raw: any): Member => ({
+  ...raw,
+  status: memberStatusFromApi[raw.status] || '待激活',
+});
+
 export interface Member {
   id: string;
   memberCode: string;
@@ -44,17 +62,36 @@ export interface PaginatedResponse<T> {
 }
 
 export const membersApi = {
-  getAll: (page = 1, pageSize = 10) =>
-    api.get<PaginatedResponse<Member>>('/members', { params: { page, pageSize } }),
+  getAll: async (page = 1, pageSize = 10) => {
+    const res = await api.get<PaginatedResponse<any>>('/members', { params: { page, pageSize } });
+    return {
+      ...res,
+      data: (res.data || []).map(mapMember),
+    } as PaginatedResponse<Member>;
+  },
 
-  getById: (id: string) =>
-    api.get<Member>(`/members/${id}`),
+  getById: async (id: string) => {
+    const res = await api.get<any>(`/members/${id}`);
+    return mapMember(res);
+  },
 
-  create: (data: CreateMemberData) =>
-    api.post<Member>('/members', data),
+  create: async (data: CreateMemberData & { status?: MemberStatus }) => {
+    const payload: any = { ...data };
+    if (payload.status) {
+      payload.status = memberStatusToApi[payload.status as MemberStatus] || 'PENDING';
+    }
+    const res = await api.post<any>('/members', payload);
+    return mapMember(res);
+  },
 
-  update: (id: string, data: UpdateMemberData) =>
-    api.patch<Member>(`/members/${id}`, data),
+  update: async (id: string, data: UpdateMemberData) => {
+    const payload: any = { ...data };
+    if (payload.status) {
+      payload.status = memberStatusToApi[payload.status as MemberStatus] || 'PENDING';
+    }
+    const res = await api.patch<any>(`/members/${id}`, payload);
+    return mapMember(res);
+  },
 
   delete: (id: string) =>
     api.delete<{ success: boolean }>(`/members/${id}`),

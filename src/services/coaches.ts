@@ -1,6 +1,22 @@
 import { api } from '@/utils/request';
 import type { CoachStatus } from '@/types';
 
+const coachStatusToApi: Record<CoachStatus, string> = {
+  '在职': 'ACTIVE',
+  '休假中': 'ON_LEAVE',
+};
+
+const coachStatusFromApi: Record<string, CoachStatus> = {
+  ACTIVE: '在职',
+  ON_LEAVE: '休假中',
+  INACTIVE: '休假中',
+};
+
+const mapCoach = (raw: any): Coach => ({
+  ...raw,
+  status: coachStatusFromApi[raw.status] || '在职',
+});
+
 export interface Coach {
   id: string;
   coachCode: string;
@@ -27,25 +43,43 @@ export interface CreateCoachData {
 }
 
 export const coachesApi = {
-  getAll: () =>
-    api.get<Coach[]>('/coaches'),
+  getAll: async () => {
+    const res = await api.get<any[]>('/coaches');
+    return (res || []).map(mapCoach);
+  },
 
-  getActive: () =>
-    api.get<Coach[]>('/coaches/active'),
+  getActive: async () => {
+    const res = await api.get<any[]>('/coaches/active');
+    return (res || []).map(mapCoach);
+  },
 
-  getById: (id: string) =>
-    api.get<Coach>(`/coaches/${id}`),
+  getById: async (id: string) => {
+    const res = await api.get<any>(`/coaches/${id}`);
+    return mapCoach(res);
+  },
 
-  create: (data: CreateCoachData) =>
-    api.post<Coach>('/coaches', data),
+  create: async (data: CreateCoachData) => {
+    const payload: any = { ...data };
+    if (payload.status) {
+      payload.status = coachStatusToApi[payload.status as CoachStatus] || payload.status;
+    }
+    const res = await api.post<any>('/coaches', payload);
+    return mapCoach(res);
+  },
 
-  update: (id: string, data: Partial<CreateCoachData>) =>
-    api.patch<Coach>(`/coaches/${id}`, data),
+  update: async (id: string, data: Partial<CreateCoachData>) => {
+    const payload: any = { ...data };
+    if (payload.status) {
+      payload.status = coachStatusToApi[payload.status as CoachStatus] || payload.status;
+    }
+    const res = await api.patch<any>(`/coaches/${id}`, payload);
+    return mapCoach(res);
+  },
 
   delete: (id: string) =>
     api.delete<{ success: boolean }>(`/coaches/${id}`),
 
-  getStats: (id: string) =>
+  getStats: async (id: string) =>
     api.get<{ coach: Pick<Coach, 'id' | 'name'>; stats: {
       totalSessions: number;
       completedSessions: number;

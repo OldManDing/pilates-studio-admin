@@ -34,4 +34,23 @@ export const reportsApi = {
       absent: number;
       attendanceBySession: Array<{ sessionId: string; _count: { id: number } }>;
     }>('/reports/attendance', { params: { from, to } }),
+
+  getMemberExpiringSoon: async (days = 30) => {
+    const res = await api.get<{
+      data: any[];
+      meta: { total: number };
+    }>('/members', { params: { page: 1, pageSize: 500 } });
+
+    const now = Date.now();
+    const threshold = now + days * 24 * 60 * 60 * 1000;
+
+    const expiringSoon = (res.data || []).filter((member: any) => {
+      if (member.status !== 'ACTIVE') return false;
+      if (!member.joinedAt || !member.plan?.durationDays) return false;
+      const end = new Date(member.joinedAt).getTime() + Number(member.plan.durationDays) * 24 * 60 * 60 * 1000;
+      return end >= now && end <= threshold;
+    });
+
+    return expiringSoon.length;
+  },
 };

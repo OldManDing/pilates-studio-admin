@@ -8,3 +8,4 @@ export * from './transactions';
 export * from './reports';
 export * from './settings';
 export * from './membershipPlans';
+export * from './roles';
