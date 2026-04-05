@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BookingStatus, AttendanceStatus, TransactionStatus } from '../../common/enums/domain.enums';
 
@@ -45,10 +45,7 @@ export class ReportsService {
 
   async getBookingsReport(from: string, to: string) {
     const where = {
-      bookedAt: {
-        gte: new Date(from),
-        lte: new Date(to),
-      },
+      bookedAt: this.buildDateRange(from, to),
     };
 
     const [
@@ -80,10 +77,7 @@ export class ReportsService {
 
   async getTransactionsReport(from: string, to: string) {
     const where = {
-      happenedAt: {
-        gte: new Date(from),
-        lte: new Date(to),
-      },
+      happenedAt: this.buildDateRange(from, to),
     };
 
     const [
@@ -119,10 +113,7 @@ export class ReportsService {
 
   async getAttendanceReport(from: string, to: string) {
     const where = {
-      createdAt: {
-        gte: new Date(from),
-        lte: new Date(to),
-      },
+      createdAt: this.buildDateRange(from, to),
     };
 
     const [
@@ -150,5 +141,33 @@ export class ReportsService {
       absent,
       attendanceBySession,
     };
+  }
+
+  private buildDateRange(from: string, to: string) {
+    const fromDate = this.parseDateValue(from, false, 'from');
+    const toDate = this.parseDateValue(to, true, 'to');
+
+    if (fromDate > toDate) {
+      throw new BadRequestException('Invalid date range: from must be earlier than to');
+    }
+
+    return {
+      gte: fromDate,
+      lte: toDate,
+    };
+  }
+
+  private parseDateValue(value: string, endOfDay: boolean, fieldName: 'from' | 'to'): Date {
+    const parsed = new Date(value);
+
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BadRequestException(`Invalid ${fieldName} date value: ${value}`);
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value) && endOfDay) {
+      parsed.setHours(23, 59, 59, 999);
+    }
+
+    return parsed;
   }
 }

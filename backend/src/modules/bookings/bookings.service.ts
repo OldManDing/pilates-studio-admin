@@ -108,10 +108,9 @@ export class BookingsService {
 
     const where: any = {};
     if (status) where.status = status;
-    if (from || to) {
-      where.bookedAt = {};
-      if (from) where.bookedAt.gte = new Date(from);
-      if (to) where.bookedAt.lte = new Date(to);
+    const bookedAtRange = this.buildDateRange(from, to);
+    if (bookedAtRange) {
+      where.bookedAt = bookedAtRange;
     }
 
     const [data, total] = await Promise.all([
@@ -282,5 +281,44 @@ export class BookingsService {
   private async generateBookingCode(): Promise<string> {
     const count = await this.prisma.booking.count();
     return `B${String(count + 1).padStart(8, '0')}`;
+  }
+
+  private buildDateRange(from?: string, to?: string) {
+    if (!from && !to) {
+      return undefined;
+    }
+
+    const range: { gte?: Date; lte?: Date } = {};
+
+    if (from) {
+      const fromDate = this.parseDateValue(from, false);
+      range.gte = fromDate;
+    }
+
+    if (to) {
+      const toDate = this.parseDateValue(to, true);
+      range.lte = toDate;
+    }
+
+    if (range.gte && range.lte && range.gte > range.lte) {
+      throw new BadRequestException('Invalid date range: from must be earlier than to');
+    }
+
+    return range;
+  }
+
+  private parseDateValue(value: string, endOfDay: boolean): Date {
+    const parsed = new Date(value);
+
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BadRequestException(`Invalid date value: ${value}`);
+    }
+
+    // For date-only inputs like 2025-01-01, normalize end boundary to end-of-day
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value) && endOfDay) {
+      parsed.setHours(23, 59, 59, 999);
+    }
+
+    return parsed;
   }
 }
