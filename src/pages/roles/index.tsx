@@ -181,8 +181,8 @@ export default function RolesPage() {
                 </div>
 
                 <div className={`${pageCls.actionRowWrap} ${pageCls.actionRowWrapTop}`}>
-                  <Button size="middle" className={pageCls.cardActionSecondary} icon={<EyeOutlined />} onClick={() => setDetailRole(item)}>详情</Button>
-                  <Button size="middle" className={pageCls.cardActionSecondary} icon={<EditOutlined />} onClick={() => openPermissionEditor(item)}>编辑权限</Button>
+                  <Button size="large" className={pageCls.cardActionSecondary} icon={<EyeOutlined />} onClick={() => setDetailRole(item)}>详情</Button>
+                  <Button size="large" className={pageCls.cardActionSecondary} icon={<EditOutlined />} onClick={() => openPermissionEditor(item)}>编辑权限</Button>
                 </div>
               </div>
             ))}

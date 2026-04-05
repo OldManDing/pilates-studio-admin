@@ -223,7 +223,7 @@ export default function CoursesPage() {
 
   if (loading && courseList.length === 0) {
     return (
-      <div className={pageCls.page}>
+      <div className={`${pageCls.page} ${pageCls.workPage}`}>
         {contextHolder}
         <PageHeader
           title="课程管理"
@@ -238,7 +238,7 @@ export default function CoursesPage() {
   }
 
   return (
-    <div className={pageCls.page}>
+    <div className={`${pageCls.page} ${pageCls.workPage}`}>
       {contextHolder}
       <PageHeader
         title="课程管理"
@@ -335,7 +335,7 @@ export default function CoursesPage() {
             <div className={`${widgetCls.twoButtons} ${pageCls.courseCardActionGroup}`}>
               <Button
                 type="primary"
-                size="middle"
+                size="large"
                 className={`${pageCls.cardActionPrimary} ${pageCls.courseCardActionBtn}`}
                 icon={<EditOutlined />}
                 onClick={() => openEditModal(course)}
@@ -343,7 +343,7 @@ export default function CoursesPage() {
                 编辑课程
               </Button>
               <Button
-                size="middle"
+                size="large"
                 className={`${pageCls.cardActionSecondary} ${pageCls.courseCardActionBtn} ${pageCls.courseCardActionSecondary}`}
                 icon={<EyeOutlined />}
                 onClick={() => setDetailCourse(course)}
