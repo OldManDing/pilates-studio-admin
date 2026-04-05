@@ -33,7 +33,9 @@ export class TransactionsService {
   }
 
   async findAll(query: PaginationDto & { memberId?: string; kind?: string; from?: string; to?: string }): Promise<PaginatedResponse<any>> {
-    const { page, pageSize, memberId, kind, from, to } = query as any;
+    const page = Number(query.page) || 1;
+    const pageSize = Number(query.pageSize) || 10;
+    const { memberId, kind, from, to } = query as any;
     const skip = (page - 1) * pageSize;
 
     const where: any = {};

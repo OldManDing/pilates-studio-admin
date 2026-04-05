@@ -1,5 +1,5 @@
 import { CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, EditOutlined, EyeOutlined, FilterOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
-import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Pagination, Popconfirm, Row, Segmented, Select, Spin, message } from 'antd';
+import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Pagination, Popconfirm, Row, Select, Spin, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
@@ -120,6 +120,7 @@ export default function BookingsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -223,6 +224,7 @@ export default function BookingsPage() {
 
   const handleSaveBooking = async () => {
     try {
+      setIsSaving(true);
       const values = await form.validateFields();
 
       if (editingBooking) {
@@ -241,6 +243,8 @@ export default function BookingsPage() {
       closeFormModal();
     } catch (err: any) {
       messageApi.error(err.message || '保存失败');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -305,7 +309,7 @@ export default function BookingsPage() {
           subtitle="管理所有课程预约和签到记录。"
           extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增预约</ActionButton>}
         />
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
           <Spin size="large" />
         </div>
       </div>
@@ -328,26 +332,34 @@ export default function BookingsPage() {
       </div>
 
       <div className={pageCls.toolbar}>
-        <div className={`${pageCls.toolbarLeft} ${pageCls.workSection}`}>
-          <div className={pageCls.segmentedSoft}>
-            <Segmented<BookingPeriod>
-              size="large"
-              options={bookingPeriods}
-              value={periodFilter}
-              onChange={(value) => setPeriodFilter(value)}
-            />
+        <div className={pageCls.toolbarLeft}>
+          <div className={pageCls.splitButtonGroup}>
+            {bookingPeriods.map((period) => {
+              const active = periodFilter === period;
+              return (
+                <Button
+                  key={period}
+                  type={active ? 'primary' : 'default'}
+                  className={`${pageCls.bookingDateTab} ${active ? pageCls.bookingDateTabActive : ''}`}
+                  onClick={() => setPeriodFilter(period)}
+                >
+                  {period}
+                </Button>
+              );
+            })}
           </div>
-          <Input
-            className={pageCls.toolbarSearch}
-            size="large"
-            value={searchValue}
-            prefix={<SearchOutlined />}
-            placeholder="按会员、课程、编号搜索预约"
-            onChange={(event) => setSearchValue(event.target.value)}
-          />
-        </div>
-        <div className={pageCls.toolbarRight}>
-          <ActionButton icon={<FilterOutlined />} ghost onClick={openFilterModal}>筛选</ActionButton>
+
+          <div className={pageCls.bookingSearchRow}>
+            <Input
+              className={pageCls.toolbarSearch}
+              size="large"
+              value={searchValue}
+              prefix={<SearchOutlined />}
+              placeholder="按会员、课程、编号搜索预约"
+              onChange={(event) => setSearchValue(event.target.value)}
+            />
+            <ActionButton icon={<FilterOutlined />} ghost onClick={openFilterModal}>筛选</ActionButton>
+          </div>
         </div>
       </div>
 
@@ -359,7 +371,7 @@ export default function BookingsPage() {
                 <div className={widgetCls.recordMeta}>
                   <MemberAvatar name={item.member?.name || '未知'} tone={getToneFromName(item.member?.name || '未知')} />
                   <div>
-                    <div className={widgetCls.recordTitle} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
                       {item.member?.name || '未知会员'}
                       <StatusTag status={item.status} />
                     </div>
@@ -373,7 +385,7 @@ export default function BookingsPage() {
                   <div>预约时间：{formatTime(item.bookedAt)}</div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <div className={pageCls.actionRowWrap}>
                   <Button type="primary" size="large" className={pageCls.cardActionHalf} onClick={() => handleStatusAdvance(item)}>
                     {getStatusActionLabel(item.status)}
                   </Button>
@@ -382,7 +394,7 @@ export default function BookingsPage() {
               </div>
             ))}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 24 }}>
+          <div className={pageCls.centerPagination}>
             <Pagination
               current={currentPage}
               pageSize={pageSize}
@@ -393,7 +405,7 @@ export default function BookingsPage() {
           </div>
         </>
       ) : (
-        <div className={`${pageCls.surface} ${widgetCls.detailCard}`} style={{ marginTop: 16 }}>
+        <div className={`${pageCls.surface} ${widgetCls.detailCard} ${pageCls.surfaceTopSpace}`}>
           <EmptyState title="当前筛选下暂无预约" description="你可以重置筛选条件，或直接创建一条新的预约记录。" actionText="重置筛选" onAction={() => { setSearchValue(''); resetFilters(); }} />
         </div>
       )}
@@ -405,6 +417,7 @@ export default function BookingsPage() {
         width={CRUD_MODAL_WIDTH}
         onCancel={closeFormModal}
         onOk={handleSaveBooking}
+        confirmLoading={isSaving}
         okText={editingBooking ? '保存修改' : '新增预约'}
         cancelText="取消"
         destroyOnHidden
@@ -463,9 +476,9 @@ export default function BookingsPage() {
           <Button key="submit" type="primary" onClick={applyFilters}>应用筛选</Button>
         ]}
       >
-        <div style={{ display: 'grid', gap: 16, marginTop: 20 }}>
+        <div className={pageCls.filterModalBody}>
           <div>
-            <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>预约状态</div>
+            <div className={`${widgetCls.smallText} ${pageCls.filterFieldLabel}`}>预约状态</div>
             <Select
               value={filterDraft.status}
               className={pageCls.settingsInput}
@@ -483,7 +496,7 @@ export default function BookingsPage() {
         title={detailBooking?.bookingCode ?? '预约详情'}
         onClose={() => setDetailBooking(null)}
         extra={detailBooking ? (
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className={pageCls.drawerActionGroup}>
             <Button icon={<EditOutlined />} onClick={() => openEditModal(detailBooking)}>编辑</Button>
             <Button icon={<EyeOutlined />} onClick={() => handleStatusAdvance(detailBooking)}>{getStatusActionLabel(detailBooking.status)}</Button>
             <Popconfirm title="确认删除该预约吗？" okText="删除" cancelText="取消" onConfirm={() => handleDeleteBooking(detailBooking)}>
@@ -493,12 +506,12 @@ export default function BookingsPage() {
         ) : null}
       >
         {detailBooking ? (
-          <div style={{ display: 'grid', gap: 16 }}>
+          <div className={pageCls.detailContentStack}>
             <div className={widgetCls.detailOverviewPanel}>
               <div className={widgetCls.recordMeta}>
                 <MemberAvatar name={detailBooking.member?.name || '未知'} tone={getToneFromName(detailBooking.member?.name || '未知')} />
                 <div>
-                  <div className={widgetCls.recordTitle} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
                     {detailBooking.member?.name || '未知会员'}
                     <StatusTag status={detailBooking.status} />
                   </div>

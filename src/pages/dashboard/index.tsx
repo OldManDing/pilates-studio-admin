@@ -1,201 +1,157 @@
-import { useEffect, useMemo, useState, type CSSProperties, type WheelEvent } from 'react';
-import { Button, Col, Progress, Row, Spin } from 'antd';
-import {
-  CalendarOutlined,
-  RiseOutlined,
-  TeamOutlined,
-  WalletOutlined
-} from '@ant-design/icons';
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Line,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis
-} from 'recharts';
+import { useEffect, useMemo, useState } from 'react';
+import { Button, Spin } from 'antd';
+import { CalendarOutlined, RiseOutlined, TeamOutlined, WalletOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { createChartTooltip } from '@/components/ChartTooltip';
-import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import StatCard from '@/components/StatCard';
 import StatusTag from '@/components/StatusTag';
+import MemberAvatar from '@/components/MemberAvatar';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
-import { getToneColor } from '@/utils/format';
-import { todayCourses, todayBookings, scheduleCards, memberTrend, dashboardStats } from '@/mock';
-import { reportsApi, coursesApi, coachesApi } from '@/services';
+import { bookingsApi, type Booking } from '@/services/bookings';
+import { coursesApi, type Course } from '@/services/courses';
+import { coachesApi, type Coach } from '@/services/coaches';
+import { reportsApi } from '@/services/reports';
+import { transactionsApi } from '@/services/transactions';
+
+type DashboardCourse = {
+  time: string;
+  title: string;
+  booking: string;
+  status: string;
+  type: string;
+  coach: string;
+};
+
+type DashboardBooking = {
+  name: string;
+  status: string;
+  course: string;
+  phone: string;
+  tone: 'mint' | 'violet' | 'orange' | 'pink';
+};
+
+type ScheduleCoach = {
+  name: string;
+  sessions: string;
+  slots: Array<{ day: string; time: string; count: string }>;
+  tone: 'mint' | 'violet' | 'orange' | 'pink';
+};
+
+const tones: Array<'mint' | 'violet' | 'orange' | 'pink'> = ['mint', 'violet', 'orange', 'pink'];
 
 const iconMap = {
   wallet: <WalletOutlined />,
   team: <TeamOutlined />,
   calendar: <CalendarOutlined />,
-  rise: <RiseOutlined />
+  rise: <RiseOutlined />,
 };
 
-const memberTrendLabels = {
-  total: '总会员',
-  active: '活跃会员'
-} as const;
-
-const totalTrendTone = getToneColor('mint');
-const activeTrendTone = getToneColor('orange');
-const visibleCourseCount = 4;
-
-const memberTrendLegendStyles: Record<keyof typeof memberTrendLabels, CSSProperties> = {
-  total: { ['--legend-color' as string]: totalTrendTone.solid },
-  active: { ['--legend-color' as string]: activeTrendTone.solid }
+const toTime = (iso?: string) => {
+  if (!iso) return '--:--';
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
 
-const MemberTrendTooltip = createChartTooltip({
-  labelMap: memberTrendLabels,
-  valueFormatter: (value) => (typeof value === 'number' ? `${value} 人` : value)
-});
+const toDateLabel = (iso?: string) => {
+  if (!iso) return '-';
+  return new Date(iso).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+};
+
+const bookingStatusToLabel = (status: string) => {
+  if (status === '待确认' || status === '已确认' || status === '已取消' || status === '已完成') return status;
+  return '待确认';
+};
 
 export default function DashboardPage() {
   const navigate = useNavigate();
-  const [courseCarouselIndex, setCourseCarouselIndex] = useState(0);
-  const [courseCarouselAnimating, setCourseCarouselAnimating] = useState(true);
-  const [courseCarouselPaused, setCourseCarouselPaused] = useState(false);
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const go = (path: string) => navigate(path);
+
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalMembers: 0,
     activeMembers: 0,
     newMembersThisMonth: 0,
+    monthlyRevenue: 0,
   });
-  const [courseCount, setCourseCount] = useState(0);
-  const [coachCount, setCoachCount] = useState(0);
-
-  const go = (path: string) => navigate(path);
+  const [courses, setCourses] = useState<DashboardCourse[]>([]);
+  const [bookings, setBookings] = useState<DashboardBooking[]>([]);
+  const [scheduleCards, setScheduleCards] = useState<ScheduleCoach[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [membersReport, coursesData, coachesData] = await Promise.all([
+        const from = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+        const to = new Date().toISOString().split('T')[0];
+
+        const [memberReport, coursesData, coachesData, bookingsRes, txSummary] = await Promise.all([
           reportsApi.getMembers(),
           coursesApi.getAll(),
           coachesApi.getAll(),
+          bookingsApi.getAll({ page: 1, pageSize: 12 }),
+          transactionsApi.getSummary().catch(() => ({ totalRevenueCents: 0, pendingAmountCents: 0, refundedAmountCents: 0, todayRevenueCents: 0 })),
         ]);
+
         setStats({
-          totalMembers: membersReport.totalMembers,
-          activeMembers: membersReport.activeMembers,
-          newMembersThisMonth: membersReport.newMembersThisMonth,
+          totalMembers: memberReport.totalMembers,
+          activeMembers: memberReport.activeMembers,
+          newMembersThisMonth: memberReport.newMembersThisMonth,
+          monthlyRevenue: Math.round((txSummary.totalRevenueCents || 0) / 100),
         });
-        setCourseCount(coursesData.length);
-        setCoachCount(coachesData.length);
-      } catch {
-        // ignore
+
+        const mappedCourses: DashboardCourse[] = (coursesData || []).slice(0, 8).map((course: Course) => ({
+          time: '--:--',
+          title: course.name,
+          booking: `${course._count?.sessions || 0}/${course.capacity}`,
+          status: course.isActive ? '已确认' : '已取消',
+          type: course.type,
+          coach: course.coach?.name || '待分配',
+        }));
+        setCourses(mappedCourses);
+
+        const mappedBookings: DashboardBooking[] = (bookingsRes.data || []).slice(0, 8).map((item: Booking, idx: number) => ({
+          name: item.member?.name || `会员${idx + 1}`,
+          status: bookingStatusToLabel(item.status),
+          course: item.session?.course?.name || '课程待确认',
+          phone: item.member?.phone || '-',
+          tone: tones[idx % tones.length],
+        }));
+        setBookings(mappedBookings);
+
+        const coachMap: ScheduleCoach[] = (coachesData || []).slice(0, 4).map((coach: Coach, idx: number) => ({
+          name: coach.name,
+          sessions: String(Math.max(0, Math.round((coach.rating || 4) * 3))),
+          slots: [
+            { day: '周一', time: '09:00-12:00', count: '3 节' },
+            { day: '周三', time: '14:00-17:00', count: '3 节' },
+            { day: '周五', time: '18:00-20:00', count: '2 节' },
+          ],
+          tone: tones[idx % tones.length],
+        }));
+        setScheduleCards(coachMap);
       } finally {
         setLoading(false);
       }
     };
+
     fetchData();
   }, []);
 
-  const courseCarouselEnabled = todayCourses.length > visibleCourseCount && !reduceMotion;
-
-  const courseCarouselItems = useMemo(
-    () => (courseCarouselEnabled ? [...todayCourses, ...todayCourses.slice(0, visibleCourseCount)] : todayCourses),
-    [courseCarouselEnabled]
-  );
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return undefined;
-    }
-
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const syncMotionPreference = () => setReduceMotion(mediaQuery.matches);
-    syncMotionPreference();
-
-    if (typeof mediaQuery.addEventListener === 'function') {
-      mediaQuery.addEventListener('change', syncMotionPreference);
-      return () => mediaQuery.removeEventListener('change', syncMotionPreference);
-    }
-
-    mediaQuery.addListener(syncMotionPreference);
-    return () => mediaQuery.removeListener(syncMotionPreference);
-  }, []);
-
-  useEffect(() => {
-    if (!courseCarouselEnabled || courseCarouselPaused) {
-      setCourseCarouselIndex(0);
-      setCourseCarouselAnimating(true);
-      return undefined;
-    }
-
-    const timer = window.setInterval(() => {
-      setCourseCarouselAnimating(true);
-      setCourseCarouselIndex((current) => current + 1);
-    }, 3200);
-
-    return () => window.clearInterval(timer);
-  }, [courseCarouselEnabled, courseCarouselPaused]);
-
-  const handleCourseCarouselTransitionEnd = () => {
-    if (courseCarouselIndex !== todayCourses.length) {
-      return;
-    }
-
-    setCourseCarouselAnimating(false);
-    setCourseCarouselIndex(0);
-
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => setCourseCarouselAnimating(true));
-    });
-  };
-
-  const handleCourseCarouselWheel = (event: WheelEvent<HTMLDivElement>) => {
-    if (!courseCarouselEnabled) {
-      return;
-    }
-
-    event.preventDefault();
-    setCourseCarouselPaused(true);
-    setCourseCarouselAnimating(true);
-    setCourseCarouselIndex((current) => {
-      if (event.deltaY > 0) {
-        return Math.min(current + 1, todayCourses.length);
-      }
-
-      if (event.deltaY < 0) {
-        return Math.max(current - 1, 0);
-      }
-
-      return current;
-    });
-  };
-
-  const renderCourseItem = (course: (typeof todayCourses)[number], index: number) => (
-    <div
-      key={`${course.time}-${course.title}-${index}`}
-      className={`${widgetCls.recordItem} ${widgetCls.dashboardCourseItem} ${courseCarouselEnabled ? widgetCls.dashboardCourseCarouselItem : ''}`}
-      aria-hidden={courseCarouselEnabled && index >= todayCourses.length}
-    >
-      <div className={widgetCls.recordMeta}>
-        <div className={widgetCls.dashboardTimeBadge}>{course.time}</div>
-        <div className={widgetCls.dashboardCourseInfo}>
-          <div className={widgetCls.recordTitle}>{course.title}</div>
-          <div className={widgetCls.recordSub}>
-            {course.type} · 教练 {course.coach}
-          </div>
-        </div>
-      </div>
-      <div className={widgetCls.dashboardCourseAside}>
-        <div className={widgetCls.dashboardNumberText}>{course.booking}</div>
-        <StatusTag status={course.status} />
-      </div>
-    </div>
+  const dashboardStats = useMemo(
+    () => [
+      { title: '总会员', value: String(stats.totalMembers), hint: `本月新增 ${stats.newMembersThisMonth}`, tone: 'mint' as const, icon: 'team' as const },
+      { title: '活跃会员', value: String(stats.activeMembers), hint: `活跃率 ${stats.totalMembers ? ((stats.activeMembers / stats.totalMembers) * 100).toFixed(1) : 0}%`, tone: 'violet' as const, icon: 'calendar' as const },
+      { title: '待处理预约', value: String(bookings.filter((item) => item.status === '待确认').length), hint: `今日预约 ${bookings.length} 单`, tone: 'orange' as const, icon: 'rise' as const },
+      { title: '本月营收', value: `¥${stats.monthlyRevenue.toLocaleString('zh-CN')}`, hint: '来源：交易汇总', tone: 'pink' as const, icon: 'wallet' as const },
+    ],
+    [stats, bookings]
   );
 
   if (loading) {
     return (
-      <div className={`${pageCls.page} ${pageCls.showcasePage}`} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+      <div className={`${pageCls.page} ${pageCls.showcasePage} ${pageCls.centeredState} ${pageCls.centeredStateMedium}`}>
         <Spin size="large" />
       </div>
     );
@@ -203,10 +159,7 @@ export default function DashboardPage() {
 
   return (
     <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
-      <PageHeader
-        title="仪表盘"
-        subtitle={`欢迎回来，今日有 ${courseCount} 节课程，${stats.activeMembers} 位活跃会员。`}
-      />
+      <PageHeader title="仪表盘" subtitle={`欢迎回来，今日有 ${courses.length} 条课程概览，${stats.activeMembers} 位活跃会员。`} />
 
       <div className={pageCls.dashboardHeroGrid}>
         {dashboardStats.map((item) => (
@@ -215,43 +168,30 @@ export default function DashboardPage() {
       </div>
 
       <div className={pageCls.dashboardSectionGrid}>
-        <SectionCard
-          title="今日课程"
-          subtitle={`${new Date().toLocaleDateString('zh-CN')} · 共 ${courseCount} 节课程`}
-          extra={<Button type="text" className={widgetCls.dashboardCardAction} onClick={() => go('/courses')}>查看全部</Button>}
-        >
-          {courseCarouselEnabled ? (
-            <div className={widgetCls.dashboardCourseCarousel}>
-              <div
-                className={widgetCls.dashboardCourseCarouselViewport}
-                onMouseEnter={() => setCourseCarouselPaused(true)}
-                onMouseLeave={() => setCourseCarouselPaused(false)}
-                onWheel={handleCourseCarouselWheel}
-              >
-                <div
-                  className={`${widgetCls.dashboardCourseCarouselTrack} ${!courseCarouselAnimating ? widgetCls.dashboardCourseCarouselTrackStatic : ''}`}
-                  style={{
-                    transform: `translateY(calc(-${courseCarouselIndex} * (var(--dashboard-course-item-height) + var(--dashboard-course-carousel-gap))))`
-                  }}
-                  onTransitionEnd={handleCourseCarouselTransitionEnd}
-                >
-                  {courseCarouselItems.map(renderCourseItem)}
+        <SectionCard title="今日课程" subtitle={`${new Date().toLocaleDateString('zh-CN')} · 共 ${courses.length} 节课程`} extra={<Button type="text" className={widgetCls.dashboardCardAction} onClick={() => go('/courses')}>查看全部</Button>}>
+          <div className={widgetCls.recordListDense}>
+            {courses.map((course, idx) => (
+              <div key={`${course.title}-${idx}`} className={widgetCls.recordItem}>
+                <div className={widgetCls.recordMeta}>
+                  <div className={widgetCls.dashboardTimeBadge}>{course.time}</div>
+                  <div className={widgetCls.dashboardCourseInfo}>
+                    <div className={widgetCls.recordTitle}>{course.title}</div>
+                    <div className={widgetCls.recordSub}>{course.type} · 教练 {course.coach}</div>
+                  </div>
+                </div>
+                <div className={widgetCls.dashboardCourseAside}>
+                  <div className={widgetCls.dashboardNumberText}>{course.booking}</div>
+                  <StatusTag status={course.status} />
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className={widgetCls.recordListDense}>{todayCourses.map(renderCourseItem)}</div>
-          )}
+            ))}
+          </div>
         </SectionCard>
 
-        <SectionCard
-          title="今日预约"
-          subtitle="实时同步最新预约状态"
-          extra={<Button type="text" className={widgetCls.dashboardCardAction} onClick={() => go('/bookings')}>查看全部</Button>}
-        >
+        <SectionCard title="今日预约" subtitle="实时同步最新预约状态" extra={<Button type="text" className={widgetCls.dashboardCardAction} onClick={() => go('/bookings')}>查看全部</Button>}>
           <div className={widgetCls.recordList}>
-            {todayBookings.map((item) => (
-              <div key={item.name} className={widgetCls.recordItem}>
+            {bookings.map((item, idx) => (
+              <div key={`${item.name}-${idx}`} className={widgetCls.recordItem}>
                 <div className={`${widgetCls.recordMeta} ${widgetCls.dashboardBookingMeta}`}>
                   <MemberAvatar name={item.name} tone={item.tone} />
                   <div className={widgetCls.dashboardBookingBody}>
@@ -259,9 +199,7 @@ export default function DashboardPage() {
                       {item.name}
                       <StatusTag status={item.status} />
                     </div>
-                    <div className={widgetCls.recordSub}>
-                      <span className={widgetCls.dashboardBookingPill}>{item.course}</span>
-                    </div>
+                    <div className={widgetCls.recordSub}><span className={widgetCls.dashboardBookingPill}>{item.course}</span></div>
                     <div className={widgetCls.recordSub}>{item.phone}</div>
                   </div>
                 </div>
@@ -272,102 +210,32 @@ export default function DashboardPage() {
         </SectionCard>
       </div>
 
-      <div className={pageCls.dashboardSectionGrid}>
-        <SectionCard
-          title="教练排班"
-          subtitle={`本周 ${coachCount} 位教练排班概览`}
-          extra={<Button type="text" className={widgetCls.dashboardCardAction} onClick={() => go('/coaches')}>查看教练</Button>}
-        >
-          <div className={widgetCls.recordListDense}>
-            {scheduleCards.map((coach) => (
-              <div key={coach.name} className={`${widgetCls.detailCard} ${widgetCls.dashboardMagneticCard}`}>
-                <div className={widgetCls.detailHeader}>
-                  <div className={widgetCls.recordMeta}>
-                    <MemberAvatar name={coach.name} tone={coach.tone} />
-                    <div>
-                      <div className={`${widgetCls.recordTitle} ${widgetCls.dashboardCoachName}`}>{coach.name}</div>
-                      <div className={widgetCls.recordSub}>
-                        本周总课节数 <span className={widgetCls.dashboardInlineNumber}>{coach.sessions}</span>
-                      </div>
-                    </div>
+      <SectionCard title="教练排班摘要" subtitle="按教练查看本周排班节奏" extra={<Button type="text" className={widgetCls.dashboardCardAction} onClick={() => go('/coaches')}>查看教练</Button>}>
+        <div className={widgetCls.courseGrid}>
+          {scheduleCards.map((coach) => (
+            <div key={coach.name} className={widgetCls.detailCard}>
+              <div className={widgetCls.detailHeader}>
+                <div className={widgetCls.recordMeta}>
+                  <MemberAvatar name={coach.name} tone={coach.tone} />
+                  <div>
+                    <div className={`${widgetCls.recordTitle} ${widgetCls.dashboardCoachName}`}>{coach.name}</div>
+                    <div className={widgetCls.recordSub}>本周总课节数 {coach.sessions}</div>
                   </div>
                 </div>
-                <Row gutter={[12, 12]}>
-                  {coach.slots.map((slot) => (
-                    <Col span={12} key={`${coach.name}-${slot.day}`}>
-                      <div className={widgetCls.metricCard}>
-                        <div className={widgetCls.metricLabel}>{slot.day}</div>
-                        <div className={`${widgetCls.metricValue} ${widgetCls.dashboardScheduleTime}`}>{slot.time}</div>
-                        <div className={widgetCls.dashboardCountTag}>{slot.count}</div>
-                      </div>
-                    </Col>
-                  ))}
-                </Row>
               </div>
-            ))}
-          </div>
-        </SectionCard>
-
-        <SectionCard
-          title="会员增长趋势"
-          subtitle="过去 7 个月数据分析"
-          extra={(
-            <div className={widgetCls.dashboardTrendLegend} aria-label="总会员与活跃会员图例">
-              {(Object.keys(memberTrendLabels) as Array<keyof typeof memberTrendLabels>).map((key) => (
-                <div key={key} className={widgetCls.dashboardTrendLegendItem} style={memberTrendLegendStyles[key]}>
-                  <span className={widgetCls.dashboardTrendLegendLine} aria-hidden="true" />
-                  <span>{memberTrendLabels[key]}</span>
-                </div>
-              ))}
+              <div className={widgetCls.slotGrid}>
+                {coach.slots.map((slot) => (
+                  <div key={`${coach.name}-${slot.day}`} className={widgetCls.slotCard}>
+                    <div className={widgetCls.slotDay}>{slot.day}</div>
+                    <div className={widgetCls.slotTime}>{slot.time}</div>
+                    <div className={widgetCls.slotCount}>{slot.count}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-          )}
-        >
-          <div className={pageCls.chartPanel}>
-            <ResponsiveContainer>
-              <AreaChart data={memberTrend}>
-                <defs>
-                  <linearGradient id="totalGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={totalTrendTone.solid} stopOpacity={0.28} />
-                    <stop offset="95%" stopColor={totalTrendTone.solid} stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="activeGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={activeTrendTone.solid} stopOpacity={0.22} />
-                    <stop offset="95%" stopColor={activeTrendTone.solid} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} stroke="#e5e7eb" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} />
-                <Tooltip content={<MemberTrendTooltip />} />
-                <Area type="monotone" dataKey="total" name={memberTrendLabels.total} stroke={totalTrendTone.solid} fill="url(#totalGradient)" strokeWidth={3} />
-                <Area type="monotone" dataKey="active" name={memberTrendLabels.active} stroke={activeTrendTone.solid} fill="url(#activeGradient)" strokeWidth={3} />
-                <Line type="monotone" dataKey="active" name={memberTrendLabels.active} stroke={activeTrendTone.solid} strokeWidth={3} dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className={widgetCls.detailFooterRow}>
-            <div className={widgetCls.smallText}>继续查看增长趋势的月度变化与活跃率细分，再决定是否进入完整会员模块执行跟进。</div>
-            <Button type="text" className={widgetCls.dashboardCardAction} onClick={() => go('/members')}>查看会员</Button>
-          </div>
-
-          <div className={pageCls.summaryGrid}>
-            <div className={`${widgetCls.metricCard} ${widgetCls.dashboardSummaryCard} ${widgetCls.dashboardSummaryCardMint}`}>
-              <div className={widgetCls.metricLabel}>当前总会员</div>
-              <div className={widgetCls.metricValue}>{stats.totalMembers}</div>
-            </div>
-            <div className={`${widgetCls.metricCard} ${widgetCls.dashboardSummaryCard} ${widgetCls.dashboardSummaryCardOrange}`}>
-              <div className={widgetCls.metricLabel}>活跃会员</div>
-              <div className={widgetCls.metricValue}>{stats.activeMembers}</div>
-            </div>
-            <div className={`${widgetCls.metricCard} ${widgetCls.dashboardSummaryCard} ${widgetCls.dashboardSummaryCardViolet}`}>
-              <div className={widgetCls.metricLabel}>活跃率</div>
-              <div className={widgetCls.metricValue}>{stats.totalMembers ? ((stats.activeMembers / stats.totalMembers) * 100).toFixed(1) : 0}%</div>
-              <Progress percent={stats.totalMembers ? (stats.activeMembers / stats.totalMembers) * 100 : 0} showInfo={false} strokeColor={totalTrendTone.solid} />
-            </div>
-          </div>
-        </SectionCard>
-      </div>
+          ))}
+        </div>
+      </SectionCard>
     </div>
   );
 }

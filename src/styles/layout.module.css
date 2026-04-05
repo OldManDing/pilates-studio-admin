@@ -30,6 +30,13 @@
   padding: 0;
 }
 
+.loadingWrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
 .mobileDrawerRoot,
 .mobileDrawer {
   display: none;

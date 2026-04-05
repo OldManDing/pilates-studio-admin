@@ -172,7 +172,7 @@ export class MembersService {
     });
 
     if (!member) {
-      throw new NotFoundException('Member profile not found');
+      return null;
     }
 
     // Strip sensitive fields

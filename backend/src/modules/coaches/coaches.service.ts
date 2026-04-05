@@ -178,6 +178,42 @@ export class CoachesService {
     };
   }
 
+  async getSchedule(id: string, query: { from?: string; to?: string }) {
+    await this.findOne(id);
+
+    const where: any = { coachId: id };
+    if (query.from || query.to) {
+      where.startsAt = {};
+      if (query.from) where.startsAt.gte = new Date(query.from);
+      if (query.to) where.startsAt.lte = new Date(query.to);
+    }
+
+    const sessions = await this.prisma.courseSession.findMany({
+      where,
+      include: {
+        course: {
+          select: { id: true, name: true, type: true, level: true, durationMinutes: true },
+        },
+        coach: {
+          select: { id: true, name: true },
+        },
+        bookings: {
+          where: { status: { not: 'CANCELLED' } },
+          select: { id: true },
+        },
+      },
+      orderBy: { startsAt: 'asc' },
+    });
+
+    return {
+      sessions: sessions.map((session) => ({
+        ...session,
+        bookedCount: session.bookings.length,
+        bookings: undefined,
+      })),
+    };
+  }
+
   private async generateCoachCode(): Promise<string> {
     const count = await this.prisma.coach.count();
     return `C${String(count + 1).padStart(6, '0')}`;

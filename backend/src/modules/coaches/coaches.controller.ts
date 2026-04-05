@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -40,6 +41,17 @@ export class CoachesController {
   @ApiOperation({ summary: 'Get active coaches only' })
   async findActive() {
     return this.coachesService.findActive();
+  }
+
+  @Get(':id/schedule')
+  @RequirePermissions('READ:COACHES')
+  @ApiOperation({ summary: 'Get coach schedule' })
+  @ApiParam({ name: 'id', description: 'Coach ID' })
+  async getSchedule(
+    @Param('id') id: string,
+    @Query() query: { from?: string; to?: string },
+  ) {
+    return this.coachesService.getSchedule(id, query);
   }
 
   @Get(':id')

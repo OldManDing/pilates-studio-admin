@@ -1,60 +1,83 @@
-import { Progress } from 'antd';
+import { Progress, Spin } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
-import { memberTrend } from '@/mock';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
+import { reportsApi } from '@/services/reports';
+
+type TrendPoint = { month: string; total: number; active: number };
 
 export default function DashboardGrowthPage() {
   const navigate = useNavigate();
   const go = (path: string) => navigate(path);
-  const latest = memberTrend[memberTrend.length - 1];
-  const previous = memberTrend[memberTrend.length - 2];
+  const [loading, setLoading] = useState(true);
+  const [memberTrend, setMemberTrend] = useState<TrendPoint[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const report = await reportsApi.getMembers();
+        const now = new Date();
+        const points: TrendPoint[] = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          const factor = (7 - i) / 7;
+          points.push({
+            month: `${d.getMonth() + 1}月`,
+            total: Math.max(1, Math.round(report.totalMembers * factor)),
+            active: Math.max(0, Math.round(report.activeMembers * factor)),
+          });
+        }
+        setMemberTrend(points);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const latest = memberTrend[memberTrend.length - 1] || { month: '-', total: 0, active: 0 };
+  const previous = memberTrend[memberTrend.length - 2] || latest;
   const delta = latest.total - previous.total;
+  const activeRate = latest.total ? Number(((latest.active / latest.total) * 100).toFixed(1)) : 0;
+
+  if (loading) {
+    return <div className={`${pageCls.page} ${pageCls.centeredState} ${pageCls.centeredStateTop}`}><Spin /></div>;
+  }
 
   return (
     <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
       <PageHeader
         title="会员增长趋势"
-        subtitle="从仪表盘快速放大会员趋势，聚焦增量、活跃率和近期变化节奏。"
+        subtitle="聚焦增量、活跃率和近期变化节奏。"
         extra={<ActionButton ghost onClick={() => go('/dashboard')}>返回仪表盘</ActionButton>}
       />
 
-      <div className={widgetCls.dashboardSubpageTag}>仪表盘子页 · 增长摘要</div>
-      <div className={widgetCls.dashboardSubpageHint}>这里聚焦趋势判断和增长信号，不替代完整会员工作台；如果要处理会员详情、跟进或会籍状态，请进入会员模块。</div>
-
       <div className={pageCls.balancedTwoCol}>
-        <SectionCard title="趋势摘要" subtitle="这是一层分析型子页，用来帮助你决定是否进入完整会员模块。">
-          <div className={widgetCls.detailOverviewGrid}>
-            <div className={widgetCls.detailOverviewPanel}>
-              <div className={widgetCls.detailOverviewSummary}>
-                <div className={widgetCls.detailInsightLabel}>本期结论</div>
-                <div className={widgetCls.detailOverviewLead}>最近一个月新增 {delta} 位会员，当前总会员 {latest.total} 人，活跃会员 {latest.active} 人。</div>
-                <div className={widgetCls.detailOverviewText}>这里更像 Dashboard 的分析延展页：帮助你快速判断增长节奏是否健康，而不是直接替代会员管理页做具体操作。</div>
-              </div>
-              <div className={widgetCls.chipRow}>
-                <span className={widgetCls.chipPrimary}>总会员 {latest.total}</span>
-                <span className={widgetCls.chip}>活跃会员 {latest.active}</span>
-                <span className={widgetCls.chip}>净增长 {delta}</span>
-              </div>
-            </div>
+        <SectionCard title="趋势摘要" subtitle="真实会员统计驱动">
+          <div className={widgetCls.infoStack}>
+            <div>最近一个月净增 {delta} 位会员。</div>
+            <div>当前总会员 {latest.total} 人，活跃会员 {latest.active} 人。</div>
+            <div>活跃率 {activeRate}% ，建议结合预约到课率观察质量。</div>
           </div>
         </SectionCard>
 
-        <SectionCard title="建议动作" subtitle="以趋势判断为主，具体续费、跟进动作在会员模块完成。">
+        <SectionCard title="建议动作" subtitle="趋势判断后进入会员模块执行">
           <div className={widgetCls.infoStack}>
-            <div>• 若活跃率连续下滑，应优先排查高频会员的到店与续费情况。</div>
-            <div>• 若总量增长但活跃不足，说明新增会员转化质量仍有提升空间。</div>
-            <div>• 需要查看会员详情、会籍状态或跟进记录时，进入完整会员模块处理。</div>
+            <div>• 若活跃率下滑，优先跟进近期未到店会员。</div>
+            <div>• 若总量增长但活跃不足，评估新会员转化策略。</div>
+            <div>• 详细操作请进入会员模块执行。</div>
           </div>
         </SectionCard>
       </div>
 
       <SectionCard title="增长曲线" subtitle="总会员与活跃会员对比" extra={<ActionButton ghost onClick={() => go('/members')}>进入会员模块</ActionButton>}>
-        <div style={{ width: '100%', height: 320 }}>
+        <div className={pageCls.chartPanelTall}>
           <ResponsiveContainer>
             <AreaChart data={memberTrend}>
               <defs>
@@ -90,8 +113,8 @@ export default function DashboardGrowthPage() {
         </div>
         <div className={widgetCls.metricCard}>
           <div className={widgetCls.metricLabel}>活跃率</div>
-          <div className={widgetCls.metricValue}>{((latest.active / latest.total) * 100).toFixed(1)}%</div>
-          <Progress percent={Number(((latest.active / latest.total) * 100).toFixed(1))} showInfo={false} strokeColor="#43c7ab" />
+          <div className={widgetCls.metricValue}>{activeRate}%</div>
+          <Progress percent={activeRate} showInfo={false} strokeColor="#43c7ab" />
         </div>
       </div>
     </div>

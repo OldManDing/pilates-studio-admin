@@ -3,9 +3,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BookingSource } from '../../../common/enums/domain.enums';
 
 export class CreateBookingDto {
-  @ApiProperty({ description: 'Member ID' })
+  @ApiPropertyOptional({ description: 'Member ID (optional for mini-program self booking)' })
+  @IsOptional()
   @IsString()
-  memberId: string;
+  memberId?: string;
 
   @ApiProperty({ description: 'Course Session ID' })
   @IsString()

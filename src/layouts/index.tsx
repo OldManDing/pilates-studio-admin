@@ -41,7 +41,7 @@ const AppLayout: FC<PropsWithChildren> = ({ children }) => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <div className={cls.loadingWrap}>
         <Spin size="large" />
       </div>
     );

@@ -8,12 +8,14 @@ import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/skip-auth.decorator';
+import { PrismaService } from '../../modules/prisma/prisma.service';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
     private jwtService: JwtService,
     private reflector: Reflector,
+    private prisma: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -35,7 +37,37 @@ export class JwtAuthGuard implements CanActivate {
 
     try {
       const payload = await this.jwtService.verifyAsync(token);
-      request.user = payload;
+
+      const admin = await this.prisma.adminUser.findUnique({
+        where: { id: payload.sub },
+        include: {
+          role: {
+            include: {
+              permissions: {
+                include: {
+                  permission: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!admin) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      request.user = {
+        ...payload,
+        role: {
+          id: admin.role.id,
+          code: admin.role.code,
+          name: admin.role.name,
+          permissions: admin.role.permissions.map(
+            (rp) => `${rp.permission.action}:${rp.permission.module}`,
+          ),
+        },
+      };
     } catch {
       throw new UnauthorizedException('Invalid or expired token');
     }

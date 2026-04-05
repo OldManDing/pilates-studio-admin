@@ -28,8 +28,11 @@ export class BookingsController {
   @Post()
   @RequirePermissions('WRITE:BOOKINGS')
   @ApiOperation({ summary: 'Create new booking' })
-  async create(@Body() dto: CreateBookingDto) {
-    return this.bookingsService.create(dto);
+  async create(
+    @Body() dto: CreateBookingDto,
+    @CurrentUser('sub') userId: string,
+  ) {
+    return this.bookingsService.create(dto, userId);
   }
 
   @Get()
@@ -37,6 +40,17 @@ export class BookingsController {
   @ApiOperation({ summary: 'Get all bookings with pagination' })
   async findAll(@Query() query: PaginationDto & { status?: BookingStatus; from?: string; to?: string }) {
     return this.bookingsService.findAll(query);
+  }
+
+  // Mini-program endpoints (member-facing)
+  @Get('my')
+  @RequirePermissions('READ:BOOKINGS')
+  @ApiOperation({ summary: 'Get my bookings (mini-program)' })
+  async getMyBookings(
+    @CurrentUser('sub') userId: string,
+    @Query() query: PaginationDto & { status?: BookingStatus },
+  ) {
+    return this.bookingsService.findMyBookings(userId, query);
   }
 
   @Get(':id')
@@ -65,17 +79,6 @@ export class BookingsController {
   @ApiParam({ name: 'id', description: 'Booking ID' })
   async remove(@Param('id') id: string) {
     return this.bookingsService.remove(id);
-  }
-
-  // Mini-program endpoints (member-facing)
-  @Get('my')
-  @RequirePermissions('READ:BOOKINGS')
-  @ApiOperation({ summary: 'Get my bookings (mini-program)' })
-  async getMyBookings(
-    @CurrentUser('sub') userId: string,
-    @Query() query: PaginationDto & { status?: BookingStatus },
-  ) {
-    return this.bookingsService.findMyBookings(userId, query);
   }
 
   @Patch(':id/cancel')

@@ -873,6 +873,14 @@
   min-height: 400px;
 }
 
+.centeredStateShort {
+  min-height: 320px;
+}
+
+.centeredStateTop {
+  padding-top: 120px;
+}
+
 .recordTitleRow {
   display: flex;
   align-items: center;
@@ -975,6 +983,11 @@
   height: 10px;
   border-radius: 999px;
   display: inline-block;
+}
+
+.metricValueStrong {
+  font-size: 22px;
+  font-weight: 800;
 }
 
 .toolbarCompact {

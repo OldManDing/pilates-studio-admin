@@ -9,7 +9,22 @@ import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dt
 export class BookingsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(dto: CreateBookingDto) {
+  async create(dto: CreateBookingDto, requesterUserId?: string) {
+    let targetMemberId = dto.memberId;
+
+    if (!targetMemberId || targetMemberId === 'SELF') {
+      if (!requesterUserId) {
+        throw new BadRequestException('Member ID is required');
+      }
+      const currentMember = await this.prisma.member.findUnique({
+        where: { miniUserId: requesterUserId },
+      });
+      if (!currentMember) {
+        throw new NotFoundException('Member profile not found');
+      }
+      targetMemberId = currentMember.id;
+    }
+
     const session = await this.prisma.courseSession.findUnique({
       where: { id: dto.sessionId },
       include: {
@@ -29,7 +44,7 @@ export class BookingsService {
     }
 
     const member = await this.prisma.member.findUnique({
-      where: { id: dto.memberId },
+      where: { id: targetMemberId },
     });
 
     if (!member) {
@@ -39,7 +54,7 @@ export class BookingsService {
     // Check for duplicate booking
     const existingBooking = await this.prisma.booking.findFirst({
       where: {
-        memberId: dto.memberId,
+        memberId: targetMemberId,
         sessionId: dto.sessionId,
         status: { notIn: [BookingStatus.CANCELLED, BookingStatus.NO_SHOW] },
       },
@@ -55,7 +70,7 @@ export class BookingsService {
       const booking = await tx.booking.create({
         data: {
           bookingCode,
-          memberId: dto.memberId,
+          memberId: targetMemberId,
           sessionId: dto.sessionId,
           source: dto.source,
           status: BookingStatus.CONFIRMED,
@@ -86,8 +101,8 @@ export class BookingsService {
   }
 
   async findAll(query: PaginationDto & { status?: BookingStatus; from?: string; to?: string }): Promise<PaginatedResponse<any>> {
-    const page = query.page ?? 1;
-    const pageSize = query.pageSize ?? 10;
+    const page = Number(query.page) || 1;
+    const pageSize = Number(query.pageSize) || 10;
     const { status, from, to } = query;
     const skip = (page - 1) * pageSize;
 
@@ -220,8 +235,8 @@ export class BookingsService {
       };
     }
 
-    const page = query.page ?? 1;
-    const pageSize = query.pageSize ?? 10;
+    const page = Number(query.page) || 1;
+    const pageSize = Number(query.pageSize) || 10;
     const skip = (page - 1) * pageSize;
 
     const where: any = { memberId: member.id };
