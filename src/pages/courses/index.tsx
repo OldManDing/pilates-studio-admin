@@ -41,6 +41,8 @@ export default function CoursesPage() {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [detailCourse, setDetailCourse] = useState<Course | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [stats, setStats] = useState({
     totalCourses: 0,
     weeklySessions: 0,
@@ -83,6 +85,31 @@ export default function CoursesPage() {
     };
     fetchData();
   }, []);
+
+  const refreshCourses = async (silent = false) => {
+    try {
+      if (!silent) setIsRefreshing(true);
+      const refreshed = await coursesApi.getAll();
+      setCourseList(refreshed);
+
+      const totalCourses = refreshed.length;
+      const weeklySessions = refreshed.reduce((sum, c) => sum + (c._count?.sessions || 0), 0);
+      const popularCourse = totalCourses > 0
+        ? refreshed.reduce((max, c) => ((c._count?.sessions || 0) > (max._count?.sessions || 0) ? c : max), refreshed[0])?.name || '-'
+        : '-';
+
+      setStats((current) => ({
+        ...current,
+        totalCourses,
+        weeklySessions,
+        popularCourse,
+      }));
+    } catch (err: any) {
+      messageApi.error(err.message || '刷新课程失败');
+    } finally {
+      if (!silent) setIsRefreshing(false);
+    }
+  };
 
   const courseTypeOptions = useMemo(
     () => Array.from(new Set(courseList.map((course) => course.type))),
@@ -152,6 +179,7 @@ export default function CoursesPage() {
 
   const handleSaveCourse = async () => {
     try {
+      setIsSaving(true);
       const values = await form.validateFields();
 
       if (editingCourse) {
@@ -173,6 +201,8 @@ export default function CoursesPage() {
       closeFormModal();
     } catch (err: any) {
       messageApi.error(err.message || '保存失败');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -200,7 +230,7 @@ export default function CoursesPage() {
           subtitle="管理所有课程设置和排期。"
           extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增课程</ActionButton>}
         />
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
           <Spin size="large" />
         </div>
       </div>
@@ -213,7 +243,16 @@ export default function CoursesPage() {
       <PageHeader
         title="课程管理"
         subtitle="管理所有课程设置和排期。"
-        extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增课程</ActionButton>}
+        extra={(
+          <div className={`${pageCls.pageHeaderActionGroup} ${pageCls.pageHeaderActionGroupWide}`}>
+            <div className={pageCls.splitButtonGroup}>
+              <ActionButton ghost loading={isRefreshing} onClick={() => refreshCourses()}>
+                刷新列表
+              </ActionButton>
+              <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增课程</ActionButton>
+            </div>
+          </div>
+        )}
       />
 
       <div className={pageCls.heroGrid}>
@@ -234,9 +273,9 @@ export default function CoursesPage() {
           />
         </div>
         <div className={pageCls.toolbarRight}>
-          <Select
-            value={typeFilter}
-            size="large"
+            <Select
+              value={typeFilter}
+              size="large"
             style={{ minWidth: 140 }}
             className={pageCls.settingsInput}
             options={[{ label: '全部类型', value: '全部' }, ...courseTypeOptions.map((item) => ({ label: item, value: item }))]}
@@ -249,9 +288,20 @@ export default function CoursesPage() {
             className={pageCls.settingsInput}
             options={[{ label: '全部难度', value: '全部' }, ...courseLevelOptions.map((item) => ({ label: item, value: item }))]}
             onChange={(value: string) => setLevelFilter(value)}
-          />
+            />
+            <Button
+              size="large"
+              className={pageCls.toolbarGhostAction}
+              onClick={() => {
+                setSearchValue('');
+                setTypeFilter('全部');
+                setLevelFilter('全部');
+              }}
+            >
+              重置筛选
+            </Button>
+          </div>
         </div>
-      </div>
 
       <div className={widgetCls.courseGrid}>
         {filteredCourses.map((course) => (
@@ -259,7 +309,7 @@ export default function CoursesPage() {
             <div className={widgetCls.detailHeader}>
               <div>
                 <h3 className={widgetCls.detailTitle}>{course.name}</h3>
-                <div className={widgetCls.chipRow} style={{ marginTop: 10 }}>
+                <div className={`${widgetCls.chipRow} ${pageCls.topSpaceSm}`}>
                   <span className={widgetCls.chipPrimary}>{course.type}</span>
                   {!course.isActive && <span className={widgetCls.chipLevel}>已停用</span>}
                 </div>
@@ -282,18 +332,33 @@ export default function CoursesPage() {
               </div>
             </div>
 
-            <div className={widgetCls.twoButtons}>
-              <Button type="primary" size="middle" className={pageCls.cardActionPrimary} icon={<EditOutlined />} onClick={() => openEditModal(course)}>编辑课程</Button>
-              <Button size="middle" className={pageCls.cardActionSecondary} icon={<EyeOutlined />} onClick={() => setDetailCourse(course)}>查看详情</Button>
+            <div className={`${widgetCls.twoButtons} ${pageCls.courseCardActionGroup}`}>
+              <Button
+                type="primary"
+                size="middle"
+                className={`${pageCls.cardActionPrimary} ${pageCls.courseCardActionBtn}`}
+                icon={<EditOutlined />}
+                onClick={() => openEditModal(course)}
+              >
+                编辑课程
+              </Button>
+              <Button
+                size="middle"
+                className={`${pageCls.cardActionSecondary} ${pageCls.courseCardActionBtn} ${pageCls.courseCardActionSecondary}`}
+                icon={<EyeOutlined />}
+                onClick={() => setDetailCourse(course)}
+              >
+                查看详情
+              </Button>
             </div>
           </div>
         ))}
       </div>
 
       {filteredCourses.length === 0 ? (
-        <div className={`${pageCls.surface} ${widgetCls.detailCard}`} style={{ marginTop: 16 }}>
+        <div className={`${pageCls.surface} ${widgetCls.detailCard} ${pageCls.surfaceTopSpace}`}>
           <div className={widgetCls.detailTitle}>暂无符合条件的课程</div>
-          <div className={widgetCls.smallText} style={{ marginTop: 8 }}>修改搜索词或筛选条件后再试。</div>
+          <div className={`${widgetCls.smallText} ${pageCls.topSpaceSm}`}>修改搜索词或筛选条件后再试。</div>
         </div>
       ) : null}
 
@@ -304,6 +369,7 @@ export default function CoursesPage() {
         width={CRUD_MODAL_WIDTH}
         onCancel={closeFormModal}
         onOk={handleSaveCourse}
+        confirmLoading={isSaving}
         okText={editingCourse ? '保存修改' : '新增课程'}
         cancelText="取消"
         destroyOnHidden
@@ -372,19 +438,19 @@ export default function CoursesPage() {
         title={detailCourse?.name ?? '课程详情'}
         onClose={() => setDetailCourse(null)}
         extra={detailCourse ? (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <Button icon={<EditOutlined />} onClick={() => openEditModal(detailCourse)}>编辑</Button>
+          <div className={pageCls.drawerActionGroup}>
+            <Button className={pageCls.courseDrawerAction} icon={<EditOutlined />} onClick={() => openEditModal(detailCourse)}>编辑</Button>
             <Popconfirm title="确认删除该课程吗？" okText="删除" cancelText="取消" onConfirm={() => handleDeleteCourse(detailCourse)}>
-              <Button danger icon={<DeleteOutlined />}>删除</Button>
+              <Button className={pageCls.courseDrawerAction} danger icon={<DeleteOutlined />}>删除</Button>
             </Popconfirm>
           </div>
         ) : null}
       >
         {detailCourse ? (
-          <div style={{ display: 'grid', gap: 16 }}>
+          <div className={pageCls.detailContentStack}>
             <div className={widgetCls.detailOverviewPanel}>
               <div className={widgetCls.detailOverviewSummary}>
-                <div className={widgetCls.recordTitle} style={{ marginBottom: 0 }}>{detailCourse.name}</div>
+                <div className={widgetCls.recordTitle}>{detailCourse.name}</div>
                 <div className={widgetCls.chipRow}>
                   <span className={widgetCls.chipPrimary}>{detailCourse.type}</span>
                   <span className={widgetCls.chipLevel}>{detailCourse.level}</span>

@@ -122,6 +122,11 @@ export default function SettingsPage() {
         if (notificationsData.length > 0) {
           setNotifications(notificationsData);
           setSavedNotifications(notificationsData);
+        } else {
+          await settingsApi.initialize().catch(() => null);
+          const initialized = await settingsApi.getNotifications().catch(() => []);
+          setNotifications(initialized);
+          setSavedNotifications(initialized);
         }
       } catch (err) {
         antdMessage.error('获取设置失败');
@@ -258,7 +263,7 @@ export default function SettingsPage() {
     return (
       <div className={pageCls.page}>
         <PageHeader title="系统设置" subtitle="配置门店信息、通知策略与系统安全选项。" />
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
           <Spin size="large" />
         </div>
       </div>
@@ -316,7 +321,7 @@ export default function SettingsPage() {
         </Form>
       </SectionCard>
 
-      <div className={pageCls.equalCol} style={{ marginTop: 24 }}>
+      <div className={`${pageCls.equalCol} ${pageCls.equalColTopSpace}`}>
         <div className={pageCls.settingsSectionShell}>
           <div className={widgetCls.detailHeader}>
             <div>
@@ -380,8 +385,7 @@ export default function SettingsPage() {
               <button
                 key={item.title}
                 type="button"
-                className={widgetCls.settingRow}
-                style={{ width: '100%', border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
+                className={`${widgetCls.settingRow} ${pageCls.plainActionRowButton}`}
                 onClick={() => {
                   if (item.title === '两步验证') {
                     setTwoFactorEnabled(securityState.两步验证.status === '正常');
@@ -393,7 +397,7 @@ export default function SettingsPage() {
                   <div className={widgetCls.recordTitle}>{item.title}</div>
                   <div className={widgetCls.smallText}>{securityState[item.title].detail}</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                <div className={pageCls.statusMetaWrap}>
                   <StatusTag status={securityState[item.title].status} />
                   <ArrowRightOutlined />
                 </div>
@@ -414,15 +418,14 @@ export default function SettingsPage() {
               <button
                 key={item.title}
                 type="button"
-                className={widgetCls.settingRow}
-                style={{ width: '100%', border: 0, background: 'transparent', textAlign: 'left', cursor: 'pointer' }}
+                className={`${widgetCls.settingRow} ${pageCls.plainActionRowButton}`}
                 onClick={() => setOpenDataDrawer(item.title)}
               >
                 <div>
                   <div className={widgetCls.recordTitle}>{item.title}</div>
                   <div className={widgetCls.smallText}>{dataState[item.title].detail}</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                <div className={pageCls.statusMetaWrap}>
                   <StatusTag status={dataState[item.title].status} />
                   <ArrowRightOutlined />
                 </div>
@@ -436,7 +439,7 @@ export default function SettingsPage() {
         {openSecurityDrawer ? (
           <div className={pageCls.settingsDetailDrawerBody}>
             <div className={widgetCls.detailOverviewPanel}>
-              <div className={widgetCls.recordTitle} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
                 {securityState[openSecurityDrawer].title}
                 <StatusTag status={securityState[openSecurityDrawer].status} />
               </div>
@@ -455,7 +458,7 @@ export default function SettingsPage() {
 
             {openSecurityDrawer === '两步验证' ? (
               <div className={pageCls.settingsDetailForm}>
-                <div className={widgetCls.settingRow} style={{ margin: 0 }}>
+                <div className={widgetCls.settingRow}>
                   <div>
                     <div className={widgetCls.recordTitle}>开启二次验证</div>
                     <div className={widgetCls.smallText}>启用后，核心账号登录需经过短信或邮箱验证。</div>
@@ -470,7 +473,7 @@ export default function SettingsPage() {
               <div className={pageCls.settingsDetailDrawerBody}>
                 <Descriptions column={1} size="small" bordered>
                   <Descriptions.Item label="当前状态">{securityState.权限管理.detail}</Descriptions.Item>
-                  <Descriptions.Item label="本地联动">角色页权限矩阵仍可继续编辑与保存</Descriptions.Item>
+                  <Descriptions.Item label="权限来源">角色页权限矩阵已通过后端接口保存并实时生效</Descriptions.Item>
                 </Descriptions>
                 <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleSyncPermissions}>记录本次核对</Button>
               </div>
@@ -480,10 +483,10 @@ export default function SettingsPage() {
       </Drawer>
 
       <Drawer open={openDataDrawer !== null} width={420} title={openDataDrawer ?? '数据管理'} onClose={() => setOpenDataDrawer(null)}>
-        {openDataDrawer ? (
-          <div className={pageCls.settingsDetailDrawerBody}>
+          {openDataDrawer ? (
+            <div className={pageCls.settingsDetailDrawerBody}>
             <div className={widgetCls.detailOverviewPanel}>
-              <div className={widgetCls.recordTitle} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
                 {dataState[openDataDrawer].title}
                 <StatusTag status={dataState[openDataDrawer].status} />
               </div>
@@ -529,6 +532,28 @@ export default function SettingsPage() {
           </div>
         ) : null}
       </Drawer>
+
+      {!loading && notifications.length === 0 ? (
+        <div className={`${pageCls.surface} ${widgetCls.detailCard} ${pageCls.topSpaceMd}`}>
+          <div className={widgetCls.detailTitle}>通知设置暂无内容</div>
+          <div className={`${widgetCls.smallText} ${pageCls.topSpaceSm}`}>
+            初始化通知模板失败，请点击下方按钮重新初始化通知配置。
+          </div>
+          <div className={pageCls.topSpaceMd}>
+            <Button
+              className={pageCls.cardActionSecondary}
+              onClick={async () => {
+                await settingsApi.initialize().catch(() => null);
+                const initialized = await settingsApi.getNotifications().catch(() => []);
+                setNotifications(initialized);
+                setSavedNotifications(initialized);
+              }}
+            >
+              初始化通知模板
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

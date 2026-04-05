@@ -120,6 +120,18 @@
   box-shadow: 0 14px 32px rgba(18, 38, 63, 0.08);
 }
 
+.pageHeaderActionGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pageHeaderActionGroupWide {
+  width: 280px;
+  max-width: 100%;
+}
+
 .workPage {
   display: flex;
   flex-direction: column;
@@ -563,6 +575,9 @@
   border-radius: 14px;
   font-weight: 700;
   color: #51606f;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .segmentedSoft :global(.ant-segmented-item-selected) {
@@ -571,6 +586,15 @@
 
 .segmentedSoft :global(.ant-segmented-item-selected .ant-segmented-item-label) {
   color: #fff;
+  font-weight: 700;
+}
+
+.segmentedSoft :global(.ant-segmented-item-label) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  line-height: 1;
 }
 
 .segmentedSoft :global(.ant-segmented-thumb) {
@@ -644,6 +668,181 @@
   color: inherit;
 }
 
+.courseCardActionGroup {
+  align-items: stretch;
+}
+
+.courseCardActionBtn {
+  min-height: 44px !important;
+  height: 44px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px !important;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.courseCardActionSecondary {
+  width: auto;
+  min-width: 120px;
+}
+
+.courseDrawerAction {
+  min-height: 36px;
+  height: 36px;
+  border-radius: 10px !important;
+  font-weight: 600;
+  padding: 0 12px !important;
+}
+
+.splitButtonGroup {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.splitButtonGroup :global(.ant-btn) {
+  flex: 1 1 50%;
+  width: 50%;
+  min-width: 0;
+  min-height: 44px !important;
+  height: 44px;
+  border-radius: 12px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.splitButtonGroup :global(.ant-btn).button {
+  height: 44px;
+  border-radius: 12px;
+  padding-inline: 14px;
+}
+
+.splitButtonGroup :global(.ant-btn-text).button {
+  height: 44px;
+  border-radius: 12px;
+}
+
+.bookingSearchRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+}
+
+.bookingSearchRow .toolbarSearch {
+  width: 100%;
+}
+
+.bookingSearchRow :global(.ant-btn) {
+  min-height: 40px !important;
+  height: 40px;
+  border-radius: 12px !important;
+  padding-inline: 14px !important;
+}
+
+.bookingDateTab {
+  min-height: 44px !important;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--control-border);
+  background: var(--control-surface);
+  color: var(--button-text-secondary);
+  font-weight: 700;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.bookingDateTab :global(.ant-btn-icon),
+.bookingDateTab :global(.anticon) {
+  color: inherit;
+}
+
+.bookingDateTab:hover {
+  border-color: var(--control-border-strong);
+  background: var(--control-surface-hover);
+  color: var(--button-text-secondary-hover);
+}
+
+.bookingDateTabActive {
+  color: var(--button-text-primary);
+  border-color: rgba(47, 151, 131, 0.3);
+  background: linear-gradient(135deg, var(--control-primary-start) 0%, var(--control-primary-end) 100%);
+  box-shadow: 0 8px 20px rgba(52, 158, 136, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+:global(.ant-btn-primary).bookingDateTabActive,
+:global(.ant-btn-primary).bookingDateTabActive:hover,
+:global(.ant-btn-primary).bookingDateTabActive:focus {
+  color: var(--button-text-primary) !important;
+  border-color: rgba(47, 151, 131, 0.3) !important;
+  background: linear-gradient(135deg, var(--control-primary-start) 0%, var(--control-primary-end) 100%) !important;
+}
+
+.bookingDateTabActive:hover {
+  color: var(--button-text-primary);
+  background: linear-gradient(135deg, var(--control-primary-hover-start) 0%, var(--control-primary-hover-end) 100%);
+}
+
+.rolePermissionPanel {
+  display: grid;
+  gap: 14px;
+}
+
+.rolePermissionBlock {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 12px;
+}
+
+.rolePermissionTitle {
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  color: var(--text-heading);
+  margin-bottom: 10px;
+}
+
+.rolePermissionList {
+  display: grid;
+  gap: 8px;
+}
+
+.rolePermissionItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(248, 250, 252, 0.86);
+}
+
+.rolePermissionText {
+  min-width: 0;
+}
+
+.rolePermissionCode {
+  font-weight: 700;
+  color: var(--text-heading);
+  line-height: 1.35;
+}
+
+.rolePermissionDesc {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -658,6 +857,132 @@
 
 .muted {
   color: var(--text-tertiary);
+}
+
+.centeredState {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.centeredStateMedium {
+  min-height: 360px;
+}
+
+.centeredStateTall {
+  min-height: 400px;
+}
+
+.recordTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.actionRowWrap {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.centerPagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.surfaceTopSpace {
+  margin-top: 16px;
+}
+
+.filterModalBody {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.filterFieldLabel {
+  margin-bottom: 8px;
+}
+
+.drawerActionGroup {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.detailContentStack {
+  display: grid;
+  gap: 16px;
+}
+
+.centeredStatePadded {
+  display: flex;
+  justify-content: center;
+  padding: 36px;
+}
+
+.actionRowWrapTop {
+  margin-top: 12px;
+}
+
+.equalColTopSpace {
+  margin-top: 24px;
+}
+
+.plainActionRowButton {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.statusMetaWrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.fullWidthControl {
+  width: 100%;
+}
+
+.topSpaceSm {
+  margin-top: 8px;
+}
+
+.topSpaceMd {
+  margin-top: 12px;
+}
+
+.rowBetween {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.legendLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.toolbarCompact {
+  margin-bottom: 16px;
+}
+
+.actionRowWrapEnd {
+  justify-content: flex-end;
 }
 
 @media (max-width: 1400px) {
@@ -755,6 +1080,22 @@
   }
 }
 
+.toolbarGhostAction {
+  min-height: 44px;
+  border-radius: 12px !important;
+  border-color: var(--control-border) !important;
+  background: var(--control-surface) !important;
+  color: var(--button-text-secondary) !important;
+  font-weight: 600;
+  padding-inline: 14px !important;
+}
+
+.toolbarGhostAction:hover {
+  border-color: var(--control-border-strong) !important;
+  background: var(--control-surface-hover) !important;
+  color: var(--button-text-secondary-hover) !important;
+}
+
 @media (max-width: 768px) {
   .memberRecordGrid {
     grid-template-columns: 1fr;
@@ -773,5 +1114,9 @@
 
   .mobileMemberMetaGrid {
     grid-template-columns: 1fr;
+  }
+
+  .drawerActionGroup {
+    width: 100%;
   }
 }

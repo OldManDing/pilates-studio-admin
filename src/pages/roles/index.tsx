@@ -1,11 +1,4 @@
-import {
-  DeleteOutlined,
-  EditOutlined,
-  EyeOutlined,
-  PlusOutlined,
-  SaveOutlined
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+import { EditOutlined, EyeOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons';
 import {
   App,
   Button,
@@ -14,321 +7,224 @@ import {
   Drawer,
   Form,
   Input,
-  InputNumber,
   Modal,
-  Popconfirm,
   Row,
   Select,
+  Spin,
   Switch,
-  Table
 } from 'antd';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import StatusTag from '@/components/StatusTag';
-import { permissionMatrix, roleCards } from '@/mock';
+import { rolesApi, type Permission, type Role } from '@/services/roles';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
-import cls from './index.module.css';
 
-type PermissionRow = (typeof permissionMatrix)[number];
-type RoleCard = (typeof roleCards)[number];
-type RoleStatus = RoleCard['status'];
-type RoleFormValues = Omit<RoleCard, 'key' | 'scopes'> & { scopesText: string };
+type RoleCode = 'OWNER' | 'FRONTDESK' | 'COACH' | 'FINANCE';
 
-const coreRoleKeys = ['owner', 'frontdesk', 'coach', 'finance'] as const;
-
-const defaultRoleNames: Record<(typeof coreRoleKeys)[number], string> = {
-  owner: '店长',
-  frontdesk: '前台',
-  coach: '教练',
-  finance: '财务'
+type RoleFormValues = {
+  code: RoleCode;
+  name: string;
+  description?: string;
 };
 
-const defaultRoleFormValues: RoleFormValues = {
-  name: '',
-  status: '待激活',
-  users: 1,
-  description: '',
-  scopesText: ''
+const roleCodeLabel: Record<RoleCode, string> = {
+  OWNER: '店长',
+  FRONTDESK: '前台',
+  COACH: '教练',
+  FINANCE: '财务',
 };
-
-const roleStatusOptions: RoleStatus[] = ['正常', '待激活', '处理中'];
-
-const createRoleKey = () => `role-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-const parseScopes = (value: string) => value
-  .split(/[、,，\n]+/)
-  .map((item) => item.trim())
-  .filter(Boolean);
 
 const CRUD_MODAL_WIDTH = 780;
 
 export default function RolesPage() {
   const [form] = Form.useForm<RoleFormValues>();
-  const [roles, setRoles] = useState<RoleCard[]>(roleCards);
-  const [matrix, setMatrix] = useState(permissionMatrix);
-  const [savedMatrix, setSavedMatrix] = useState(permissionMatrix);
-  const [isRoleFormOpen, setIsRoleFormOpen] = useState(false);
-  const [editingRole, setEditingRole] = useState<RoleCard | null>(null);
-  const [detailRole, setDetailRole] = useState<RoleCard | null>(null);
   const { message } = App.useApp();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [isRoleFormOpen, setIsRoleFormOpen] = useState(false);
+  const [detailRole, setDetailRole] = useState<Role | null>(null);
+  const [editingPermissionRole, setEditingPermissionRole] = useState<Role | null>(null);
+  const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([]);
 
-  const roleNameMap = useMemo(() => coreRoleKeys.reduce<Record<(typeof coreRoleKeys)[number], string>>((map, key) => {
-    map[key] = roles.find((item) => item.key === key)?.name ?? defaultRoleNames[key];
-    return map;
-  }, { ...defaultRoleNames }), [roles]);
-
-  const unsavedMatrixCount = useMemo(
-    () => matrix.reduce((total, row, rowIndex) => total + coreRoleKeys.filter((roleKey) => row[roleKey] !== savedMatrix[rowIndex]?.[roleKey]).length, 0),
-    [matrix, savedMatrix]
-  );
-
-  const togglePermission = (rowKey: string, roleKey: (typeof coreRoleKeys)[number], checked: boolean) => {
-    setMatrix((prev) => prev.map((item) => (item.key === rowKey ? { ...item, [roleKey]: checked } : item)));
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      let permissionList = await rolesApi.getPermissions().catch(() => []);
+      if (!permissionList.length) {
+        await rolesApi.initializeDefaults().catch(() => null);
+        permissionList = await rolesApi.getPermissions().catch(() => []);
+      }
+      const roleList = await rolesApi.getAll();
+      setRoles(roleList);
+      setPermissions(permissionList);
+    } catch (err: any) {
+      message.error(err?.message || '获取角色权限数据失败');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const groupedPermissions = useMemo(() => {
+    const groupMap = new Map<string, Permission[]>();
+    permissions.forEach((item) => {
+      const list = groupMap.get(item.module) || [];
+      list.push(item);
+      groupMap.set(item.module, list);
+    });
+    return Array.from(groupMap.entries());
+  }, [permissions]);
 
   const openCreateModal = () => {
-    setEditingRole(null);
-    form.setFieldsValue(defaultRoleFormValues);
-    setIsRoleFormOpen(true);
-  };
-
-  const openEditModal = (role: RoleCard) => {
-    setEditingRole(role);
     form.setFieldsValue({
-      name: role.name,
-      status: role.status,
-      users: role.users,
-      description: role.description,
-      scopesText: role.scopes.join('、')
+      code: 'FRONTDESK',
+      name: '',
+      description: '',
     });
     setIsRoleFormOpen(true);
   };
 
-  const closeRoleFormModal = () => {
+  const closeCreateModal = () => {
     setIsRoleFormOpen(false);
-    setEditingRole(null);
     form.resetFields();
   };
 
-  const handleSaveRole = async () => {
+  const handleCreateRole = async () => {
     const values = await form.validateFields();
-    const scopes = parseScopes(values.scopesText);
-    const nextRole: RoleCard = editingRole
-      ? {
-        ...editingRole,
-        ...values,
-        scopes
-      }
-      : {
-        key: createRoleKey(),
-        ...values,
-        scopes
-      };
+    try {
+      setSaving(true);
+      await rolesApi.create({
+        code: values.code,
+        name: values.name,
+        description: values.description,
+      });
+      message.success('角色创建成功');
+      closeCreateModal();
+      await fetchData();
+    } catch (err: any) {
+      message.error(err?.message || '角色创建失败');
+    } finally {
+      setSaving(false);
+    }
+  };
 
-    setRoles((current) => {
-      if (editingRole) {
-        return current.map((item) => (item.key === editingRole.key ? nextRole : item));
-      }
+  const openPermissionEditor = (role: Role) => {
+    setEditingPermissionRole(role);
+    setSelectedPermissionIds(role.permissions.map((rp) => rp.permission.id));
+  };
 
-      return [nextRole, ...current];
+  const handlePermissionToggle = (permissionId: string, checked: boolean) => {
+    setSelectedPermissionIds((current) => {
+      if (checked) {
+        return current.includes(permissionId) ? current : [...current, permissionId];
+      }
+      return current.filter((id) => id !== permissionId);
     });
-
-    if (detailRole?.key === nextRole.key) {
-      setDetailRole(nextRole);
-    }
-
-    message.success(editingRole ? '角色信息已更新' : '新角色已添加');
-    closeRoleFormModal();
   };
 
-  const handleDeleteRole = (role: RoleCard) => {
-    setRoles((current) => current.filter((item) => item.key !== role.key));
-
-    if (detailRole?.key === role.key) {
-      setDetailRole(null);
+  const savePermissions = async () => {
+    if (!editingPermissionRole) return;
+    try {
+      setSaving(true);
+      await rolesApi.assignPermissions(editingPermissionRole.id, selectedPermissionIds);
+      message.success('权限模板已保存并生效');
+      setEditingPermissionRole(null);
+      await fetchData();
+    } catch (err: any) {
+      message.error(err?.message || '保存权限失败');
+    } finally {
+      setSaving(false);
     }
-
-    if (editingRole?.key === role.key) {
-      closeRoleFormModal();
-    }
-
-    message.success(`已删除角色 ${role.name}`);
   };
-
-  const handleSaveMatrix = () => {
-    setSavedMatrix(matrix.map((item) => ({ ...item })));
-    message.success('权限模板已在当前页面状态中保存');
-  };
-
-  const columns: ColumnsType<PermissionRow> = [
-    {
-      title: '功能模块',
-      dataIndex: 'module',
-      key: 'module',
-      render: (value: string) => <strong>{value}</strong>
-    },
-    {
-      title: roleNameMap.owner,
-      dataIndex: 'owner',
-      key: 'owner',
-      align: 'center',
-      render: (checked: boolean, record) => <Switch checked={checked} onChange={(value) => togglePermission(record.key, 'owner', value)} />
-    },
-    {
-      title: roleNameMap.frontdesk,
-      dataIndex: 'frontdesk',
-      key: 'frontdesk',
-      align: 'center',
-      render: (checked: boolean, record) => <Switch checked={checked} onChange={(value) => togglePermission(record.key, 'frontdesk', value)} />
-    },
-    {
-      title: roleNameMap.coach,
-      dataIndex: 'coach',
-      key: 'coach',
-      align: 'center',
-      render: (checked: boolean, record) => <Switch checked={checked} onChange={(value) => togglePermission(record.key, 'coach', value)} />
-    },
-    {
-      title: roleNameMap.finance,
-      dataIndex: 'finance',
-      key: 'finance',
-      align: 'center',
-      render: (checked: boolean, record) => <Switch checked={checked} onChange={(value) => togglePermission(record.key, 'finance', value)} />
-    }
-  ];
 
   return (
     <div className={`${pageCls.page} ${pageCls.workPage}`}>
       <PageHeader
         title="角色与权限"
-        subtitle="统一管理门店角色分工，确保每个岗位只访问必要功能。当前修改仅作用于本次预览会话。"
-        extra={
+        subtitle="统一管理门店角色分工，所有修改均通过后端接口持久化并即时生效。"
+        extra={(
           <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>
             新增角色
           </ActionButton>
-        }
+        )}
       />
 
-      <SectionCard title="角色列表" subtitle={`当前岗位分配与权限范围 · 本地角色 ${roles.length} 个`}>
-        {roles.length ? (
-          <div className={`${cls.roleGrid} ${pageCls.workSection}`}>
+      <SectionCard title="角色列表" subtitle={`当前角色 ${roles.length} 个 · 权限实时同步后端`}>
+        {loading ? (
+          <div className={pageCls.centeredStatePadded}><Spin /></div>
+        ) : roles.length ? (
+          <div className={`${pageCls.courseGrid} ${pageCls.workSection}`}>
             {roles.map((item) => (
-              <div key={item.key} className={`${widgetCls.settingBlock} ${widgetCls.workRecordItem} ${cls.roleCard}`}>
+              <div key={item.id} className={`${widgetCls.settingBlock} ${widgetCls.workRecordItem}`}>
                 <div className={widgetCls.detailHeader}>
                   <div>
                     <h3 className={widgetCls.detailTitle}>{item.name}</h3>
-                    <div className={widgetCls.smallText}>{item.users} 人使用</div>
+                    <div className={widgetCls.smallText}>角色编码 {item.code}</div>
                   </div>
-                  <StatusTag status={item.status} />
+                  <StatusTag status="正常" />
                 </div>
 
-                <div className={cls.roleBody}>
-                  <div className={widgetCls.smallText}>{item.description}</div>
-                  <div className={cls.scopeRow}>
-                    {item.scopes.map((scope) => (
-                      <span key={scope} className={widgetCls.chip}>
-                        {scope}
-                      </span>
-                    ))}
-                  </div>
+                <div className={widgetCls.detailOverviewText}>{item.description || '暂无角色说明'}</div>
+
+                <div className={widgetCls.chipRow}>
+                  <span className={widgetCls.chipPrimary}>管理员 {item._count?.admins || 0} 人</span>
+                  <span className={widgetCls.chip}>权限项 {item.permissions.length} 个</span>
                 </div>
 
-                <div className={cls.roleFooter}>
-                  <span className={pageCls.memberRemainingBadge}>权限项 {item.scopes.length} 个</span>
-                  <div className={cls.roleActions}>
-                    <Button size="middle" className={pageCls.cardActionSecondary} icon={<EditOutlined />} onClick={() => openEditModal(item)}>编辑</Button>
-                    <Button size="middle" className={pageCls.cardActionSecondary} icon={<EyeOutlined />} onClick={() => setDetailRole(item)}>详情</Button>
-                    <Popconfirm title="确认删除该角色吗？" okText="删除" cancelText="取消" onConfirm={() => handleDeleteRole(item)}>
-                      <Button size="middle" danger className={pageCls.cardActionSecondary} icon={<DeleteOutlined />}>删除</Button>
-                    </Popconfirm>
-                  </div>
+                <div className={`${pageCls.actionRowWrap} ${pageCls.actionRowWrapTop}`}>
+                  <Button size="middle" className={pageCls.cardActionSecondary} icon={<EyeOutlined />} onClick={() => setDetailRole(item)}>详情</Button>
+                  <Button size="middle" className={pageCls.cardActionSecondary} icon={<EditOutlined />} onClick={() => openPermissionEditor(item)}>编辑权限</Button>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <EmptyState title="暂无角色配置" description="角色列表为空时，可在此统一创建岗位权限模板。" actionText="新增角色" onAction={openCreateModal} />
-        )}
-      </SectionCard>
-
-      <SectionCard
-        title="权限矩阵"
-        subtitle={`可视化开关仅在当前页面状态中生效${unsavedMatrixCount > 0 ? ` · 待保存 ${unsavedMatrixCount} 项` : ' · 已同步最新模板'}`}
-        extra={
-          <ActionButton icon={<SaveOutlined />} onClick={handleSaveMatrix}>
-            保存权限模板
-          </ActionButton>
-        }
-      >
-        {matrix.length ? (
-          <div className={pageCls.tableWrap}>
-            <Table<PermissionRow>
-              className={pageCls.membersTable}
-              rowKey="key"
-              columns={columns}
-              dataSource={matrix}
-              scroll={{ x: 760 }}
-              pagination={false}
-            />
-          </div>
-        ) : (
-          <EmptyState title="暂无权限矩阵" description="当前尚未配置角色权限，请先创建角色或导入默认模板。" actionText="返回角色列表" onAction={() => window.scrollTo({ top: 0, behavior: 'smooth' })} />
+          <EmptyState title="暂无角色配置" description="请先创建角色并分配权限。" actionText="新增角色" onAction={openCreateModal} />
         )}
       </SectionCard>
 
       <Modal
         className={pageCls.crudModal}
-        title={editingRole ? '编辑角色' : '新增角色'}
+        title="新增角色"
         open={isRoleFormOpen}
         width={CRUD_MODAL_WIDTH}
-        onCancel={closeRoleFormModal}
-        onOk={handleSaveRole}
-        okText={editingRole ? '保存修改' : '新增角色'}
+        onCancel={closeCreateModal}
+        onOk={handleCreateRole}
+        okText="创建角色"
         cancelText="取消"
+        confirmLoading={saving}
         destroyOnHidden
       >
         <Form form={form} className={pageCls.crudModalForm} layout="vertical">
           <Row gutter={18}>
             <Col xs={24} md={12}>
+              <Form.Item name="code" label="角色编码" rules={[{ required: true, message: '请选择角色编码' }]}>
+                <Select
+                  className={pageCls.settingsInput}
+                  options={(Object.keys(roleCodeLabel) as RoleCode[]).map((key) => ({
+                    label: `${roleCodeLabel[key]} (${key})`,
+                    value: key,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
               <Form.Item name="name" label="角色名称" rules={[{ required: true, message: '请输入角色名称' }]}>
                 <Input className={pageCls.settingsInput} placeholder="例如：运营主管" />
               </Form.Item>
             </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="status" label="角色状态" rules={[{ required: true, message: '请选择角色状态' }]}>
-                <Select className={pageCls.settingsInput} options={roleStatusOptions.map((item) => ({ label: item, value: item }))} />
-              </Form.Item>
-            </Col>
             <Col xs={24}>
-              <Form.Item name="users" label="使用人数" rules={[{ required: true, message: '请输入使用人数' }]}>
-                <InputNumber className={pageCls.settingsInput} style={{ width: '100%' }} min={0} precision={0} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="description" label="角色说明" rules={[{ required: true, message: '请输入角色说明' }]}>
-                <Input.TextArea className={pageCls.settingsInput} rows={4} placeholder="概述该岗位的主要职责与协作范围" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item
-                name="scopesText"
-                label="权限范围"
-                rules={[
-                  { required: true, message: '请输入至少一个权限范围' },
-                  {
-                    validator: async (_, value: string | undefined) => {
-                      if (parseScopes(value ?? '').length === 0) {
-                        throw new Error('请输入至少一个权限范围');
-                      }
-                    }
-                  }
-                ]}
-              >
-                <Input.TextArea className={pageCls.settingsInput} rows={4} placeholder="例如：门店总览、排班审批、会员管理" />
+              <Form.Item name="description" label="角色说明">
+                <Input.TextArea className={pageCls.settingsInput} rows={4} placeholder="概述角色职责与协作范围" />
               </Form.Item>
             </Col>
           </Row>
@@ -336,67 +232,53 @@ export default function RolesPage() {
       </Modal>
 
       <Drawer
+        open={editingPermissionRole !== null}
+        width={560}
+        title={editingPermissionRole ? `编辑权限 · ${editingPermissionRole.name}` : '编辑权限'}
+        onClose={() => setEditingPermissionRole(null)}
+        extra={(
+          <ActionButton icon={<SaveOutlined />} onClick={savePermissions} disabled={saving}>
+            保存
+          </ActionButton>
+        )}
+      >
+        <div className={pageCls.rolePermissionPanel}>
+          {groupedPermissions.map(([moduleName, permissionList]) => (
+            <div key={moduleName} className={pageCls.rolePermissionBlock}>
+              <div className={pageCls.rolePermissionTitle}>{moduleName}</div>
+              <div className={pageCls.rolePermissionList}>
+              {permissionList.map((permission) => {
+                const checked = selectedPermissionIds.includes(permission.id);
+                return (
+                  <div key={permission.id} className={pageCls.rolePermissionItem}>
+                    <div className={pageCls.rolePermissionText}>
+                      <div className={pageCls.rolePermissionCode}>{permission.action}:{permission.module}</div>
+                      <div className={pageCls.rolePermissionDesc}>{permission.description || '无描述'}</div>
+                    </div>
+                    <Switch checked={checked} onChange={(value) => handlePermissionToggle(permission.id, value)} />
+                  </div>
+                );
+              })}
+            </div>
+            </div>
+          ))}
+        </div>
+      </Drawer>
+
+      <Drawer
         open={detailRole !== null}
         width={440}
-        title={detailRole?.name ?? '角色详情'}
+        title={detailRole?.name || '角色详情'}
         onClose={() => setDetailRole(null)}
-        extra={detailRole ? (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <Button icon={<EditOutlined />} onClick={() => openEditModal(detailRole)}>编辑</Button>
-            <Popconfirm title="确认删除该角色吗？" okText="删除" cancelText="取消" onConfirm={() => handleDeleteRole(detailRole)}>
-              <Button danger icon={<DeleteOutlined />}>删除</Button>
-            </Popconfirm>
-          </div>
-        ) : null}
       >
         {detailRole ? (
-          <div style={{ display: 'grid', gap: 16 }}>
-            <div className={widgetCls.detailOverviewPanel}>
-              <div className={widgetCls.detailOverviewSummary}>
-                <div className={widgetCls.recordTitle} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  {detailRole.name}
-                  <StatusTag status={detailRole.status} />
-                </div>
-                <div className={widgetCls.detailOverviewText}>{detailRole.description}</div>
-              </div>
-
-              <div className={widgetCls.detailOverviewStatGrid}>
-                <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatMint}`}>
-                  <div className={widgetCls.detailInsightLabel}>使用人数</div>
-                  <div className={widgetCls.detailOverviewStatValue}>{detailRole.users}</div>
-                </div>
-                <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatViolet}`}>
-                  <div className={widgetCls.detailInsightLabel}>权限项</div>
-                  <div className={widgetCls.detailOverviewStatValue}>{detailRole.scopes.length}</div>
-                </div>
-                <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatOrange}`}>
-                  <div className={widgetCls.detailInsightLabel}>矩阵联动</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>
-                    {coreRoleKeys.includes(detailRole.key as (typeof coreRoleKeys)[number]) ? '已启用' : '卡片管理'}
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>权限范围</div>
-                <div className={cls.scopeRow}>
-                  {detailRole.scopes.map((scope) => (
-                    <span key={scope} className={widgetCls.chip}>
-                      {scope}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <Descriptions column={1} size="small" bordered>
-              <Descriptions.Item label="角色名称">{detailRole.name}</Descriptions.Item>
-              <Descriptions.Item label="角色状态">{detailRole.status}</Descriptions.Item>
-              <Descriptions.Item label="使用人数">{detailRole.users} 人</Descriptions.Item>
-              <Descriptions.Item label="角色说明">{detailRole.description}</Descriptions.Item>
-              <Descriptions.Item label="权限范围">{detailRole.scopes.join('、')}</Descriptions.Item>
-            </Descriptions>
-          </div>
+          <Descriptions column={1} size="small" bordered>
+            <Descriptions.Item label="角色编码">{detailRole.code}</Descriptions.Item>
+            <Descriptions.Item label="角色名称">{detailRole.name}</Descriptions.Item>
+            <Descriptions.Item label="角色说明">{detailRole.description || '-'}</Descriptions.Item>
+            <Descriptions.Item label="管理员数量">{detailRole._count?.admins || 0}</Descriptions.Item>
+            <Descriptions.Item label="权限数量">{detailRole.permissions.length}</Descriptions.Item>
+          </Descriptions>
         ) : null}
       </Drawer>
     </div>

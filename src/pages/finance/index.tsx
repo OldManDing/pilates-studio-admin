@@ -387,7 +387,7 @@ export default function FinancePage() {
           subtitle="查看营收、支出与门店财务分析。"
           extra={<ActionButton icon={<DownloadOutlined />} onClick={handleExportReport}>导出报表</ActionButton>}
         />
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
           <Spin size="large" />
         </div>
       </div>
@@ -459,9 +459,9 @@ export default function FinancePage() {
 
           <div className={widgetCls.recordList}>
             {revenueStructure.map((item) => (
-              <div key={item.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 999, background: item.fill, display: 'inline-block' }} />
+              <div key={item.name} className={pageCls.rowBetween}>
+                <div className={pageCls.legendLabelRow}>
+                  <span className={pageCls.legendDot} style={{ background: item.fill }} />
                   <span>{item.name}</span>
                 </div>
                 <strong>{formatCurrency(item.value)}</strong>
@@ -476,7 +476,7 @@ export default function FinancePage() {
         subtitle={`交易管理 · ${transactionCountLabel}`}
         extra={<Button type="text" onClick={handleViewAll}>{viewAllLabel}</Button>}
       >
-        <div className={pageCls.toolbar} style={{ marginBottom: 16 }}>
+        <div className={`${pageCls.toolbar} ${pageCls.toolbarCompact}`}>
           <div className={pageCls.toolbarLeft}>
             <Input
               className={pageCls.toolbarSearch}
@@ -519,17 +519,17 @@ export default function FinancePage() {
                   <div className={pageCls.memberRecordLabel}>交易金额</div>
                   <div className={pageCls.memberRecordValue}>{formatCurrency(item.amountCents / 100)}</div>
                 </div>
-                <div className={pageCls.memberRecordField}>
-                  <div className={pageCls.memberRecordLabel}>交易状态</div>
-                  <div className={pageCls.memberRecordValue} style={{ fontSize: 'var(--font-size-xl)' }}>{statusMap[item.status] || item.status}</div>
-                </div>
+              <div className={pageCls.memberRecordField}>
+                <div className={pageCls.memberRecordLabel}>交易状态</div>
+                <div className={pageCls.memberRecordValue} style={{ fontSize: 'var(--font-size-xl)' }}>{statusMap[item.status] || item.status}</div>
+              </div>
                 <div className={pageCls.memberRecordField}>
                   <div className={pageCls.memberRecordLabel}>交易日期</div>
                   <div className={pageCls.memberRecordValue} style={{ fontSize: 'var(--font-size-xl)' }}>{new Date(item.happenedAt).toLocaleDateString('zh-CN')}</div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <div className={`${pageCls.actionRowWrap} ${pageCls.actionRowWrapEnd}`}>
                 <Button size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={() => openEditModal(item)}>编辑</Button>
                 <Button size="large" className={pageCls.cardActionHalf} icon={<EyeOutlined />} onClick={() => setDetailTransaction(item)}>详情</Button>
               </div>
@@ -538,9 +538,9 @@ export default function FinancePage() {
         </div>
 
         {visibleTransactions.length === 0 ? (
-          <div className={`${pageCls.surface} ${widgetCls.detailCard}`} style={{ marginTop: 16 }}>
+          <div className={`${pageCls.surface} ${widgetCls.detailCard} ${pageCls.surfaceTopSpace}`}>
             <div className={widgetCls.detailTitle}>暂无符合条件的交易记录</div>
-            <div className={widgetCls.smallText} style={{ marginTop: 8 }}>试试调整搜索词，或清空筛选后重新查看全部交易。</div>
+            <div className={`${widgetCls.smallText} ${pageCls.topSpaceSm}`}>试试调整搜索词，或清空筛选后重新查看全部交易。</div>
             <div className={widgetCls.twoButtons}>
               <Button size="large" className={pageCls.cardActionHalf} onClick={() => setSearchValue('')}>清空搜索</Button>
               <Button type="primary" size="large" className={pageCls.cardActionHalf} onClick={resetFilters}>重置筛选</Button>
@@ -605,9 +605,9 @@ export default function FinancePage() {
           <Button key="submit" type="primary" onClick={applyFilters}>应用筛选</Button>
         ]}
       >
-        <div style={{ display: 'grid', gap: 16, marginTop: 20 }}>
+        <div className={pageCls.filterModalBody}>
           <div>
-            <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>交易状态</div>
+            <div className={`${widgetCls.smallText} ${pageCls.filterFieldLabel}`}>交易状态</div>
             <Select
               value={filterDraft.status}
               className={pageCls.settingsInput}
@@ -617,7 +617,7 @@ export default function FinancePage() {
             />
           </div>
           <div>
-            <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>交易类型</div>
+            <div className={`${widgetCls.smallText} ${pageCls.filterFieldLabel}`}>交易类型</div>
             <Select
               value={filterDraft.kind}
               className={pageCls.settingsInput}
@@ -635,18 +635,18 @@ export default function FinancePage() {
         title={detailTransaction?.member?.name ?? '交易详情'}
         onClose={() => setDetailTransaction(null)}
         extra={detailTransaction ? (
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className={pageCls.drawerActionGroup}>
             <Button icon={<EditOutlined />} onClick={() => openEditModal(detailTransaction)}>编辑</Button>
           </div>
         ) : null}
       >
         {detailTransaction ? (
-          <div style={{ display: 'grid', gap: 16 }}>
+          <div className={pageCls.detailContentStack}>
             <div className={widgetCls.detailOverviewPanel}>
               <div className={widgetCls.recordMeta}>
                 <MemberAvatar name={detailTransaction.member?.name || '未知'} tone={getToneFromName(detailTransaction.member?.name || '未知')} />
                 <div>
-                  <div className={widgetCls.recordTitle} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
                     {detailTransaction.member?.name || '未知会员'}
                     <StatusTag status={statusMap[detailTransaction.status] || detailTransaction.status} />
                   </div>

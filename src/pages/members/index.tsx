@@ -64,7 +64,7 @@ export default function MembersPage() {
     totalMembers: 0,
     activeMembers: 0,
     newMembersThisMonth: 0,
-    expiringSoonCount: 23, // 这个字段后端暂时没有，先用固定值
+    expiringSoonCount: 0,
   });
 
   // Pagination
@@ -77,11 +77,12 @@ export default function MembersPage() {
     const fetchStats = async () => {
       try {
         const data = await reportsApi.getMembers();
+        const expiringSoonCount = await reportsApi.getMemberExpiringSoon(30).catch(() => 0);
         setStats({
           totalMembers: data.totalMembers,
           activeMembers: data.activeMembers,
           newMembersThisMonth: data.newMembersThisMonth,
-          expiringSoonCount: 23,
+          expiringSoonCount,
         });
       } catch (err) {
         // ignore
@@ -291,7 +292,7 @@ export default function MembersPage() {
           subtitle="管理所有会员信息和会籍状态。"
           extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增会员</ActionButton>}
         />
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
           <Spin size="large" />
         </div>
       </div>
@@ -370,7 +371,7 @@ export default function MembersPage() {
               </div>
             ))}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 24 }}>
+          <div className={pageCls.centerPagination}>
             <Pagination
               current={currentPage}
               pageSize={pageSize}
@@ -381,7 +382,7 @@ export default function MembersPage() {
           </div>
         </>
       ) : (
-        <div className={`${pageCls.surface} ${widgetCls.detailCard}`} style={{ marginTop: 16 }}>
+        <div className={`${pageCls.surface} ${widgetCls.detailCard} ${pageCls.surfaceTopSpace}`}>
           <EmptyState title="暂无符合条件的会员" description="试试调整搜索词或清空筛选条件，也可以直接新增会员。" actionText="清空筛选" onAction={() => { setSearchValue(''); resetFilters(); }} />
         </div>
       )}
@@ -455,9 +456,9 @@ export default function MembersPage() {
           <Button key="submit" type="primary" onClick={applyFilters}>应用筛选</Button>
         ]}
       >
-        <div style={{ display: 'grid', gap: 16, marginTop: 20 }}>
+        <div className={pageCls.filterModalBody}>
           <div>
-            <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>会籍状态</div>
+            <div className={`${widgetCls.smallText} ${pageCls.filterFieldLabel}`}>会籍状态</div>
             <Select
               value={filterDraft.status}
               className={pageCls.settingsInput}
@@ -467,7 +468,7 @@ export default function MembersPage() {
             />
           </div>
           <div>
-            <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>会籍类型</div>
+            <div className={`${widgetCls.smallText} ${pageCls.filterFieldLabel}`}>会籍类型</div>
             <Select
               value={filterDraft.planId}
               className={pageCls.settingsInput}
@@ -485,7 +486,7 @@ export default function MembersPage() {
         title={detailMember?.name ?? '会员详情'}
         onClose={() => setDetailMember(null)}
         extra={detailMember ? (
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className={pageCls.drawerActionGroup}>
             <Button icon={<EditOutlined />} onClick={() => openEditModal(detailMember)}>编辑</Button>
             <Popconfirm title="确认删除该会员吗？" okText="删除" cancelText="取消" onConfirm={() => handleDeleteMember(detailMember)}>
               <Button danger icon={<DeleteOutlined />}>删除</Button>
@@ -494,12 +495,12 @@ export default function MembersPage() {
         ) : null}
       >
         {detailMember ? (
-          <div style={{ display: 'grid', gap: 16 }}>
+          <div className={pageCls.detailContentStack}>
             <div className={widgetCls.detailOverviewPanel}>
               <div className={widgetCls.recordMeta}>
                 <MemberAvatar name={detailMember.name} tone={getToneFromName(detailMember.name)} />
                 <div>
-                  <div className={widgetCls.recordTitle} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
                     {detailMember.name}
                     <StatusTag status={detailMember.status} />
                   </div>
