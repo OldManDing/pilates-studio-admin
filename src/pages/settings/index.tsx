@@ -261,7 +261,7 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className={pageCls.page}>
+      <div className={`${pageCls.page} ${pageCls.workPage}`}>
         <PageHeader title="系统设置" subtitle="配置门店信息、通知策略与系统安全选项。" />
         <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
           <Spin size="large" />
@@ -271,7 +271,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className={pageCls.page}>
+    <div className={`${pageCls.page} ${pageCls.workPage}`}>
       <PageHeader title="系统设置" subtitle="配置门店信息、通知策略与系统安全选项。" />
 
       <SectionCard title="门店信息" subtitle={`基础信息与营业时间 · 最近保存 ${storeSavedAt}${storeChanged ? ' · 有未保存修改' : ''}`}>

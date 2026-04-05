@@ -199,7 +199,7 @@ export default function CoachesPage() {
 
   if (loading && coachList.length === 0) {
     return (
-      <div className={pageCls.page}>
+      <div className={`${pageCls.page} ${pageCls.workPage}`}>
         {contextHolder}
         <PageHeader
           title="教练管理"
@@ -214,7 +214,7 @@ export default function CoachesPage() {
   }
 
   return (
-    <div className={pageCls.page}>
+    <div className={`${pageCls.page} ${pageCls.workPage}`}>
       {contextHolder}
       <PageHeader
         title="教练管理"
@@ -383,7 +383,7 @@ export default function CoachesPage() {
         title={detailCoach?.name ?? '教练详情'}
         onClose={() => setDetailCoach(null)}
         extra={detailCoach ? (
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className={pageCls.drawerActionGroup}>
             <Button icon={<EditOutlined />} onClick={() => openEditModal(detailCoach)}>编辑</Button>
             <Popconfirm title="确认删除该教练吗？" okText="删除" cancelText="取消" onConfirm={() => handleDeleteCoach(detailCoach)}>
               <Button danger icon={<DeleteOutlined />}>删除</Button>
