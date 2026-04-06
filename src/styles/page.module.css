@@ -634,7 +634,9 @@
 }
 
 .cardActionSecondary {
-  width: 96px;
+  flex: 1;
+  min-width: 0;
+  width: auto;
   border-radius: 14px !important;
   font-weight: 700;
   color: var(--button-text-secondary) !important;
@@ -1136,6 +1138,12 @@
 .toolbarSelect :global(.ant-select-selection-item),
 .toolbarSelect :global(.ant-select-selection-placeholder) {
   line-height: 42px !important;
+  color: var(--button-text-secondary) !important;
+}
+
+.toolbarSelect :global(.ant-select-focused) .ant-select-selector {
+  border-color: rgba(67, 199, 171, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(67, 199, 171, 0.12) !important;
 }
 
 @media (max-width: 768px) {

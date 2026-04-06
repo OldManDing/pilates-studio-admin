@@ -243,11 +243,7 @@ export default function CoursesPage() {
       <PageHeader
         title="课程管理"
         subtitle="管理所有课程设置和排期。"
-        extra={(
-          <div className={`${pageCls.pageHeaderActionGroup} ${pageCls.pageHeaderActionGroupWide}`}>
-            <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增课程</ActionButton>
-          </div>
-        )}
+        extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增课程</ActionButton>}
       />
 
       <div className={pageCls.heroGrid}>
@@ -271,14 +267,14 @@ export default function CoursesPage() {
             <Select
               value={typeFilter}
               size="large"
-              className={`${pageCls.settingsInput} ${pageCls.toolbarSelect}`}
+              className={pageCls.toolbarSelect}
               options={[{ label: '全部类型', value: '全部' }, ...courseTypeOptions.map((item) => ({ label: item, value: item }))]}
               onChange={(value: string) => setTypeFilter(value)}
             />
             <Select
               value={levelFilter}
               size="large"
-              className={`${pageCls.settingsInput} ${pageCls.toolbarSelect}`}
+              className={pageCls.toolbarSelect}
               options={[{ label: '全部难度', value: '全部' }, ...courseLevelOptions.map((item) => ({ label: item, value: item }))]}
               onChange={(value: string) => setLevelFilter(value)}
             />
