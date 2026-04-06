@@ -36,15 +36,28 @@ export const reportsApi = {
     }>('/reports/attendance', { params: { from, to } }),
 
   getMemberExpiringSoon: async (days = 30) => {
-    const res = await api.get<{
-      data: any[];
-      meta: { total: number };
-    }>('/members', { params: { page: 1, pageSize: 500 } });
+    // Backend page size limitation: max 100 per request. Aggregate across pages.
+    const pageSize = 100;
+    let page = 1;
+    let collected: any[] = [];
+    let total = 0;
+
+    // Fetch all pages up to total
+    do {
+      const res = await api.get<{
+        data: any[];
+        meta: { total: number };
+      }>('/members', { params: { page, pageSize } });
+      const data = res.data || [];
+      collected = collected.concat(data);
+      total = res.meta?.total ?? 0;
+      page += 1;
+    } while (collected.length < total);
 
     const now = Date.now();
     const threshold = now + days * 24 * 60 * 60 * 1000;
 
-    const expiringSoon = (res.data || []).filter((member: any) => {
+    const expiringSoon = collected.filter((member: any) => {
       if (member.status !== 'ACTIVE') return false;
       if (!member.joinedAt || !member.plan?.durationDays) return false;
       const end = new Date(member.joinedAt).getTime() + Number(member.plan.durationDays) * 24 * 60 * 60 * 1000;
