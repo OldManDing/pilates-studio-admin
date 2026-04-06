@@ -19,15 +19,36 @@
   border: 1px solid rgba(255, 255, 255, 0.72);
   box-shadow: 0 20px 44px rgba(53, 63, 81, 0.09);
   overflow: hidden;
+  /* 隐藏侧边栏滚动条 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar::-webkit-scrollbar {
+  display: none;
 }
 
 .main {
   margin-left: calc(clamp(248px, 22vw, 280px) + 44px);
   padding: 20px 20px 28px;
+  /* 隐藏主内容区滚动条 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.main::-webkit-scrollbar {
+  display: none;
 }
 
 .content {
   padding: 0;
+  /* 隐藏内容区滚动条 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.content::-webkit-scrollbar {
+  display: none;
 }
 
 .loadingWrap {

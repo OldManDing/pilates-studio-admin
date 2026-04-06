@@ -62,10 +62,10 @@ export class SettingsService {
 
   async initializeDefaultSettings() {
     const defaultSettings = [
-      { key: 'booking_confirmation', title: 'Booking Confirmation', channel: 'MINI_PROGRAM', description: 'Send notification when booking is confirmed' },
-      { key: 'booking_reminder', title: 'Booking Reminder', channel: 'MINI_PROGRAM', description: 'Send reminder before class starts' },
-      { key: 'membership_expiry', title: 'Membership Expiry', channel: 'SMS', description: 'Notify when membership is about to expire' },
-      { key: 'payment_receipt', title: 'Payment Receipt', channel: 'EMAIL', description: 'Send receipt after payment' },
+      { key: 'booking_confirmation', title: '预约确认', channel: 'MINI_PROGRAM', description: '会员预约成功后发送确认通知' },
+      { key: 'booking_reminder', title: '开课提醒', channel: 'MINI_PROGRAM', description: '课程开始前发送提醒通知' },
+      { key: 'membership_expiry', title: '会籍到期', channel: 'SMS', description: '会员卡即将到期时发送通知' },
+      { key: 'payment_receipt', title: '支付凭证', channel: 'EMAIL', description: '支付成功后发送电子收据' },
     ];
 
     for (const setting of defaultSettings) {

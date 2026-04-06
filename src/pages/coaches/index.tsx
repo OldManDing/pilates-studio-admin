@@ -243,8 +243,7 @@ export default function CoachesPage() {
           <Select
             size="large"
             value={statusFilter}
-            style={{ minWidth: 140 }}
-            className={pageCls.settingsInput}
+            className={`${pageCls.settingsInput} ${pageCls.toolbarSelect}`}
             options={[{ label: '全部状态', value: '全部' }, ...coachStatusOptions.map((item) => ({ label: item, value: item }))]}
             onChange={(value: CoachStatus | '全部') => setStatusFilter(value)}
           />

@@ -1,5 +1,5 @@
 import { ArrowRightOutlined, SaveOutlined } from '@ant-design/icons';
-import { App, Button, Col, Descriptions, Drawer, Form, Input, Row, Select, Spin, Switch, TimePicker, message as antdMessage } from 'antd';
+import { App, Button, Cascader, Col, Descriptions, Drawer, Form, Input, Row, Select, Spin, Switch, TimePicker, message as antdMessage } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import ActionButton from '@/components/ActionButton';
@@ -15,6 +15,9 @@ interface StoreInfoValues {
   phone: string;
   email: string;
   businessHours: string;
+  province: string;
+  city: string;
+  district: string;
   address: string;
 }
 
@@ -66,6 +69,104 @@ const dataActionsList: Array<{ title: DataActionTitle; description: string }> = 
   { title: '数据恢复', description: '从最近一次备份恢复门店数据' }
 ];
 
+// 省市区三级联动数据
+const provinceCityDistrictData = [
+  {
+    value: '上海市',
+    label: '上海市',
+    children: [
+      {
+        value: '上海市',
+        label: '上海市',
+        children: [
+          { value: '黄浦区', label: '黄浦区' },
+          { value: '徐汇区', label: '徐汇区' },
+          { value: '长宁区', label: '长宁区' },
+          { value: '静安区', label: '静安区' },
+          { value: '普陀区', label: '普陀区' },
+          { value: '虹口区', label: '虹口区' },
+          { value: '杨浦区', label: '杨浦区' },
+          { value: '闵行区', label: '闵行区' },
+          { value: '宝山区', label: '宝山区' },
+          { value: '嘉定区', label: '嘉定区' },
+          { value: '浦东新区', label: '浦东新区' },
+          { value: '金山区', label: '金山区' },
+          { value: '松江区', label: '松江区' },
+          { value: '青浦区', label: '青浦区' },
+          { value: '奉贤区', label: '奉贤区' },
+          { value: '崇明区', label: '崇明区' }
+        ]
+      }
+    ]
+  },
+  {
+    value: '北京市',
+    label: '北京市',
+    children: [
+      {
+        value: '北京市',
+        label: '北京市',
+        children: [
+          { value: '东城区', label: '东城区' },
+          { value: '西城区', label: '西城区' },
+          { value: '朝阳区', label: '朝阳区' },
+          { value: '丰台区', label: '丰台区' },
+          { value: '石景山区', label: '石景山区' },
+          { value: '海淀区', label: '海淀区' },
+          { value: '门头沟区', label: '门头沟区' },
+          { value: '房山区', label: '房山区' },
+          { value: '通州区', label: '通州区' },
+          { value: '顺义区', label: '顺义区' },
+          { value: '昌平区', label: '昌平区' },
+          { value: '大兴区', label: '大兴区' },
+          { value: '怀柔区', label: '怀柔区' },
+          { value: '平谷区', label: '平谷区' },
+          { value: '密云区', label: '密云区' },
+          { value: '延庆区', label: '延庆区' }
+        ]
+      }
+    ]
+  },
+  {
+    value: '广东省',
+    label: '广东省',
+    children: [
+      {
+        value: '广州市',
+        label: '广州市',
+        children: [
+          { value: '荔湾区', label: '荔湾区' },
+          { value: '越秀区', label: '越秀区' },
+          { value: '海珠区', label: '海珠区' },
+          { value: '天河区', label: '天河区' },
+          { value: '白云区', label: '白云区' },
+          { value: '黄埔区', label: '黄埔区' },
+          { value: '番禺区', label: '番禺区' },
+          { value: '花都区', label: '花都区' },
+          { value: '南沙区', label: '南沙区' },
+          { value: '从化区', label: '从化区' },
+          { value: '增城区', label: '增城区' }
+        ]
+      },
+      {
+        value: '深圳市',
+        label: '深圳市',
+        children: [
+          { value: '罗湖区', label: '罗湖区' },
+          { value: '福田区', label: '福田区' },
+          { value: '南山区', label: '南山区' },
+          { value: '宝安区', label: '宝安区' },
+          { value: '龙岗区', label: '龙岗区' },
+          { value: '盐田区', label: '盐田区' },
+          { value: '龙华区', label: '龙华区' },
+          { value: '坪山区', label: '坪山区' },
+          { value: '光明区', label: '光明区' }
+        ]
+      }
+    ]
+  }
+];
+
 export default function SettingsPage() {
   const [storeForm] = Form.useForm<StoreInfoValues>();
   const { message } = App.useApp();
@@ -107,16 +208,46 @@ export default function SettingsPage() {
         ]);
 
         if (studioData) {
+          // 解析地址：尝试从地址字符串中提取省市区
+          const addressStr = studioData.address || defaultStoreInfo.address;
+          let province = '', city = '', district = '', remainingAddress = addressStr;
+          
+          // 简单解析：检查地址是否包含省市区信息
+          for (const provinceData of provinceCityDistrictData) {
+            if (addressStr.includes(provinceData.value)) {
+              province = provinceData.value;
+              for (const cityData of provinceData.children || []) {
+                if (addressStr.includes(cityData.value)) {
+                  city = cityData.value;
+                  for (const districtData of cityData.children || []) {
+                    if (addressStr.includes(districtData.value)) {
+                      district = districtData.value;
+                      remainingAddress = addressStr.replace(new RegExp(`^${provinceData.value}${cityData.value}${districtData.value}`), '').trim();
+                      break;
+                    }
+                  }
+                  break;
+                }
+              }
+              break;
+            }
+          }
+          
           const info: StoreInfoValues = {
             studioName: studioData.studioName || defaultStoreInfo.studioName,
             phone: studioData.phone || defaultStoreInfo.phone,
             email: studioData.email || defaultStoreInfo.email,
             businessHours: studioData.businessHours || defaultStoreInfo.businessHours,
-            address: studioData.address || defaultStoreInfo.address
+            province,
+            city,
+            district,
+            address: remainingAddress || addressStr
           };
+          // 设置级联选择器的值
+          const areaValue = [province, city, district].filter(Boolean);
+          storeForm.setFieldsValue({ ...info, area: areaValue });
           setStoreInfo(info);
           setSavedStoreInfo(info);
-          storeForm.setFieldsValue(info);
         }
 
         if (notificationsData.length > 0) {
@@ -147,9 +278,27 @@ export default function SettingsPage() {
   const handleSaveStoreInfo = async () => {
     try {
       const values = await storeForm.validateFields();
-      await settingsApi.updateStudio(values);
-      setStoreInfo(values);
-      setSavedStoreInfo(values);
+      // 组合完整地址
+      const area = values.area || [];
+      const [province, city, district] = area;
+      const fullAddress = [
+        province,
+        city,
+        district,
+        values.address
+      ].filter(Boolean).join('');
+      
+      const saveData = {
+        studioName: values.studioName,
+        phone: values.phone,
+        email: values.email,
+        businessHours: values.businessHours,
+        address: fullAddress
+      };
+      
+      await settingsApi.updateStudio(saveData);
+      setStoreInfo({ ...values, province, city, district, address: fullAddress });
+      setSavedStoreInfo({ ...values, province, city, district, address: fullAddress });
       setStoreSavedAt(todayText());
       message.success('门店信息已保存');
     } catch (err: any) {
@@ -312,8 +461,19 @@ export default function SettingsPage() {
               </Form.Item>
             </Col>
             <Col span={24}>
-              <Form.Item label="门店地址" name="address" rules={[{ required: true, message: '请输入门店地址' }]}>
-                <Input className={pageCls.settingsInput} size="large" />
+              <Form.Item label="省市区" name="area" rules={[{ required: true, message: '请选择省市区' }]}>
+                <Cascader
+                  className={pageCls.settingsInput}
+                  style={{ width: '100%' }}
+                  size="large"
+                  options={provinceCityDistrictData}
+                  placeholder="请选择省市区"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item label="详细地址" name="address" rules={[{ required: true, message: '请输入详细地址' }]}>
+                <Input className={pageCls.settingsInput} size="large" placeholder="请输入街道、楼栋、门牌号等" />
               </Form.Item>
             </Col>
           </Row>

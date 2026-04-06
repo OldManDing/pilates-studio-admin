@@ -54,6 +54,13 @@
   padding-bottom: 12px;
   margin-right: -6px;
   scrollbar-gutter: stable;
+  /* 隐藏导航菜单滚动条 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.menu::-webkit-scrollbar {
+  display: none;
 }
 
 .menu::-webkit-scrollbar {

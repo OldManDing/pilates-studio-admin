@@ -21,6 +21,7 @@ import SectionCard from '@/components/SectionCard';
 import StatusTag from '@/components/StatusTag';
 import { rolesApi, type Permission, type Role } from '@/services/roles';
 import pageCls from '@/styles/page.module.css';
+import roleCss from './index.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 
 type RoleCode = 'OWNER' | 'FRONTDESK' | 'COACH' | 'FINANCE';
@@ -162,7 +163,7 @@ export default function RolesPage() {
         {loading ? (
           <div className={pageCls.centeredStatePadded}><Spin /></div>
         ) : roles.length ? (
-          <div className={`${pageCls.courseGrid} ${pageCls.workSection}`}>
+          <div className={`${roleCss.roleGrid} ${pageCls.workSection}`}>
             {roles.map((item) => (
               <div key={item.id} className={`${widgetCls.settingBlock} ${widgetCls.workRecordItem}`}>
                 <div className={widgetCls.detailHeader}>

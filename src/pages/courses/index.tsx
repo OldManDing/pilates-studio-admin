@@ -245,12 +245,7 @@ export default function CoursesPage() {
         subtitle="管理所有课程设置和排期。"
         extra={(
           <div className={`${pageCls.pageHeaderActionGroup} ${pageCls.pageHeaderActionGroupWide}`}>
-            <div className={pageCls.splitButtonGroup}>
-              <ActionButton ghost loading={isRefreshing} onClick={() => refreshCourses()}>
-                刷新列表
-              </ActionButton>
-              <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增课程</ActionButton>
-            </div>
+            <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增课程</ActionButton>
           </div>
         )}
       />
@@ -272,22 +267,20 @@ export default function CoursesPage() {
             onChange={(event) => setSearchValue(event.target.value)}
           />
         </div>
-        <div className={pageCls.toolbarRight}>
+          <div className={pageCls.toolbarRight}>
             <Select
               value={typeFilter}
               size="large"
-            style={{ minWidth: 140 }}
-            className={pageCls.settingsInput}
-            options={[{ label: '全部类型', value: '全部' }, ...courseTypeOptions.map((item) => ({ label: item, value: item }))]}
-            onChange={(value: string) => setTypeFilter(value)}
-          />
-          <Select
-            value={levelFilter}
-            size="large"
-            style={{ minWidth: 140 }}
-            className={pageCls.settingsInput}
-            options={[{ label: '全部难度', value: '全部' }, ...courseLevelOptions.map((item) => ({ label: item, value: item }))]}
-            onChange={(value: string) => setLevelFilter(value)}
+              className={`${pageCls.settingsInput} ${pageCls.toolbarSelect}`}
+              options={[{ label: '全部类型', value: '全部' }, ...courseTypeOptions.map((item) => ({ label: item, value: item }))]}
+              onChange={(value: string) => setTypeFilter(value)}
+            />
+            <Select
+              value={levelFilter}
+              size="large"
+              className={`${pageCls.settingsInput} ${pageCls.toolbarSelect}`}
+              options={[{ label: '全部难度', value: '全部' }, ...courseLevelOptions.map((item) => ({ label: item, value: item }))]}
+              onChange={(value: string) => setLevelFilter(value)}
             />
             <Button
               size="large"
@@ -344,7 +337,7 @@ export default function CoursesPage() {
               </Button>
               <Button
                 size="large"
-                className={`${pageCls.cardActionSecondary} ${pageCls.courseCardActionBtn} ${pageCls.courseCardActionSecondary}`}
+                className={`${pageCls.cardActionSecondary} ${pageCls.courseCardActionBtn}`}
                 icon={<EyeOutlined />}
                 onClick={() => setDetailCourse(course)}
               >
