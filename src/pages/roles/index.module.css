@@ -1,52 +1,192 @@
+/* CSS 变量定义 */
+.roleCard {
+  --role-surface: #ffffff;
+  --role-border: rgba(116, 132, 154, 0.18);
+  --role-text-primary: #1f2a33;
+  --role-text-secondary: #6d7683;
+  --role-mint: #43c7ab;
+}
+
 .roleGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.scopeRow {
-  margin-top: 14px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  gap: 20px;
 }
 
 .roleCard {
+  background: var(--role-surface);
+  border: 1px solid var(--role-border);
+  border-radius: 16px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
+  gap: 20px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.roleCard:hover {
+  box-shadow: 0 8px 24px rgba(67, 199, 171, 0.12);
+  transform: translateY(-2px);
+  border-color: var(--role-mint);
+}
+
+.roleCardHeader {
+  display: flex;
   gap: 16px;
+  align-items: flex-start;
 }
 
-.roleBody {
-  display: grid;
-  gap: 2px;
-}
-
-.roleFooter {
+.roleAvatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 14px;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.roleAvatar[data-tone="mint"] {
+  background: linear-gradient(135deg, #43c7ab 0%, #6be0c8 100%);
+}
+
+.roleAvatar[data-tone="violet"] {
+  background: linear-gradient(135deg, #8b7cff 0%, #b2a8ff 100%);
+}
+
+.roleAvatar[data-tone="orange"] {
+  background: linear-gradient(135deg, #ffb760 0%, #ffd199 100%);
+}
+
+.roleAvatar[data-tone="pink"] {
+  background: linear-gradient(135deg, #ff8da8 0%, #ffb3c6 100%);
+}
+
+.roleInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.roleNameRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
-.roleActions {
-  display: flex;
-  gap: 10px;
-  flex: 1;
-  min-width: min(240px, 100%);
+.roleName {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--role-text-primary);
 }
 
-.roleActions > * {
-  flex: 1;
+.roleSub {
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--role-text-secondary);
+  line-height: 1.5;
+}
+
+.roleStats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 0;
+  background: linear-gradient(180deg, rgba(243, 247, 249, 0.5) 0%, rgba(243, 247, 249, 0) 100%);
+  border-radius: 10px;
+}
+
+.roleStatItem {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.roleStatValue {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--role-text-primary);
+}
+
+.roleStatLabel {
+  font-size: 13px;
+  color: var(--role-text-secondary);
+}
+
+.roleStatDivider {
+  color: var(--role-text-secondary);
+  font-size: 14px;
+  opacity: 0.5;
+}
+
+.roleActions {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 12px;
+}
+
+/* 按钮样式 - 次要按钮 */
+.roleCard :global(.ant-btn-default) {
+  border-color: rgba(116, 132, 154, 0.25);
+  color: #415061;
+  background: #fff;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.roleCard :global(.ant-btn-default):hover {
+  border-color: var(--role-mint);
+  color: var(--role-mint);
+}
+
+/* 按钮样式 - 主要按钮 */
+.roleCard :global(.ant-btn-primary) {
+  background: linear-gradient(135deg, #43c7ab 0%, #6be0c8 100%);
+  border: none;
+  color: #1f2a33;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(67, 199, 171, 0.3);
+  transition: all 0.2s ease;
+}
+
+.roleCard :global(.ant-btn-primary):hover {
+  background: linear-gradient(135deg, #3ab8a0 0%, #5fd4ba 100%);
+  box-shadow: 0 6px 16px rgba(67, 199, 171, 0.4);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 1024px) {
   .roleGrid {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 640px) {
+  .roleCard {
+    padding: 20px;
+  }
+
+  .roleAvatar {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+    border-radius: 12px;
+  }
+
+  .roleName {
+    font-size: 16px;
+  }
+
+  .roleStatValue {
+    font-size: 18px;
+  }
 
   .roleActions {
-    width: 100%;
+    grid-template-columns: 1fr;
   }
 }

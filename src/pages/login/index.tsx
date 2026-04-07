@@ -51,7 +51,7 @@ export default function LoginPage() {
     <div className={cls.shell}>
       <div className={cls.backdrop} />
       <div className={cls.panel}>
-        <div className={cls.brand}>Pilates Studio</div>
+        <div className={cls.brand}>普拉提工作室</div>
         <h1 className={cls.title}>欢迎登录门店管理后台</h1>
         <p className={cls.subtitle}>请使用管理员账号密码登录。</p>
 

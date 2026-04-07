@@ -77,7 +77,7 @@ export default function CoachesPage() {
           totalCoaches: coachesData.length,
           activeCoaches,
           avgRating,
-          totalSessions: coachesData.reduce((sum, c) => sum + 100, 0), // Placeholder
+          totalSessions: 0, // 后端暂未提供此字段，显示 0
         });
       } catch (err) {
         messageApi.error('获取教练数据失败');
@@ -261,7 +261,9 @@ export default function CoachesPage() {
                     {coach.name}
                     <StatusTag status={coach.status} />
                   </div>
-                  <div className={widgetCls.recordSub}>{coach.experience || '暂无经验信息'} · 评分 {coach.rating || '-'}</div>
+                  <div className={widgetCls.recordSub}>
+                    {coach.experience || '暂无经验信息'} · 评分 {coach.rating || '-'}
+                  </div>
                 </div>
               </div>
             </div>
@@ -269,39 +271,6 @@ export default function CoachesPage() {
             <div className={widgetCls.infoStack}>
               <div>电话：{coach.phone}</div>
               <div>邮箱：{coach.email || '-'}</div>
-            </div>
-
-            <div style={{ marginTop: 16 }}>
-              <div className={widgetCls.smallText}>专长领域</div>
-              <div className={widgetCls.chipRow} style={{ marginTop: 8 }}>
-                {coach.specialties?.map((item) => (
-                  <span key={item.value} className={widgetCls.chip}>{item.value}</span>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ marginTop: 16 }}>
-              <div className={widgetCls.smallText}>资质认证</div>
-              <div className={widgetCls.chipRow} style={{ marginTop: 8 }}>
-                {coach.certificates?.map((item) => (
-                  <span key={item.value} className={widgetCls.chip}>{item.value}</span>
-                ))}
-              </div>
-            </div>
-
-            <div className={widgetCls.metricGrid} style={{ marginTop: 18 }}>
-              <div className={widgetCls.metricCard}>
-                <div className={widgetCls.metricLabel}>评分</div>
-                <div className={widgetCls.metricValue}>{coach.rating || '-'}</div>
-              </div>
-              <div className={widgetCls.metricCard}>
-                <div className={widgetCls.metricLabel}>状态</div>
-                <div className={widgetCls.metricValue}>{coach.status}</div>
-              </div>
-              <div className={widgetCls.metricCard}>
-                <div className={widgetCls.metricLabel}>电话</div>
-                <div className={widgetCls.metricValue} style={{ fontSize: 12 }}>{coach.phone}</div>
-              </div>
             </div>
 
             <div className={widgetCls.twoButtons}>
@@ -391,7 +360,8 @@ export default function CoachesPage() {
         ) : null}
       >
         {detailCoach ? (
-          <div style={{ display: 'grid', gap: 16 }}>
+          <div style={{ display: 'grid', gap: 20 }}>
+            {/* 头部信息 */}
             <div className={widgetCls.detailOverviewPanel}>
               <div className={widgetCls.recordMeta}>
                 <MemberAvatar name={detailCoach.name} tone={getToneFromName(detailCoach.name)} />
@@ -400,8 +370,7 @@ export default function CoachesPage() {
                     {detailCoach.name}
                     <StatusTag status={detailCoach.status} />
                   </div>
-                  <div className={widgetCls.recordSub}>{detailCoach.experience || '暂无经验信息'} · 评分 {detailCoach.rating || '-'}</div>
-                  <div className={widgetCls.recordSub}>{detailCoach.phone}</div>
+                  <div className={widgetCls.recordSub}>{detailCoach.email || '-'}</div>
                 </div>
               </div>
               <div className={widgetCls.detailOverviewStatGrid}>
@@ -413,40 +382,47 @@ export default function CoachesPage() {
                   <div className={widgetCls.detailInsightLabel}>状态</div>
                   <div className={widgetCls.detailOverviewStatValue}>{detailCoach.status}</div>
                 </div>
-                <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatOrange}`}>
-                  <div className={widgetCls.detailInsightLabel}>电话</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-lg)' }}>{detailCoach.phone}</div>
-                </div>
               </div>
             </div>
 
-            <Descriptions column={1} size="small" bordered>
-              <Descriptions.Item label="教练姓名">{detailCoach.name}</Descriptions.Item>
-              <Descriptions.Item label="状态">{detailCoach.status}</Descriptions.Item>
-              <Descriptions.Item label="经验信息">{detailCoach.experience || '-'}</Descriptions.Item>
-              <Descriptions.Item label="评分">{detailCoach.rating || '-'}</Descriptions.Item>
+            {/* 联系信息 */}
+            <Descriptions column={2} size="small" bordered>
               <Descriptions.Item label="电话">{detailCoach.phone}</Descriptions.Item>
               <Descriptions.Item label="邮箱">{detailCoach.email || '-'}</Descriptions.Item>
-              <Descriptions.Item label="个人简介">{detailCoach.bio || '-'}</Descriptions.Item>
+              <Descriptions.Item label="经验">{detailCoach.experience || '-'}</Descriptions.Item>
             </Descriptions>
 
-            <div>
-              <div className={widgetCls.smallText} style={{ marginBottom: 10 }}>专长领域</div>
-              <div className={widgetCls.chipRow}>
-                {detailCoach.specialties?.map((item) => (
-                  <span key={item.value} className={widgetCls.chip}>{item.value}</span>
-                ))}
+            {/* 个人简介 */}
+            {detailCoach.bio && (
+              <div>
+                <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>个人简介</div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.6 }}>{detailCoach.bio}</div>
               </div>
-            </div>
+            )}
 
-            <div>
-              <div className={widgetCls.smallText} style={{ marginBottom: 10 }}>资质认证</div>
-              <div className={widgetCls.chipRow}>
-                {detailCoach.certificates?.map((item) => (
-                  <span key={item.value} className={widgetCls.chip}>{item.value}</span>
-                ))}
+            {/* 专长领域 */}
+            {detailCoach.specialties?.length ? (
+              <div>
+                <div className={widgetCls.smallText} style={{ marginBottom: 10 }}>专长领域</div>
+                <div className={widgetCls.chipRow}>
+                  {detailCoach.specialties.map((item) => (
+                    <span key={item.value} className={widgetCls.chip}>{item.value}</span>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : null}
+
+            {/* 资质认证 */}
+            {detailCoach.certificates?.length ? (
+              <div>
+                <div className={widgetCls.smallText} style={{ marginBottom: 10 }}>资质认证</div>
+                <div className={widgetCls.chipRow}>
+                  {detailCoach.certificates.map((item) => (
+                    <span key={item.value} className={widgetCls.chip}>{item.value}</span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </Drawer>

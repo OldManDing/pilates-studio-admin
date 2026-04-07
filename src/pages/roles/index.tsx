@@ -39,6 +39,66 @@ const roleCodeLabel: Record<RoleCode, string> = {
   FINANCE: '财务',
 };
 
+// 模块名中文映射
+const moduleNameMap: Record<string, string> = {
+  // 小写
+  members: '会员管理',
+  bookings: '预约管理',
+  courses: '课程管理',
+  coaches: '教练管理',
+  transactions: '交易管理',
+  reports: '报表管理',
+  settings: '系统设置',
+  roles: '角色权限',
+  auth: '认证管理',
+  dashboard: '仪表盘',
+  plans: '会籍方案',
+  sessions: '课程时段',
+  attendance: '签到管理',
+  analytics: '数据分析',
+  admin: '管理员',
+  // 大写
+  MEMBERS: '会员管理',
+  BOOKINGS: '预约管理',
+  COURSES: '课程管理',
+  COACHES: '教练管理',
+  TRANSACTIONS: '交易管理',
+  REPORTS: '报表管理',
+  SETTINGS: '系统设置',
+  ROLES: '角色权限',
+  AUTH: '认证管理',
+  DASHBOARD: '仪表盘',
+  PLANS: '会籍方案',
+  SESSIONS: '课程时段',
+  ATTENDANCE: '签到管理',
+  ANALYTICS: '数据分析',
+  ADMIN: '管理员',
+};
+
+// 权限动作中文映射
+const actionLabelMap: Record<string, string> = {
+  // 小写
+  create: '创建',
+  read: '查看',
+  update: '编辑',
+  delete: '删除',
+  approve: '审批',
+  export: '导出',
+  import: '导入',
+  manage: '管理',
+  write: '写入',
+  // 大写
+  CREATE: '创建',
+  READ: '查看',
+  UPDATE: '编辑',
+  DELETE: '删除',
+  APPROVE: '审批',
+  EXPORT: '导出',
+  IMPORT: '导入',
+  MANAGE: '管理',
+  WRITE: '写入',
+};
+
 const CRUD_MODAL_WIDTH = 780;
 
 export default function RolesPage() {
@@ -164,29 +224,69 @@ export default function RolesPage() {
           <div className={pageCls.centeredStatePadded}><Spin /></div>
         ) : roles.length ? (
           <div className={`${roleCss.roleGrid} ${pageCls.workSection}`}>
-            {roles.map((item) => (
-              <div key={item.id} className={`${widgetCls.settingBlock} ${widgetCls.workRecordItem}`}>
-                <div className={widgetCls.detailHeader}>
-                  <div>
-                    <h3 className={widgetCls.detailTitle}>{item.name}</h3>
-                    <div className={widgetCls.smallText}>角色编码 {item.code}</div>
+            {roles.map((item) => {
+              const roleTone = (['mint', 'violet', 'orange', 'pink'] as const)[item.code === 'OWNER' ? 0 : item.code === 'FRONTDESK' ? 1 : item.code === 'COACH' ? 2 : 3];
+              const initials = item.name.slice(0, 1);
+              return (
+                <div key={item.id} className={roleCss.roleCard}>
+                  <div className={roleCss.roleCardHeader}>
+                    <div className={roleCss.roleAvatar} data-tone={roleTone}>
+                      {initials}
+                    </div>
+                    <div className={roleCss.roleInfo}>
+                      <div className={roleCss.roleNameRow}>
+                        <h3 className={roleCss.roleName}>{item.name}</h3>
+                        <StatusTag status="正常" />
+                      </div>
+                      <div className={roleCss.roleSub}>{item.description || '暂无角色说明'}</div>
+                    </div>
                   </div>
-                  <StatusTag status="正常" />
-                </div>
 
-                <div className={widgetCls.detailOverviewText}>{item.description || '暂无角色说明'}</div>
+                  <div className={roleCss.roleStats}>
+                    <span className={roleCss.roleStatItem}>
+                      <span className={roleCss.roleStatValue}>{item.permissions.length}</span>
+                      <span className={roleCss.roleStatLabel}>权限项</span>
+                    </span>
+                    <span className={roleCss.roleStatDivider}>·</span>
+                    <span className={roleCss.roleStatItem}>
+                      <span className={roleCss.roleStatValue}>{item._count?.admins || 0}</span>
+                      <span className={roleCss.roleStatLabel}>管理员</span>
+                    </span>
+                  </div>
 
-                <div className={widgetCls.chipRow}>
-                  <span className={widgetCls.chipPrimary}>管理员 {item._count?.admins || 0} 人</span>
-                  <span className={widgetCls.chip}>权限项 {item.permissions.length} 个</span>
+                  <div className={roleCss.roleActions}>
+                    <Button
+                      size="large"
+                      icon={<EyeOutlined />}
+                      onClick={() => setDetailRole(item)}
+                      style={{
+                        borderColor: 'rgba(116, 132, 154, 0.25)',
+                        color: '#415061',
+                        background: '#fff',
+                        fontWeight: 500,
+                      }}
+                    >
+                      详情
+                    </Button>
+                    <Button
+                      size="large"
+                      type="primary"
+                      icon={<EditOutlined />}
+                      onClick={() => openPermissionEditor(item)}
+                      style={{
+                        background: 'linear-gradient(135deg, #43c7ab 0%, #6be0c8 100%)',
+                        border: 'none',
+                        color: '#1f2a33',
+                        fontWeight: 600,
+                        boxShadow: '0 4px 12px rgba(67, 199, 171, 0.3)',
+                      }}
+                    >
+                      编辑权限
+                    </Button>
+                  </div>
                 </div>
-
-                <div className={`${pageCls.actionRowWrap} ${pageCls.actionRowWrapTop}`}>
-                  <Button size="large" className={pageCls.cardActionSecondary} icon={<EyeOutlined />} onClick={() => setDetailRole(item)}>详情</Button>
-                  <Button size="large" className={pageCls.cardActionSecondary} icon={<EditOutlined />} onClick={() => openPermissionEditor(item)}>编辑权限</Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <EmptyState title="暂无角色配置" description="请先创建角色并分配权限。" actionText="新增角色" onAction={openCreateModal} />
@@ -208,11 +308,11 @@ export default function RolesPage() {
         <Form form={form} className={pageCls.crudModalForm} layout="vertical">
           <Row gutter={18}>
             <Col xs={24} md={12}>
-              <Form.Item name="code" label="角色编码" rules={[{ required: true, message: '请选择角色编码' }]}>
+              <Form.Item name="code" label="角色类型" rules={[{ required: true, message: '请选择角色类型' }]}>
                 <Select
                   className={pageCls.settingsInput}
                   options={(Object.keys(roleCodeLabel) as RoleCode[]).map((key) => ({
-                    label: `${roleCodeLabel[key]} (${key})`,
+                    label: roleCodeLabel[key],
                     value: key,
                   }))}
                 />
@@ -246,15 +346,17 @@ export default function RolesPage() {
         <div className={pageCls.rolePermissionPanel}>
           {groupedPermissions.map(([moduleName, permissionList]) => (
             <div key={moduleName} className={pageCls.rolePermissionBlock}>
-              <div className={pageCls.rolePermissionTitle}>{moduleName}</div>
+              <div className={pageCls.rolePermissionTitle}>{moduleNameMap[moduleName] || moduleName}</div>
               <div className={pageCls.rolePermissionList}>
               {permissionList.map((permission) => {
                 const checked = selectedPermissionIds.includes(permission.id);
+                const actionLabel = actionLabelMap[permission.action] || permission.action;
+                const moduleLabel = moduleNameMap[permission.module] || permission.module;
                 return (
                   <div key={permission.id} className={pageCls.rolePermissionItem}>
                     <div className={pageCls.rolePermissionText}>
-                      <div className={pageCls.rolePermissionCode}>{permission.action}:{permission.module}</div>
-                      <div className={pageCls.rolePermissionDesc}>{permission.description || '无描述'}</div>
+                      <div className={pageCls.rolePermissionCode}>{actionLabel} {moduleLabel}</div>
+                      <div className={pageCls.rolePermissionDesc}>{permission.description || '暂无描述'}</div>
                     </div>
                     <Switch checked={checked} onChange={(value) => handlePermissionToggle(permission.id, value)} />
                   </div>
@@ -274,11 +376,11 @@ export default function RolesPage() {
       >
         {detailRole ? (
           <Descriptions column={1} size="small" bordered>
-            <Descriptions.Item label="角色编码">{detailRole.code}</Descriptions.Item>
+            <Descriptions.Item label="角色类型">{roleCodeLabel[detailRole.code as RoleCode] || detailRole.code}</Descriptions.Item>
             <Descriptions.Item label="角色名称">{detailRole.name}</Descriptions.Item>
             <Descriptions.Item label="角色说明">{detailRole.description || '-'}</Descriptions.Item>
-            <Descriptions.Item label="管理员数量">{detailRole._count?.admins || 0}</Descriptions.Item>
-            <Descriptions.Item label="权限数量">{detailRole.permissions.length}</Descriptions.Item>
+            <Descriptions.Item label="管理员人数">{detailRole._count?.admins || 0} 人</Descriptions.Item>
+            <Descriptions.Item label="权限数量">{detailRole.permissions.length} 项</Descriptions.Item>
           </Descriptions>
         ) : null}
       </Drawer>

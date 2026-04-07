@@ -83,7 +83,7 @@ const AppLayout: FC<PropsWithChildren> = ({ children }) => {
           菜单
         </Button>
         <div className={cls.mobileTitleWrap}>
-          <div className={cls.mobileTitle}>Pilates Studio</div>
+          <div className={cls.mobileTitle}>普拉提工作室</div>
           <div className={cls.mobileSubtitle}>高端门店管理系统</div>
         </div>
       </div>

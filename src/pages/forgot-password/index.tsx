@@ -25,7 +25,7 @@ export default function ForgotPasswordPage() {
     <div className={cls.shell}>
       <div className={cls.backdrop} />
       <div className={cls.panel}>
-        <div className={cls.brand}>Pilates Studio</div>
+        <div className={cls.brand}>普拉提工作室</div>
         <h1 className={cls.title}>找回登录密码</h1>
         <p className={cls.subtitle}>输入邮箱或手机号后，会在当前页面展示预览环境的重置指引，不会发送真实邮件或短信。</p>
 

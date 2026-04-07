@@ -28,7 +28,7 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
         const me = await authApi.getMe();
         setUser(me);
       } catch {
-        // ignore
+        // User not authenticated - this is expected for public routes
       }
     };
     fetchUser();
@@ -119,7 +119,7 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
       <div className={cls.brand}>
         <div className={cls.logo}>P</div>
         <div>
-          <div className={cls.brandTitle}>Pilates Studio</div>
+          <div className={cls.brandTitle}>普拉提工作室</div>
           <div className={cls.brandMeta}>高端门店管理系统</div>
         </div>
       </div>

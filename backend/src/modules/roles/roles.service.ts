@@ -112,31 +112,31 @@ export class RolesService {
 
   async initializeDefaultRoles() {
     const defaultPermissions = [
-      { module: 'ADMINS', action: 'MANAGE' },
-      { module: 'ROLES', action: 'MANAGE' },
-      { module: 'MEMBERS', action: 'READ' },
-      { module: 'MEMBERS', action: 'WRITE' },
-      { module: 'MEMBERS', action: 'MANAGE' },
-      { module: 'PLANS', action: 'READ' },
-      { module: 'PLANS', action: 'MANAGE' },
-      { module: 'COACHES', action: 'READ' },
-      { module: 'COACHES', action: 'WRITE' },
-      { module: 'COACHES', action: 'MANAGE' },
-      { module: 'COURSES', action: 'READ' },
-      { module: 'COURSES', action: 'WRITE' },
-      { module: 'COURSES', action: 'MANAGE' },
-      { module: 'SESSIONS', action: 'READ' },
-      { module: 'SESSIONS', action: 'WRITE' },
-      { module: 'BOOKINGS', action: 'READ' },
-      { module: 'BOOKINGS', action: 'WRITE' },
-      { module: 'ATTENDANCE', action: 'READ' },
-      { module: 'ATTENDANCE', action: 'WRITE' },
-      { module: 'TRANSACTIONS', action: 'READ' },
-      { module: 'TRANSACTIONS', action: 'WRITE' },
-      { module: 'ANALYTICS', action: 'READ' },
-      { module: 'REPORTS', action: 'READ' },
-      { module: 'SETTINGS', action: 'READ' },
-      { module: 'SETTINGS', action: 'MANAGE' },
+      { module: 'ADMIN', action: 'MANAGE', description: '管理系统管理员账号' },
+      { module: 'ROLES', action: 'MANAGE', description: '管理角色与权限配置' },
+      { module: 'MEMBERS', action: 'READ', description: '查看会员信息' },
+      { module: 'MEMBERS', action: 'WRITE', description: '新增、编辑会员' },
+      { module: 'MEMBERS', action: 'MANAGE', description: '删除会员、管理会籍' },
+      { module: 'PLANS', action: 'READ', description: '查看会籍方案' },
+      { module: 'PLANS', action: 'MANAGE', description: '管理会籍方案' },
+      { module: 'COACHES', action: 'READ', description: '查看教练信息' },
+      { module: 'COACHES', action: 'WRITE', description: '新增、编辑教练' },
+      { module: 'COACHES', action: 'MANAGE', description: '管理教练排班' },
+      { module: 'COURSES', action: 'READ', description: '查看课程信息' },
+      { module: 'COURSES', action: 'WRITE', description: '新增、编辑课程' },
+      { module: 'COURSES', action: 'MANAGE', description: '管理课程排期' },
+      { module: 'SESSIONS', action: 'READ', description: '查看课程时段' },
+      { module: 'SESSIONS', action: 'WRITE', description: '排课程时段' },
+      { module: 'BOOKINGS', action: 'READ', description: '查看预约记录' },
+      { module: 'BOOKINGS', action: 'WRITE', description: '创建、处理预约' },
+      { module: 'ATTENDANCE', action: 'READ', description: '查看签到记录' },
+      { module: 'ATTENDANCE', action: 'WRITE', description: '签到管理' },
+      { module: 'TRANSACTIONS', action: 'READ', description: '查看交易记录' },
+      { module: 'TRANSACTIONS', action: 'WRITE', description: '新增交易记录' },
+      { module: 'ANALYTICS', action: 'READ', description: '查看数据分析' },
+      { module: 'REPORTS', action: 'READ', description: '查看经营报表' },
+      { module: 'SETTINGS', action: 'READ', description: '查看系统设置' },
+      { module: 'SETTINGS', action: 'MANAGE', description: '管理系统设置' },
     ];
 
     // Create permissions
@@ -154,10 +154,10 @@ export class RolesService {
 
     // Create default roles
     const roles = [
-      { code: 'OWNER', name: 'Owner', description: 'Full system access' },
-      { code: 'FRONTDESK', name: 'Front Desk', description: 'Member and booking management' },
-      { code: 'COACH', name: 'Coach', description: 'Session and attendance management' },
-      { code: 'FINANCE', name: 'Finance', description: 'Transaction and report access' },
+      { code: 'OWNER', name: '店长', description: '拥有系统全部权限' },
+      { code: 'FRONTDESK', name: '前台', description: '负责会员管理与预约处理' },
+      { code: 'COACH', name: '教练', description: '管理课程时段与签到记录' },
+      { code: 'FINANCE', name: '财务', description: '查看交易记录与经营报表' },
     ];
 
     for (const role of roles) {
