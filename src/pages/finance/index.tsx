@@ -112,9 +112,9 @@ export default function FinancePage() {
   const [financeBar, setFinanceBar] = useState<Array<{ month: string; revenue: number; profit: number }>>([]);
   const [stats, setStats] = useState({
     totalRevenue: 0,
-    totalExpense: 0, // 后端暂未提供支出数据
+    totalExpense: 0,
     netProfit: 0,
-    profitMargin: '0%',
+    profitMargin: '-', // 后端暂无支出数据
   });
 
   const fetchTransactions = async (page = 1, pageSize = 100) => {
@@ -130,12 +130,11 @@ export default function FinancePage() {
       setTransactionList(txRes.data);
 
       const totalRevenue = summaryRes.totalRevenueCents / 100;
-      const netProfit = totalRevenue - stats.totalExpense;
       setStats({
         totalRevenue,
-        totalExpense: 0, // 后端暂未提供支出数据
-        netProfit,
-        profitMargin: totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) + '%' : '0%',
+        totalExpense: 0, // 后端暂无支出数据
+        netProfit: totalRevenue, // 暂时用营收作为净利润
+        profitMargin: '-', // 后端暂无支出数据
       });
 
       // Build pie chart data from reports

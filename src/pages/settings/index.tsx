@@ -178,14 +178,14 @@ export default function SettingsPage() {
   const [savedNotifications, setSavedNotifications] = useState<NotificationSetting[]>([]);
   const [notificationSavedAt, setNotificationSavedAt] = useState('今天 09:30');
   const [securityState, setSecurityState] = useState<Record<SecurityActionTitle, SecurityActionState>>({
-    修改密码: { title: '修改密码', description: '定期更新管理员账号密码', status: '正常', detail: '最近更新于 03-28 10:30' },
-    两步验证: { title: '两步验证', description: '为核心账号开启短信或邮箱二次验证', status: '待激活', detail: '当前未开启二次验证' },
-    权限管理: { title: '权限管理', description: '配置前台、店长和财务的页面权限', status: '处理中', detail: '最近一次权限核对在 03-25 完成' }
+    修改密码: { title: '修改密码', description: '定期更新管理员账号密码', status: '待激活', detail: '功能开发中' },
+    两步验证: { title: '两步验证', description: '为核心账号开启短信或邮箱二次验证', status: '待激活', detail: '功能开发中' },
+    权限管理: { title: '权限管理', description: '配置前台、店长和财务的页面权限', status: '正常', detail: '可在"角色权限"页面配置' }
   });
   const [dataState, setDataState] = useState<Record<DataActionTitle, DataActionState>>({
-    数据备份: { title: '数据备份', description: '每日自动备份课程、预约和交易数据', status: '正常', detail: '最近备份于 03-30 22:00' },
-    导出数据: { title: '导出数据', description: '按时间范围导出经营与会员报表', status: '正常', detail: '最近导出：近 30 天经营报表' },
-    数据恢复: { title: '数据恢复', description: '从最近一次备份恢复门店数据', status: '待激活', detail: '尚未执行恢复演练' }
+    数据备份: { title: '数据备份', description: '每日自动备份课程、预约和交易数据', status: '待激活', detail: '功能开发中' },
+    导出数据: { title: '导出数据', description: '按时间范围导出经营与会员报表', status: '待激活', detail: '功能开发中' },
+    数据恢复: { title: '数据恢复', description: '从最近一次备份恢复门店数据', status: '待激活', detail: '功能开发中' }
   });
   const [passwordDraft, setPasswordDraft] = useState({ current: '', next: '', confirm: '' });
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
@@ -324,39 +324,17 @@ export default function SettingsPage() {
   const handleCheckUpdate = () => {
     setSystemStatus('检查中');
     setTimeout(() => {
-      setSystemVersion('v2.6.2-beta');
-      setLastUpdated('2026-04-02');
       setSystemStatus('稳定');
-      message.success('已完成更新检查');
+      message.success('当前版本为最新版本');
     }, 1000);
   };
 
   const handleSavePassword = () => {
-    if (!passwordDraft.current || !passwordDraft.next || !passwordDraft.confirm) {
-      message.warning('请完整填写密码信息');
-      return;
-    }
-    if (passwordDraft.next !== passwordDraft.confirm) {
-      message.error('两次输入的新密码不一致');
-      return;
-    }
-    const timestamp = todayText();
-    setSecurityState((current) => ({
-      ...current,
-      修改密码: { ...current.修改密码, status: '正常', detail: `最近更新于 ${timestamp}` }
-    }));
-    setPasswordDraft({ current: '', next: '', confirm: '' });
-    message.success('密码已更新');
-    setOpenSecurityDrawer(null);
+    message.info('密码修改功能开发中');
   };
 
   const handleSaveTwoFactor = () => {
-    setSecurityState((current) => ({
-      ...current,
-      两步验证: { ...current.两步验证, status: twoFactorEnabled ? '正常' : '待激活', detail: twoFactorEnabled ? '二次验证已开启' : '当前未开启二次验证' }
-    }));
-    message.success(twoFactorEnabled ? '已开启两步验证' : '已关闭两步验证');
-    setOpenSecurityDrawer(null);
+    message.info('两步验证功能开发中');
   };
 
   const handleSyncPermissions = () => {
@@ -370,33 +348,15 @@ export default function SettingsPage() {
   };
 
   const handleRunBackup = () => {
-    const timestamp = todayText();
-    setDataState((current) => ({
-      ...current,
-      数据备份: { ...current.数据备份, status: '正常', detail: `最近备份于 ${timestamp}` }
-    }));
-    message.success('备份完成');
-    setOpenDataDrawer(null);
+    message.info('数据备份功能开发中');
   };
 
   const handleExportData = () => {
-    const timestamp = todayText();
-    setDataState((current) => ({
-      ...current,
-      导出数据: { ...current.导出数据, status: '正常', detail: `最近导出：${exportRange} · ${timestamp}` }
-    }));
-    message.success(`已导出 ${exportRange} 数据`);
-    setOpenDataDrawer(null);
+    message.info('数据导出功能开发中');
   };
 
   const handleRestoreData = () => {
-    const timestamp = todayText();
-    setDataState((current) => ({
-      ...current,
-      数据恢复: { ...current.数据恢复, status: '处理中', detail: `已从“${restoreSource}”执行恢复 · ${timestamp}` }
-    }));
-    message.success(`已从 ${restoreSource} 恢复`);
-    setOpenDataDrawer(null);
+    message.info('数据恢复功能开发中');
   };
 
   const parseHoursToDayjs = (hours: string): [dayjs.Dayjs, dayjs.Dayjs] => {

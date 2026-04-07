@@ -71,10 +71,17 @@ export default function CoursesPage() {
           ? coursesData.reduce((max, c) => ((c._count?.sessions || 0) > (max._count?.sessions || 0) ? c : max), coursesData[0])?.name || '-'
           : '-';
 
+        // 从报告数据计算真实的上座率
+        let avgOccupancy = '-';
+        if (reportsData && reportsData.totalBookings > 0) {
+          const occupancyRate = ((reportsData.confirmedBookings / reportsData.totalBookings) * 100).toFixed(1);
+          avgOccupancy = `${occupancyRate}%`;
+        }
+
         setStats({
           totalCourses,
           weeklySessions,
-          avgOccupancy: '87%',
+          avgOccupancy,
           popularCourse,
         });
       } catch (err) {

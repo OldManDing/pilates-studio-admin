@@ -30,7 +30,7 @@ export default function AnalyticsPage() {
     goalAchievement: '0%',
     retentionRate: '0%',
     avgOccupancy: '0%',
-    satisfaction: '4.8 / 5',
+    satisfaction: '-',
   });
   const [coursePopularity, setCoursePopularity] = useState<ChartPoint[]>([]);
   const [bookingDistribution, setBookingDistribution] = useState<ChartPoint[]>([]);
@@ -63,7 +63,7 @@ export default function AnalyticsPage() {
           goalAchievement: `${goalAchievement}%`,
           retentionRate: `${retentionRate}%`,
           avgOccupancy: `${occupancyRate}%`,
-          satisfaction: '4.8 / 5',
+          satisfaction: '-', // 后端暂无此接口
         });
 
         const popularity = (transactionsReport.transactionsByKind || []).map((item) => ({

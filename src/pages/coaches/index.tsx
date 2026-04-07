@@ -73,11 +73,22 @@ export default function CoachesPage() {
           ? (coachesData.reduce((sum, c) => sum + (c.rating || 0), 0) / coachesData.length).toFixed(1)
           : '0.0';
 
+        // 尝试获取第一个教练的统计数据作为示例
+        let totalSessions = 0;
+        if (coachesData.length > 0) {
+          try {
+            const firstStats = await coachesApi.getStats(coachesData[0].id);
+            totalSessions = firstStats.stats.totalSessions;
+          } catch {
+            // 后端接口可能不可用
+          }
+        }
+
         setStats({
           totalCoaches: coachesData.length,
           activeCoaches,
           avgRating,
-          totalSessions: 0, // 后端暂未提供此字段，显示 0
+          totalSessions,
         });
       } catch (err) {
         messageApi.error('获取教练数据失败');

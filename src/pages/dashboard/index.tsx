@@ -125,9 +125,8 @@ export default function DashboardPage() {
           name: coach.name,
           sessions: String(Math.max(0, Math.round((coach.rating || 4) * 3))),
           slots: [
-            { day: '周一', time: '09:00-12:00', count: '3 节' },
-            { day: '周三', time: '14:00-17:00', count: '3 节' },
-            { day: '周五', time: '18:00-20:00', count: '2 节' },
+            // 使用教练的经验信息，或显示"待排班"
+            { day: '排班信息', time: coach.experience || '暂无排班', count: '-' },
           ],
           tone: tones[idx % tones.length],
         }));
