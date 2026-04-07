@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Spin } from 'antd';
+import { Button, Spin, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
 import MemberAvatar from '@/components/MemberAvatar';
@@ -20,6 +20,7 @@ type ScheduleCard = {
 const tones: AccentTone[] = ['mint', 'violet', 'orange', 'pink'];
 
 export default function DashboardSchedulePage() {
+  const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
   const go = (path: string) => navigate(path);
   const [loading, setLoading] = useState(true);
@@ -41,6 +42,8 @@ export default function DashboardSchedulePage() {
           tone: tones[idx % tones.length],
         }));
         setScheduleCards(cards);
+      } catch (err: any) {
+        messageApi.error(err.message || '加载教练排班数据失败，请稍后重试');
       } finally {
         setLoading(false);
       }
@@ -61,6 +64,7 @@ export default function DashboardSchedulePage() {
 
   return (
     <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
+      {contextHolder}
       <PageHeader
         title="教练排班明细"
         subtitle="查看本周关键教练时段分布，快速识别高峰与空档。"

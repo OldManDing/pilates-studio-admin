@@ -1,5 +1,5 @@
 import { LineChartOutlined, PieChartOutlined, WalletOutlined } from '@ant-design/icons';
-import { Button, Spin } from 'antd';
+import { Button, Spin, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useNavigate } from 'react-router-dom';
@@ -44,6 +44,7 @@ const DashboardFinanceStructureTooltip = createChartTooltip({
 });
 
 export default function DashboardFinanceTrendPage() {
+  const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
   const go = (path: string) => navigate(path);
   const isMobile = useIsMobile();
@@ -121,6 +122,8 @@ export default function DashboardFinanceTrendPage() {
         });
         setRevenueStructure(structure);
         setTransactions(txList.data || []);
+      } catch (err: any) {
+        messageApi.error(err.message || '加载财务数据失败，请稍后重试');
       } finally {
         setLoading(false);
       }
@@ -134,6 +137,7 @@ export default function DashboardFinanceTrendPage() {
 
   return (
     <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
+      {contextHolder}
       <PageHeader
         title="财务趋势钻取"
         subtitle="聚焦营收变化与收入结构。"

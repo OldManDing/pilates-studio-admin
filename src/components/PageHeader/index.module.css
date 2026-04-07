@@ -8,7 +8,8 @@
 
 .title {
   margin: 0;
-  font-size: var(--font-size-6xl);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-black);
   line-height: 1.15;
   color: var(--text-heading);
   letter-spacing: -0.02em;
@@ -30,7 +31,7 @@
   }
 
   .title {
-    font-size: var(--font-size-4xl);
+    font-size: var(--font-size-lg);
   }
 
   .subtitle {

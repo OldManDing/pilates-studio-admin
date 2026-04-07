@@ -84,8 +84,8 @@ export default function MembersPage() {
           newMembersThisMonth: data.newMembersThisMonth,
           expiringSoonCount,
         });
-      } catch (err) {
-        // ignore
+      } catch (err: any) {
+        messageApi.error(err.message || '加载会员统计失败');
       }
     };
     fetchStats();
@@ -97,8 +97,8 @@ export default function MembersPage() {
       try {
         const plans = await membershipPlansApi.getAll();
         setMembershipPlans(plans);
-      } catch (err) {
-        // ignore
+      } catch (err: any) {
+        messageApi.error(err.message || '加载会籍计划失败');
       }
     };
     fetchPlans();

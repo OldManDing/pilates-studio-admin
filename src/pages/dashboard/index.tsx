@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Spin } from 'antd';
+import { Button, Spin, message } from 'antd';
 import { CalendarOutlined, RiseOutlined, TeamOutlined, WalletOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '@/components/PageHeader';
@@ -65,6 +65,7 @@ const bookingStatusToLabel = (status: string) => {
 };
 
 export default function DashboardPage() {
+  const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
   const go = (path: string) => navigate(path);
 
@@ -131,6 +132,8 @@ export default function DashboardPage() {
           tone: tones[idx % tones.length],
         }));
         setScheduleCards(coachMap);
+      } catch (err: any) {
+        messageApi.error(err.message || '加载仪表盘数据失败，请稍后重试');
       } finally {
         setLoading(false);
       }
@@ -159,6 +162,7 @@ export default function DashboardPage() {
 
   return (
     <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
+      {contextHolder}
       <PageHeader title="仪表盘" subtitle={`欢迎回来，今日有 ${courses.length} 条课程概览，${stats.activeMembers} 位活跃会员。`} />
 
       <div className={pageCls.dashboardHeroGrid}>

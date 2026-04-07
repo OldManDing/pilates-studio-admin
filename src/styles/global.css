@@ -1,26 +1,67 @@
 :root {
+  /* ═══ Typography System ═══ */
+  --font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-size-xs: 13px;
+  --font-size-sm: 15px;
+  --font-size-md: 16px;
+  --font-size-lg: 20px;
+  --font-size-xl: 28px;
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  --font-black: 800;
+  --leading-tight: 1.15;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.7;
+
+  /* ═══ Spacing System (4px base) ═══ */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ═══ Color System ═══ */
   --bg-app: #faf8f4;
   --bg-surface: rgba(255, 255, 255, 0.92);
   --bg-surface-strong: #fffdfb;
-  --bg-sidebar: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 249, 246, 0.94) 100%);
+  --bg-sidebar: #faf8f4;
   --bg-accent: linear-gradient(135deg, #48d2b6 0%, #6be0c8 100%);
+
   --text-main: #23313b;
   --text-heading: #1f2a33;
   --text-secondary: #6d7683;
   --text-tertiary: #98a2b3;
   --text-soft: #a9b1bc;
-  --text-mint: #3f9f8a;
-  --text-violet: #7569d9;
-  --text-orange: #c68a49;
-  --text-pink: #c97892;
-  --text-blue: #5d85d6;
-  --icon-primary: #53bfa8;
-  --icon-secondary: #7569d9;
-  --icon-tertiary: #c68a49;
+
+  /* Brand Colors (single source of truth) */
+  --mint: #53bfa8;
+  --mint-soft: #edf8f3;
+  --violet: #8878ee;
+  --violet-soft: #f1efff;
+  --orange: #efb169;
+  --orange-soft: #fff5e8;
+  --pink: #eb96ad;
+  --pink-soft: #fff2f5;
+  --blue: #82a6ed;
+  --blue-soft: #eef4ff;
+
+  /* Semantic Aliases (use brand colors directly) */
+  --icon-primary: var(--mint);
+  --icon-secondary: var(--violet);
+  --icon-tertiary: var(--orange);
   --icon-muted: #7d8897;
+
   --button-text-primary: #ffffff;
   --button-text-secondary: #415061;
   --button-text-secondary-hover: #28384a;
+
+  /* ═══ Control System ═══ */
   --control-surface: rgba(244, 246, 244, 0.96);
   --control-surface-hover: rgba(237, 241, 239, 0.98);
   --control-surface-strong: rgba(233, 238, 236, 0.98);
@@ -34,34 +75,19 @@
   --control-primary-hover-end: #54c2ac;
   --control-primary-active-start: #309f88;
   --control-primary-active-end: #4ab39e;
+
+  /* ═══ Border & Shadow ═══ */
   --border-soft: rgba(15, 23, 42, 0.06);
-  --shadow-card: 0 18px 44px rgba(53, 63, 81, 0.07);
-  --shadow-soft: 0 12px 28px rgba(62, 71, 87, 0.05);
-  --radius-xl: 28px;
-  --radius-lg: 22px;
-  --radius-md: 16px;
+  --shadow-sm: 0 4px 12px rgba(62, 71, 87, 0.04);
+  --shadow-md: 0 8px 20px rgba(62, 71, 87, 0.06);
+  --shadow-lg: 0 16px 32px rgba(62, 71, 87, 0.08);
+
+  /* ═══ Radius System (uniform 4px steps) ═══ */
+  --radius-xs: 8px;
   --radius-sm: 12px;
-  --font-size-xs: 14px;
-  --font-size-sm: 15px;
-  --font-size-md: 16px;
-  --font-size-lg: 18px;
-  --font-size-xl: 20px;
-  --font-size-2xl: 22px;
-  --font-size-3xl: 24px;
-  --font-size-4xl: 26px;
-  --font-size-5xl: 32px;
-  --font-size-6xl: 36px;
-  --font-size-7xl: 40px;
-  --mint: #53bfa8;
-  --mint-soft: #edf8f3;
-  --violet: #8878ee;
-  --violet-soft: #f1efff;
-  --orange: #efb169;
-  --orange-soft: #fff5e8;
-  --pink: #eb96ad;
-  --pink-soft: #fff2f5;
-  --blue: #82a6ed;
-  --blue-soft: #eef4ff;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
 }
 
 * {
@@ -78,14 +104,14 @@ body,
 }
 
 body {
-  background:
-    radial-gradient(circle at top left, rgba(83, 191, 168, 0.1), transparent 28%),
-    radial-gradient(circle at top right, rgba(136, 120, 238, 0.08), transparent 20%),
-    radial-gradient(circle at bottom left, rgba(239, 177, 105, 0.07), transparent 22%),
-    var(--bg-app);
+  background: var(--bg-app);
+  font-family: var(--font-family);
   color: var(--text-main);
   font-size: var(--font-size-md);
-  line-height: 1.5;
+  font-weight: var(--font-regular);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html::-webkit-scrollbar,
@@ -125,15 +151,28 @@ button,
 input,
 select,
 textarea {
+  font-family: var(--font-family);
   color: var(--text-main);
 }
 
 a {
   color: inherit;
+  text-decoration: none;
+}
+
+/* ═══ Global Focus States ═══ */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 20%, transparent);
 }
 
 .recharts-default-tooltip {
   border: none !important;
-  border-radius: 16px !important;
-  box-shadow: var(--shadow-soft) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-md) !important;
 }

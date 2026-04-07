@@ -1,5 +1,5 @@
 import { HeartOutlined, RiseOutlined, SmileOutlined } from '@ant-design/icons';
-import { Progress, Spin } from 'antd';
+import { Progress, Spin, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import PageHeader from '@/components/PageHeader';
@@ -23,6 +23,7 @@ const iconMap = {
 type ChartPoint = { label: string; value: number };
 
 export default function AnalyticsPage() {
+  const [messageApi, contextHolder] = message.useMessage();
   const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -91,6 +92,8 @@ export default function AnalyticsPage() {
           };
         });
         setRetentionTrend(trend);
+      } catch (err: any) {
+        messageApi.error(err.message || '加载数据失败，请稍后重试');
       } finally {
         setLoading(false);
       }
@@ -120,6 +123,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className={pageCls.page}>
+      {contextHolder}
       <PageHeader title="数据分析" subtitle="深度洞察业务数据和运营指标。" />
 
       <div className={pageCls.heroGrid}>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Spin } from 'antd';
+import { Button, Spin, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
 import PageHeader from '@/components/PageHeader';
@@ -10,6 +10,7 @@ import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 
 export default function DashboardCoursesPage() {
+  const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
   const go = (path: string) => navigate(path);
   const [loading, setLoading] = useState(true);
@@ -21,6 +22,8 @@ export default function DashboardCoursesPage() {
         setLoading(true);
         const data = await coursesApi.getAll();
         setCourses(data || []);
+      } catch (err: any) {
+        messageApi.error(err.message || '加载课程数据失败，请稍后重试');
       } finally {
         setLoading(false);
       }
@@ -37,6 +40,7 @@ export default function DashboardCoursesPage() {
 
   return (
     <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
+      {contextHolder}
       <PageHeader
         title="今日课程排期"
         subtitle="从仪表盘快速查看今日课程节奏，优先识别满班时段与待提升场次。"

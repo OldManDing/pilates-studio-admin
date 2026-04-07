@@ -1,4 +1,4 @@
-import { Progress, Spin } from 'antd';
+import { Progress, Spin, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +12,7 @@ import { reportsApi } from '@/services/reports';
 type TrendPoint = { month: string; total: number; active: number };
 
 export default function DashboardGrowthPage() {
+  const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
   const go = (path: string) => navigate(path);
   const [loading, setLoading] = useState(true);
@@ -34,6 +35,8 @@ export default function DashboardGrowthPage() {
           });
         }
         setMemberTrend(points);
+      } catch (err: any) {
+        messageApi.error(err.message || '加载会员增长数据失败，请稍后重试');
       } finally {
         setLoading(false);
       }
@@ -52,6 +55,7 @@ export default function DashboardGrowthPage() {
 
   return (
     <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
+      {contextHolder}
       <PageHeader
         title="会员增长趋势"
         subtitle="聚焦增量、活跃率和近期变化节奏。"

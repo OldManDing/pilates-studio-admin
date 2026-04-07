@@ -112,7 +112,7 @@ export default function FinancePage() {
   const [financeBar, setFinanceBar] = useState<Array<{ month: string; revenue: number; profit: number }>>([]);
   const [stats, setStats] = useState({
     totalRevenue: 0,
-    totalExpense: 106800,
+    totalExpense: 0, // 后端暂未提供支出数据
     netProfit: 0,
     profitMargin: '0%',
   });
@@ -133,7 +133,7 @@ export default function FinancePage() {
       const netProfit = totalRevenue - stats.totalExpense;
       setStats({
         totalRevenue,
-        totalExpense: 106800,
+        totalExpense: 0, // 后端暂未提供支出数据
         netProfit,
         profitMargin: totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) + '%' : '0%',
       });
@@ -380,7 +380,7 @@ export default function FinancePage() {
 
   if (loading && transactionList.length === 0) {
     return (
-      <div className={pageCls.page}>
+      <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
         {contextHolder}
         <PageHeader
           title="财务报表"
@@ -395,7 +395,7 @@ export default function FinancePage() {
   }
 
   return (
-    <div className={pageCls.page}>
+    <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
       {contextHolder}
       <PageHeader
         title="财务报表"

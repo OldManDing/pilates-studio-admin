@@ -1,5 +1,5 @@
 .page {
-  padding: 6px 8px 22px;
+  padding: 20px 28px 32px;
 }
 
 .heroGrid {
@@ -26,28 +26,28 @@
 
 .twoCol {
   display: grid;
-  grid-template-columns: 1.45fr 1fr;
+  grid-template-columns: 2fr 1fr;
   gap: 18px;
   margin-bottom: 22px;
 }
 
 .balancedTwoCol {
   display: grid;
-  grid-template-columns: 1.08fr 1fr;
+  grid-template-columns: 1.5fr 1fr;
   gap: 18px;
   margin-bottom: 22px;
 }
 
 .financeTwoCol {
   display: grid;
-  grid-template-columns: 1.9fr 1fr;
+  grid-template-columns: 2fr 1fr;
   gap: 18px;
   margin-bottom: 22px;
 }
 
 .analyticsPrimaryTwoCol {
   display: grid;
-  grid-template-columns: 1.95fr 1fr;
+  grid-template-columns: 2fr 1fr;
   gap: 18px;
   margin-bottom: 22px;
 }
@@ -81,22 +81,22 @@
 }
 
 .toolbarSearch {
-  width: 380px;
-  max-width: 100%;
-  border-radius: 14px;
+  max-width: 380px;
+  width: 100%;
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.88);
-  border-color: rgba(148, 163, 184, 0.2);
+  border-color: var(--control-border);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .toolbarSearch:hover {
-  border-color: rgba(67, 199, 171, 0.34);
+  border-color: color-mix(in srgb, var(--mint) 34%, transparent);
 }
 
 .toolbarSearch:focus-within {
   background: #fff;
-  border-color: rgba(67, 199, 171, 0.5);
-  box-shadow: 0 0 0 3px rgba(67, 199, 171, 0.12);
+  border-color: color-mix(in srgb, var(--mint) 50%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 12%, transparent);
 }
 
 .toolbarLeft,
@@ -157,7 +157,7 @@
 }
 
 .membersTable :global(.ant-table-wrapper) {
-  border-radius: 16px;
+  border-radius: var(--radius-md);
 }
 
 .membersTable :global(.ant-table) {
@@ -168,18 +168,18 @@
   background: linear-gradient(180deg, rgba(247, 250, 253, 0.94) 0%, rgba(244, 248, 252, 0.92) 100%);
   color: var(--text-tertiary);
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   letter-spacing: 0.03em;
   text-transform: uppercase;
   padding-top: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+  border-bottom: 1px solid var(--control-border);
 }
 
 .membersTable :global(.ant-table-tbody > tr > td) {
   padding-top: 12px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.11);
+  border-bottom: 1px solid var(--border-soft);
   color: var(--text-main);
   line-height: 1.4;
   transition: background 0.2s ease, border-color 0.2s ease;
@@ -195,7 +195,7 @@
 }
 
 .membersName {
-  font-weight: 700;
+  font-weight: var(--font-bold);
   line-height: 1.3;
   color: var(--text-heading);
 }
@@ -213,10 +213,10 @@
   padding: 5px 10px;
   background: rgba(47, 109, 255, 0.07);
   color: var(--text-blue);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   cursor: pointer;
-  border-radius: 8px;
-  transition: color 0.18s ease, background 0.18s ease, opacity 0.18s ease, transform 0.14s ease;
+  border-radius: var(--radius-xs);
+  transition: color 0.2s ease, background 0.2s ease, opacity 0.2s ease, transform 0.14s ease;
 }
 
 .membersAction:hover {
@@ -242,9 +242,9 @@
 
 .mobileMemberCard {
   padding: 14px;
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  border: 1px solid var(--control-border);
   box-shadow: 0 10px 22px rgba(53, 63, 81, 0.05);
 }
 
@@ -270,7 +270,7 @@
 
 .mobileMetaValue {
   font-size: var(--font-size-md);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   color: var(--text-heading);
   line-height: 1.35;
 }
@@ -280,10 +280,10 @@
   width: 100%;
   min-height: 44px;
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--radius-sm);
   background: rgba(47, 109, 255, 0.08);
   color: var(--text-blue);
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 .settingsForm :global(.ant-form-item) {
@@ -291,8 +291,8 @@
 }
 
 .settingsForm :global(.ant-form-item-label > label) {
-  font-weight: 700;
-  color: var(--text-violet);
+  font-weight: var(--font-bold);
+  color: var(--violet);
   margin-bottom: 2px;
   letter-spacing: 0.01em;
 }
@@ -303,7 +303,7 @@
   border: 1px solid rgba(255, 255, 255, 0.78);
   box-shadow: 0 22px 48px rgba(18, 38, 63, 0.14);
   backdrop-filter: blur(22px);
-  padding: 24px;
+  padding: var(--space-6);
 }
 
 .crudModal :global(.ant-modal-header) {
@@ -313,8 +313,8 @@
 
 .crudModal :global(.ant-modal-title) {
   color: var(--text-heading);
-  font-size: var(--font-size-3xl);
-  font-weight: 700;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-bold);
   letter-spacing: -0.01em;
 }
 
@@ -325,7 +325,7 @@
 .crudModal :global(.ant-modal-footer) {
   margin-top: 8px;
   padding-top: 18px;
-  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  border-top: 1px solid var(--control-border);
 }
 
 .crudModalForm {
@@ -337,29 +337,29 @@
 }
 
 .crudModalForm :global(.ant-form-item-label > label) {
-  font-weight: 700;
-  color: var(--text-violet);
+  font-weight: var(--font-bold);
+  color: var(--violet);
   margin-bottom: 2px;
   letter-spacing: 0.01em;
 }
 
 .settingsInput {
-  border-radius: 12px;
-  border-color: rgba(148, 163, 184, 0.24);
+  border-radius: var(--radius-sm);
+  border-color: var(--control-border-strong);
   min-height: 40px;
   background: rgba(255, 255, 255, 0.94);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .settingsInput:hover {
-  border-color: rgba(67, 199, 171, 0.36);
+  border-color: color-mix(in srgb, var(--mint) 0.36%, transparent);
 }
 
 .settingsInput:focus,
 .settingsInput:focus-within {
   background: #fff;
-  border-color: rgba(67, 199, 171, 0.5);
-  box-shadow: 0 0 0 3px rgba(67, 199, 171, 0.12);
+  border-color: color-mix(in srgb, var(--mint) 0.5%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 0.12%, transparent);
 }
 
 .chartPanel {
@@ -379,7 +379,7 @@
 }
 
 .chartTooltip {
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.84);
   box-shadow: 0 12px 28px rgba(28, 45, 71, 0.12);
   background: rgba(255, 255, 255, 0.97);
@@ -390,7 +390,7 @@
   margin-bottom: 8px;
   color: var(--text-heading);
   font-size: var(--font-size-sm);
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 .chartTooltipList {
@@ -425,7 +425,7 @@
 .chartTooltipValue {
   color: var(--text-heading);
   font-size: var(--font-size-sm);
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 .memberRecordItem {
@@ -459,13 +459,13 @@
   padding: 12px 14px;
   border-radius: var(--radius-md);
   background: rgba(248, 250, 251, 0.84);
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  border: 1px solid var(--border-soft);
 }
 
 .memberRecordLabel {
   color: var(--text-tertiary);
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
@@ -474,7 +474,7 @@
   margin-top: 8px;
   color: var(--text-heading);
   font-size: var(--font-size-lg);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   line-height: 1.35;
 }
 
@@ -485,10 +485,10 @@
   padding: 5px 12px;
   border-radius: 999px;
   background: rgba(237, 248, 243, 0.86);
-  border: 1px solid rgba(83, 191, 168, 0.14);
-  color: var(--text-mint);
+  border: 1px solid color-mix(in srgb, var(--mint) 0.14%, transparent);
+  color: var(--mint);
   font-size: var(--font-size-sm);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   white-space: nowrap;
 }
 
@@ -496,7 +496,7 @@
   min-width: 42px;
   height: 23px;
   background: rgba(148, 163, 184, 0.45);
-  transition: box-shadow 0.18s ease, background 0.18s ease;
+  transition: box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .settingSwitch :global(.ant-switch:hover:not(.ant-switch-disabled)) {
@@ -509,18 +509,18 @@
 
 .settingSwitch :global(.ant-switch:focus-visible) {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(67, 199, 171, 0.16);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 0.16%, transparent);
 }
 
 .settingsUtilityButton {
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   border-color: var(--control-border);
   background: var(--control-surface);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   color: var(--button-text-secondary);
   min-height: 46px;
   box-shadow: 0 6px 14px rgba(24, 40, 62, 0.05);
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease, background 0.18s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, background 0.2s ease;
 }
 
 .settingsUtilityButton:hover {
@@ -564,7 +564,7 @@
 
 .segmentedSoft :global(.ant-segmented) {
   padding: 4px;
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 8px 18px rgba(53, 63, 81, 0.05);
 }
@@ -572,8 +572,8 @@
 .segmentedSoft :global(.ant-segmented-item) {
   min-width: 84px;
   min-height: 40px;
-  border-radius: 14px;
-  font-weight: 700;
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-bold);
   color: #51606f;
   display: inline-flex;
   align-items: center;
@@ -586,7 +586,7 @@
 
 .segmentedSoft :global(.ant-segmented-item-selected .ant-segmented-item-label) {
   color: #fff;
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 .segmentedSoft :global(.ant-segmented-item-label) {
@@ -598,14 +598,14 @@
 }
 
 .segmentedSoft :global(.ant-segmented-thumb) {
-  border-radius: 14px;
+  border-radius: var(--radius-sm);
   background: linear-gradient(135deg, #53bfa8 0%, #77dac5 100%);
-  box-shadow: 0 8px 18px rgba(83, 191, 168, 0.18);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--mint) 0.18%, transparent);
 }
 
 .textAction {
   color: var(--text-secondary);
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 .textAction :global(.anticon) {
@@ -615,8 +615,8 @@
 .cardActionPrimary {
   flex: 1;
   min-width: 0;
-  border-radius: 14px !important;
-  font-weight: 700;
+  border-radius: var(--radius-sm) !important;
+  font-weight: var(--font-bold);
   color: var(--button-text-primary) !important;
 }
 
@@ -637,16 +637,16 @@
   flex: 1;
   min-width: 0;
   width: auto;
-  border-radius: 14px !important;
-  font-weight: 700;
+  border-radius: var(--radius-sm) !important;
+  font-weight: var(--font-bold);
   color: var(--button-text-secondary) !important;
 }
 
 .cardActionHalf {
   flex: 1;
   min-width: 0;
-  border-radius: 14px !important;
-  font-weight: 700;
+  border-radius: var(--radius-sm) !important;
+  font-weight: var(--font-bold);
 }
 
 .cardActionSecondary,
@@ -693,8 +693,8 @@
 .courseDrawerAction {
   min-height: 36px;
   height: 36px;
-  border-radius: 10px !important;
-  font-weight: 600;
+  border-radius: var(--radius-xs) !important;
+  font-weight: var(--font-semibold);
   padding: 0 12px !important;
 }
 
@@ -710,22 +710,22 @@
   min-width: 0;
   min-height: 44px !important;
   height: 44px;
-  border-radius: 12px !important;
+  border-radius: var(--radius-sm) !important;
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 .splitButtonGroup :global(.ant-btn).button {
   height: 44px;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   padding-inline: 14px;
 }
 
 .splitButtonGroup :global(.ant-btn-text).button {
   height: 44px;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
 }
 
 .bookingSearchRow {
@@ -743,18 +743,18 @@
 .bookingSearchRow :global(.ant-btn) {
   min-height: 40px !important;
   height: 40px;
-  border-radius: 12px !important;
+  border-radius: var(--radius-sm) !important;
   padding-inline: 14px !important;
 }
 
 .bookingDateTab {
   min-height: 44px !important;
   height: 44px;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--control-border);
   background: var(--control-surface);
   color: var(--button-text-secondary);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   padding: 0 16px;
   display: inline-flex;
   align-items: center;
@@ -799,15 +799,15 @@
 }
 
 .rolePermissionBlock {
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 14px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.9);
   padding: 12px;
 }
 
 .rolePermissionTitle {
   font-size: var(--font-size-sm);
-  font-weight: 800;
+  font-weight: var(--font-black);
   color: var(--text-heading);
   margin-bottom: 10px;
 }
@@ -823,8 +823,8 @@
   justify-content: space-between;
   gap: 10px;
   padding: 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--control-border);
   background: rgba(248, 250, 252, 0.86);
 }
 
@@ -833,7 +833,7 @@
 }
 
 .rolePermissionCode {
-  font-weight: 700;
+  font-weight: var(--font-bold);
   color: var(--text-heading);
   line-height: 1.35;
 }
@@ -989,7 +989,7 @@
 
 .metricValueStrong {
   font-size: 22px;
-  font-weight: 800;
+  font-weight: var(--font-black);
 }
 
 .toolbarCompact {
@@ -1006,6 +1006,15 @@
   .threeCol,
   .fourCol {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1200px) {
+  .twoCol,
+  .balancedTwoCol,
+  .financeTwoCol,
+  .analyticsPrimaryTwoCol {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1097,11 +1106,11 @@
 
 .toolbarGhostAction {
   min-height: 44px;
-  border-radius: 12px !important;
+  border-radius: var(--radius-sm) !important;
   border-color: var(--control-border) !important;
   background: var(--control-surface) !important;
   color: var(--button-text-secondary) !important;
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   padding-inline: 14px !important;
 }
 
@@ -1114,11 +1123,11 @@
 .toolbarSelect {
   min-height: 44px;
   min-width: 140px;
-  border-radius: 12px !important;
+  border-radius: var(--radius-sm) !important;
   border-color: var(--control-border) !important;
   background: var(--control-surface) !important;
   color: var(--button-text-secondary) !important;
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   padding-inline: 14px !important;
 }
 
@@ -1130,7 +1139,7 @@
 
 .toolbarSelect :global(.ant-select-selector) {
   min-height: 44px !important;
-  border-radius: 12px !important;
+  border-radius: var(--radius-sm) !important;
   border-color: transparent !important;
   background: transparent !important;
 }
@@ -1142,8 +1151,8 @@
 }
 
 .toolbarSelect :global(.ant-select-focused) .ant-select-selector {
-  border-color: rgba(67, 199, 171, 0.5) !important;
-  box-shadow: 0 0 0 3px rgba(67, 199, 171, 0.12) !important;
+  border-color: color-mix(in srgb, var(--mint) 0.5%, transparent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 0.12%, transparent) !important;
 }
 
 @media (max-width: 768px) {

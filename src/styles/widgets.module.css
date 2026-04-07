@@ -18,24 +18,26 @@
   padding: 14px 16px;
   border-radius: var(--radius-md);
   background: rgba(248, 250, 251, 0.84);
-  border: 1px solid rgba(148, 163, 184, 0.1);
-  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid var(--border-soft);
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
 }
 
 .workRecordItem {
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: var(--radius-sm);
 }
 
 .showcaseRecordItem {
   padding: 16px 18px;
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
 }
 
 .recordItem:hover {
-  border-color: rgba(67, 199, 171, 0.16);
+  border-color: color-mix(in srgb, var(--mint) 16%, transparent);
   background: rgba(250, 252, 251, 0.94);
   box-shadow: 0 8px 18px rgba(38, 57, 84, 0.04);
+  transform: translateY(-1px);
 }
 
 .recordMeta {
@@ -46,7 +48,7 @@
 }
 
 .recordTitle {
-  font-weight: 700;
+  font-weight: var(--font-bold);
   margin-bottom: 4px;
   color: var(--text-heading);
 }
@@ -59,13 +61,15 @@
 .dashboardCardAction {
   min-height: 36px;
   padding: 0 14px !important;
-  border-radius: 12px !important;
+  border-radius: var(--radius-sm) !important;
   background: var(--control-surface) !important;
   border: 1px solid var(--control-border) !important;
   color: var(--button-text-secondary) !important;
   font-size: var(--font-size-sm);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   box-shadow: var(--control-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.76);
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .dashboardCardAction:hover {
@@ -73,22 +77,23 @@
   border-color: var(--control-border-strong) !important;
   color: var(--button-text-secondary-hover) !important;
   box-shadow: var(--control-shadow-strong), inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  transform: translateY(-1px);
 }
 
 .dashboardCardAction:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(83, 191, 168, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 10%, transparent);
 }
 
 .dashboardTimeBadge {
   min-width: 72px;
   padding: 10px 12px;
   border-radius: var(--radius-md);
-  background: rgba(237, 248, 243, 0.92);
-  border: 1px solid rgba(83, 191, 168, 0.18);
-  color: var(--text-mint);
-  font-weight: 700;
-  font-size: var(--font-size-4xl);
+  background: var(--mint-soft);
+  border: 1px solid color-mix(in srgb, var(--mint) 18%, transparent);
+  color: var(--mint);
+  font-weight: var(--font-bold);
+  font-size: var(--font-size-lg);
   line-height: 1;
   text-align: center;
 }
@@ -96,7 +101,7 @@
 .dashboardNumberText {
   color: var(--text-heading);
   font-size: var(--font-size-md);
-  font-weight: 800;
+  font-weight: var(--font-black);
   letter-spacing: 0.01em;
 }
 
@@ -141,10 +146,10 @@
   min-height: 26px;
   padding: 0 10px;
   border-radius: 999px;
-  background: rgba(83, 191, 168, 0.12);
-  color: var(--text-mint);
+  background: color-mix(in srgb, var(--mint) 0.12%, transparent);
+  color: var(--mint);
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 .dashboardSubpageHint {
@@ -190,7 +195,7 @@
   height: 28px;
   border-radius: 999px;
   background: rgba(248, 250, 249, 0.92);
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  border: 1px solid var(--control-border);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -245,10 +250,10 @@
   padding: 0 12px;
   border-radius: 999px;
   background: rgba(248, 250, 249, 0.92);
-  border: 1px solid rgba(148, 163, 184, 0.14);
+  border: 1px solid var(--control-border);
   color: var(--text-secondary);
   font-size: var(--font-size-sm);
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 .dashboardTrendLegendLine {
@@ -277,10 +282,10 @@
   padding: 5px 10px;
   border-radius: 999px;
   background: rgba(237, 248, 243, 0.82);
-  border: 1px solid rgba(83, 191, 168, 0.12);
+  border: 1px solid color-mix(in srgb, var(--mint) 0.12%, transparent);
   color: var(--text-secondary);
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 .dashboardBookingMeta {
@@ -310,10 +315,10 @@
   margin-left: 6px;
   padding: 3px 8px;
   border-radius: 999px;
-  background: rgba(83, 191, 168, 0.12);
-  border: 1px solid rgba(83, 191, 168, 0.12);
-  color: var(--text-mint);
-  font-weight: 700;
+  background: color-mix(in srgb, var(--mint) 0.12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--mint) 0.12%, transparent);
+  color: var(--mint);
+  font-weight: var(--font-bold);
 }
 
 .dashboardCountTag {
@@ -323,10 +328,10 @@
   padding: 5px 10px;
   border-radius: 999px;
   background: rgba(237, 248, 243, 0.82);
-  border: 1px solid rgba(83, 191, 168, 0.14);
+  border: 1px solid color-mix(in srgb, var(--mint) 0.14%, transparent);
   color: var(--text-secondary);
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 .dashboardScheduleTime {
@@ -347,14 +352,14 @@
 
 .dashboardMagneticCard:hover {
   transform: translateY(-2px);
-  border-color: rgba(67, 199, 171, 0.18);
+  border-color: color-mix(in srgb, var(--mint) 0.18%, transparent);
   background: rgba(250, 252, 251, 0.96);
   box-shadow: 0 14px 26px rgba(38, 57, 84, 0.07);
 }
 
 .dashboardMagneticCard:focus-within {
-  border-color: rgba(83, 191, 168, 0.2);
-  box-shadow: 0 0 0 3px rgba(83, 191, 168, 0.08), 0 12px 24px rgba(38, 57, 84, 0.06);
+  border-color: color-mix(in srgb, var(--mint) 0.2%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 0.08%, transparent), 0 12px 24px rgba(38, 57, 84, 0.06);
 }
 
 .metricGrid {
@@ -367,7 +372,7 @@
   padding: 13px;
   border-radius: var(--radius-md);
   background: rgba(248, 250, 252, 0.88);
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  border: 1px solid var(--border-soft);
   transition: border-color 0.2s ease, background 0.2s ease;
 }
 
@@ -394,11 +399,11 @@
 
 .dashboardSummaryCardMint {
   background: rgba(237, 248, 243, 0.82);
-  border-color: rgba(83, 191, 168, 0.16);
+  border-color: color-mix(in srgb, var(--mint) 0.16%, transparent);
 }
 
 .dashboardSummaryCardMint::after {
-  background: rgba(83, 191, 168, 0.18);
+  background: color-mix(in srgb, var(--mint) 0.18%, transparent);
 }
 
 .dashboardSummaryCardViolet {
@@ -426,38 +431,38 @@
 
 .metricValue {
   margin-top: 8px;
-  font-size: var(--font-size-3xl);
-  font-weight: 800;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-black);
   color: var(--text-heading);
 }
 
 .dashboardSummaryCard .metricValue {
-  font-size: var(--font-size-4xl);
+  font-size: var(--font-size-xl);
   letter-spacing: -0.02em;
 }
 
 .dashboardSummaryCardMint .metricValue {
-  color: var(--text-mint);
+  color: var(--mint);
 }
 
 .dashboardSummaryCardViolet .metricValue {
-  color: var(--text-violet);
+  color: var(--violet);
 }
 
 .dashboardSummaryCardOrange .metricValue {
-  color: var(--text-orange);
+  color: var(--orange);
 }
 
 .metricGrid > .metricCard:nth-child(1) .metricValue {
-  color: var(--text-mint);
+  color: var(--mint);
 }
 
 .metricGrid > .metricCard:nth-child(2) .metricValue {
-  color: var(--text-violet);
+  color: var(--violet);
 }
 
 .metricGrid > .metricCard:nth-child(3) .metricValue {
-  color: var(--text-orange);
+  color: var(--orange);
 }
 
 .chipRow {
@@ -470,30 +475,30 @@
   padding: 5px 10px;
   border-radius: 999px;
   background: rgba(244, 245, 242, 0.88);
-  border: 1px solid rgba(148, 163, 184, 0.08);
+  border: 1px solid var(--border-soft);
   color: var(--text-secondary);
   font-size: var(--font-size-xs);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
 }
 
 .chipPrimary {
   padding: 5px 11px;
   border-radius: 999px;
   background: rgba(237, 248, 243, 0.96);
-  border: 1px solid rgba(83, 191, 168, 0.18);
-  color: var(--text-mint);
+  border: 1px solid color-mix(in srgb, var(--mint) 0.18%, transparent);
+  color: var(--mint);
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 .chipLevel {
   padding: 5px 10px;
   border-radius: 999px;
   background: rgba(245, 247, 244, 0.92);
-  border: 1px solid rgba(148, 163, 184, 0.08);
+  border: 1px solid var(--border-soft);
   color: var(--text-tertiary);
   font-size: var(--font-size-xs);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
 }
 
 .courseGrid,
@@ -505,7 +510,7 @@
 }
 
 .detailCard {
-  padding: 20px;
+  padding: var(--space-5);
   border-radius: var(--radius-lg);
   background: var(--bg-surface);
   border: 1px solid var(--border-soft);
@@ -514,7 +519,7 @@
 }
 
 .detailCard:hover {
-  border-color: rgba(67, 199, 171, 0.16);
+  border-color: color-mix(in srgb, var(--mint) 0.16%, transparent);
   background: rgba(250, 252, 251, 0.94);
   box-shadow: 0 8px 18px rgba(38, 57, 84, 0.04);
 }
@@ -529,7 +534,7 @@
 
 .detailTitle {
   margin: 0;
-  font-size: var(--font-size-4xl);
+  font-size: var(--font-size-xl);
   color: var(--text-heading);
 }
 
@@ -550,7 +555,7 @@
 }
 
 .settingBlock {
-  padding: 20px;
+  padding: var(--space-5);
   border-radius: var(--radius-lg);
   background: var(--bg-surface);
   border: 1px solid var(--border-soft);
@@ -565,8 +570,8 @@
   padding: 10px 8px;
   margin: 0 -8px;
   border-radius: var(--radius-sm);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
-  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.16s ease;
+  border-bottom: 1px solid var(--border-soft);
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .settingRow:hover {
@@ -580,8 +585,8 @@
 
 .settingRow:focus-within {
   background: rgba(242, 249, 246, 0.96);
-  border-color: rgba(67, 199, 171, 0.22);
-  box-shadow: 0 0 0 3px rgba(67, 199, 171, 0.08);
+  border-color: color-mix(in srgb, var(--mint) 0.22%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 0.08%, transparent);
 }
 
 .settingRow:last-child {
@@ -604,13 +609,13 @@
   padding: 16px 18px;
   border-radius: var(--radius-md);
   background: rgba(248, 250, 251, 0.9);
-  border: 1px solid rgba(148, 163, 184, 0.12);
+  border: 1px solid var(--border-soft);
   box-shadow: 0 10px 24px rgba(36, 50, 73, 0.04);
 }
 
 .detailInsightCardMint {
   background: rgba(237, 248, 243, 0.92);
-  border-color: rgba(83, 191, 168, 0.16);
+  border-color: color-mix(in srgb, var(--mint) 0.16%, transparent);
 }
 
 .detailInsightCardOrange {
@@ -621,7 +626,7 @@
 .detailInsightLabel {
   color: var(--text-tertiary);
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -629,14 +634,14 @@
 .detailInsightValue {
   margin-top: 10px;
   color: var(--text-heading);
-  font-size: var(--font-size-3xl);
-  font-weight: 800;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-black);
   line-height: 1.2;
 }
 
 .detailPersonName {
   font-size: var(--font-size-xl);
-  font-weight: 700;
+  font-weight: var(--font-bold);
   line-height: 1.3;
 }
 
@@ -665,7 +670,7 @@
   padding: 18px 20px;
   border-radius: var(--radius-lg);
   background: linear-gradient(180deg, rgba(249, 250, 248, 0.96) 0%, rgba(245, 248, 246, 0.92) 100%);
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  border: 1px solid var(--border-soft);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
@@ -688,13 +693,13 @@
 .detailOverviewStatCard {
   padding: 14px 15px;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  border: 1px solid var(--border-soft);
   background: rgba(248, 250, 251, 0.92);
 }
 
 .detailOverviewStatMint {
   background: rgba(237, 248, 243, 0.86);
-  border-color: rgba(83, 191, 168, 0.16);
+  border-color: color-mix(in srgb, var(--mint) 0.16%, transparent);
 }
 
 .detailOverviewStatViolet {
@@ -709,28 +714,28 @@
 
 .detailOverviewStatValue {
   margin-top: 8px;
-  font-size: var(--font-size-3xl);
-  font-weight: 800;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-black);
   line-height: 1.15;
   color: var(--text-heading);
 }
 
 .detailOverviewStatMint .detailOverviewStatValue {
-  color: var(--text-mint);
+  color: var(--mint);
 }
 
 .detailOverviewStatViolet .detailOverviewStatValue {
-  color: var(--text-violet);
+  color: var(--violet);
 }
 
 .detailOverviewStatOrange .detailOverviewStatValue {
-  color: var(--text-orange);
+  color: var(--orange);
 }
 
 .detailOverviewLead {
   color: var(--text-heading);
   font-size: var(--font-size-xl);
-  font-weight: 800;
+  font-weight: var(--font-black);
   line-height: 1.25;
 }
 
@@ -765,20 +770,20 @@
   padding: 14px 16px;
   border-radius: var(--radius-md);
   background: rgba(248, 250, 252, 0.88);
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  border: 1px solid var(--border-soft);
 }
 
 .slotDay {
   color: var(--text-tertiary);
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 .slotTime {
   margin-top: 8px;
   color: var(--text-heading);
   font-size: var(--font-size-xl);
-  font-weight: 800;
+  font-weight: var(--font-black);
   line-height: 1.3;
 }
 
@@ -789,10 +794,10 @@
   padding: 5px 10px;
   border-radius: 999px;
   background: rgba(237, 248, 243, 0.82);
-  border: 1px solid rgba(83, 191, 168, 0.14);
+  border: 1px solid color-mix(in srgb, var(--mint) 0.14%, transparent);
   color: var(--text-secondary);
   font-size: var(--font-size-xs);
-  font-weight: 700;
+  font-weight: var(--font-bold);
 }
 
 .detailFooterRow {
@@ -802,7 +807,7 @@
   gap: 12px;
   margin-top: 16px;
   padding-top: 14px;
-  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  border-top: 1px solid var(--border-soft);
   flex-wrap: wrap;
 }
 

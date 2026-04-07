@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Spin } from 'antd';
+import { Button, Spin, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
 import MemberAvatar from '@/components/MemberAvatar';
@@ -15,6 +15,7 @@ import type { AccentTone } from '@/types';
 const tones: AccentTone[] = ['mint', 'violet', 'orange', 'pink'];
 
 export default function DashboardBookingsPage() {
+  const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
   const go = (path: string) => navigate(path);
   const [loading, setLoading] = useState(true);
@@ -31,6 +32,8 @@ export default function DashboardBookingsPage() {
         ]);
         setBookings(bookingRes.data || []);
         setCourses(courseRes || []);
+      } catch (err: any) {
+        messageApi.error(err.message || '加载预约数据失败，请稍后重试');
       } finally {
         setLoading(false);
       }
@@ -52,6 +55,7 @@ export default function DashboardBookingsPage() {
 
   return (
     <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
+      {contextHolder}
       <PageHeader
         title="今日预约明细"
         subtitle="聚焦预约跟进事项，快速确认、联系与处理异常。"
