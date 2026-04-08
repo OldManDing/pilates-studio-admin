@@ -92,6 +92,8 @@ model AdminUser {
   roleId         String
   role           Role          @relation(fields: [roleId], references: [id])
   refreshTokens  RefreshToken[]
+  twoFactorEnabled Boolean      @default(false)
+  twoFactorSecret  String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 }

@@ -37,6 +37,18 @@ export const authApi = {
 
   changePassword: (data: { currentPassword: string; newPassword: string; confirmPassword: string }) =>
     api.post<{ success: boolean; message: string }>('/auth/change-password', data),
+
+  getTwoFactorStatus: () =>
+    api.get<{ enabled: boolean; hasSecret: boolean }>('/auth/2fa/status'),
+
+  generateTwoFactorSecret: () =>
+    api.post<{ secret: string; backupCode: string; message: string }>('/auth/2fa/generate', {}),
+
+  verifyTwoFactor: (code: string) =>
+    api.post<{ success: boolean; message: string }>('/auth/2fa/verify', { code }),
+
+  disableTwoFactor: (password: string) =>
+    api.post<{ success: boolean; message: string }>('/auth/2fa/disable', { password }),
 };
 
 export const setTokens = (accessToken: string, refreshToken: string) => {

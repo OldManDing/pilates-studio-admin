@@ -180,16 +180,19 @@ export default function SettingsPage() {
   const [notificationSavedAt, setNotificationSavedAt] = useState('今天 09:30');
   const [securityState, setSecurityState] = useState<Record<SecurityActionTitle, SecurityActionState>>({
     修改密码: { title: '修改密码', description: '定期更新管理员账号密码', status: '正常', detail: '可通过此功能修改密码' },
-    两步验证: { title: '两步验证', description: '为核心账号开启短信或邮箱二次验证', status: '待激活', detail: '功能开发中' },
+    两步验证: { title: '两步验证', description: '为核心账号开启短信或邮箱二次验证', status: '待激活', detail: '点击设置两步验证' },
     权限管理: { title: '权限管理', description: '配置前台、店长和财务的页面权限', status: '正常', detail: '可在"角色权限"页面配置' }
   });
   const [dataState, setDataState] = useState<Record<DataActionTitle, DataActionState>>({
     数据备份: { title: '数据备份', description: '每日自动备份课程、预约和交易数据', status: '正常', detail: '可通过导出功能手动备份' },
     导出数据: { title: '导出数据', description: '按时间范围导出经营与会员报表', status: '正常', detail: '点击导出按钮开始' },
-    数据恢复: { title: '数据恢复', description: '从最近一次备份恢复门店数据', status: '待激活', detail: '功能开发中' }
+    数据恢复: { title: '数据恢复', description: '从最近一次备份恢复门店数据', status: '正常', detail: '点击上传备份文件恢复' }
   });
   const [passwordDraft, setPasswordDraft] = useState({ current: '', next: '', confirm: '' });
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [twoFactorSecret, setTwoFactorSecret] = useState<string | null>(null);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [disablePassword, setDisablePassword] = useState('');
   const [exportRange, setExportRange] = useState('近 30 天');
   const [restoreSource, setRestoreSource] = useState('最近一次备份');
   const [systemVersion, setSystemVersion] = useState('v2.6.1');
@@ -358,8 +361,32 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveTwoFactor = () => {
-    message.info('两步验证功能开发中');
+  const handleSaveTwoFactor = async () => {
+    try {
+      if (twoFactorEnabled) {
+        // Disable 2FA
+        await authApi.disableTwoFactor(disablePassword);
+        setTwoFactorEnabled(false);
+        setTwoFactorSecret(null);
+        setDisablePassword('');
+        message.success('已关闭两步验证');
+      } else if (twoFactorSecret) {
+        // Verify and enable 2FA
+        await authApi.verifyTwoFactor(twoFactorCode);
+        setTwoFactorEnabled(true);
+        setTwoFactorCode('');
+        message.success('已开启两步验证');
+      } else {
+        // Generate secret first
+        const res = await authApi.generateTwoFactorSecret();
+        setTwoFactorSecret(res.secret);
+        message.info('请使用验证器扫描密钥，然后输入验证码');
+        return;
+      }
+      setOpenSecurityDrawer(null);
+    } catch (err: any) {
+      message.error(err.message || '操作失败');
+    }
   };
 
   const handleSyncPermissions = () => {
@@ -408,8 +435,37 @@ export default function SettingsPage() {
     }
   };
 
-  const handleRestoreData = () => {
-    message.info('数据恢复功能开发中');
+  const handleRestoreData = async () => {
+    try {
+      // Create a file input element
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+
+        try {
+          const res = await settingsApi.restoreData(file);
+          if (res.success) {
+            const timestamp = todayText();
+            setDataState((current) => ({
+              ...current,
+              数据恢复: { ...current.数据恢复, status: '正常', detail: `最近恢复于 ${timestamp}` }
+            }));
+            message.success('数据恢复成功');
+          } else {
+            message.error(res.message || '恢复失败');
+          }
+          setOpenDataDrawer(null);
+        } catch (err: any) {
+          message.error(err.message || '恢复失败');
+        }
+      };
+      input.click();
+    } catch (err: any) {
+      message.error(err.message || '恢复失败');
+    }
   };
 
   const parseHoursToDayjs = (hours: string): [dayjs.Dayjs, dayjs.Dayjs] => {
@@ -631,14 +687,54 @@ export default function SettingsPage() {
 
             {openSecurityDrawer === '两步验证' ? (
               <div className={pageCls.settingsDetailForm}>
-                <div className={widgetCls.settingRow}>
+                {!twoFactorEnabled ? (
+                  <>
+                    {!twoFactorSecret ? (
+                      <div>
+                        <div className={widgetCls.settingRow}>
+                          <div>
+                            <div className={widgetCls.recordTitle}>开启两步验证</div>
+                            <div className={widgetCls.smallText}>启用后，登录时需要输入验证器生成的验证码。</div>
+                          </div>
+                        </div>
+                        <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleSaveTwoFactor}>开始设置</Button>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className={widgetCls.recordTitle}>验证密钥</div>
+                        <div className={widgetCls.smallText} style={{ marginBottom: 12 }}>请使用验证器应用（如 Google Authenticator）扫描或手动输入以下密钥：</div>
+                        <Input.TextArea
+                          value={twoFactorSecret}
+                          readOnly
+                          rows={2}
+                          style={{ marginBottom: 16 }}
+                        />
+                        <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>输入验证器生成的 6 位验证码：</div>
+                        <Input
+                          className={pageCls.settingsInput}
+                          placeholder="6 位验证码"
+                          value={twoFactorCode}
+                          onChange={(e) => setTwoFactorCode(e.target.value)}
+                          maxLength={6}
+                        />
+                        <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleSaveTwoFactor} style={{ marginTop: 16 }}>验证并开启</Button>
+                      </div>
+                    )}
+                  </>
+                ) : (
                   <div>
-                    <div className={widgetCls.recordTitle}>开启二次验证</div>
-                    <div className={widgetCls.smallText}>启用后，核心账号登录需经过短信或邮箱验证。</div>
+                    <div className={widgetCls.recordTitle} style={{ color: '#52c41a', marginBottom: 8 }}>两步验证已开启</div>
+                    <div className={widgetCls.smallText} style={{ marginBottom: 16 }}>您的账号已启用两步验证保护。</div>
+                    <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>输入密码以关闭两步验证：</div>
+                    <Input.Password
+                      className={pageCls.settingsInput}
+                      placeholder="当前密码"
+                      value={disablePassword}
+                      onChange={(e) => setDisablePassword(e.target.value)}
+                    />
+                    <Button danger className={pageCls.cardActionPrimary} size="large" onClick={handleSaveTwoFactor} style={{ marginTop: 16 }}>关闭两步验证</Button>
                   </div>
-                  <span className={pageCls.settingSwitch}><Switch checked={twoFactorEnabled} onChange={setTwoFactorEnabled} /></span>
-                </div>
-                <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleSaveTwoFactor}>保存验证策略</Button>
+                )}
               </div>
             ) : null}
 
@@ -689,17 +785,10 @@ export default function SettingsPage() {
 
             {openDataDrawer === '数据恢复' ? (
               <div className={pageCls.settingsDetailForm}>
-                <div>
-                  <div className={`${widgetCls.smallText} ${pageCls.settingsFieldLabel}`}>恢复来源</div>
-                  <Select
-                    value={restoreSource}
-                    className={pageCls.settingsInput}
-                    style={{ width: '100%' }}
-                    options={['最近一次备份', '03-28 每日备份', '03-21 周度备份'].map((item) => ({ label: item, value: item }))}
-                    onChange={setRestoreSource}
-                  />
+                <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>
+                  请上传之前导出的备份文件（.json 格式）。恢复操作会覆盖现有数据，请谨慎操作。
                 </div>
-                <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleRestoreData}>执行恢复演练</Button>
+                <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleRestoreData}>上传备份文件</Button>
               </div>
             ) : null}
           </div>

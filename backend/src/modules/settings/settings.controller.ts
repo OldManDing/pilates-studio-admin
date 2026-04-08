@@ -1,6 +1,7 @@
-import { Controller, Get, Put, Body, Post, Res } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Put, Body, Post, Res, UploadedFile, UseInterceptors, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { Response } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { SettingsService } from './settings.service';
 import { UpdateStudioDto } from './dto/update-studio.dto';
@@ -59,5 +60,35 @@ export class SettingsController {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
     res.send(JSON.stringify(data, null, 2));
+  }
+
+  @Post('restore')
+  @RequirePermissions('MANAGE:SETTINGS')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Restore data from backup file' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  async restoreData(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      return { success: false, message: 'No file uploaded' };
+    }
+    try {
+      const backupData = JSON.parse(file.buffer.toString('utf-8'));
+      const result = await this.settingsService.restoreFromBackup(backupData);
+      return result;
+    } catch (error) {
+      return { success: false, message: 'Invalid backup file format' };
+    }
   }
 }

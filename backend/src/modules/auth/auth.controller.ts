@@ -60,4 +60,38 @@ export class AuthController {
   ) {
     return this.authService.changePassword(userId, dto);
   }
+
+  @Get('2fa/status')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get two-factor authentication status' })
+  async getTwoFactorStatus(@CurrentUser('sub') userId: string) {
+    return this.authService.getTwoFactorStatus(userId);
+  }
+
+  @Post('2fa/generate')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Generate two-factor authentication secret' })
+  async generateTwoFactorSecret(@CurrentUser('sub') userId: string) {
+    return this.authService.generateTwoFactorSecret(userId);
+  }
+
+  @Post('2fa/verify')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Verify and enable two-factor authentication' })
+  async verifyTwoFactor(
+    @CurrentUser('sub') userId: string,
+    @Body('code') code: string,
+  ) {
+    return this.authService.verifyTwoFactor(userId, code);
+  }
+
+  @Post('2fa/disable')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Disable two-factor authentication' })
+  async disableTwoFactor(
+    @CurrentUser('sub') userId: string,
+    @Body('password') password: string,
+  ) {
+    return this.authService.disableTwoFactor(userId, password);
+  }
 }

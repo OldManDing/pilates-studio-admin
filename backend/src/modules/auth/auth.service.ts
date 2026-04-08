@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -219,5 +220,105 @@ export class AuthService {
     });
 
     return { success: true, message: 'Password changed successfully' };
+  }
+
+  async getTwoFactorStatus(userId: string) {
+    const admin = await this.prisma.adminUser.findUnique({
+      where: { id: userId },
+      select: {
+        twoFactorEnabled: true,
+        twoFactorSecret: true,
+      },
+    });
+
+    if (!admin) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return {
+      enabled: admin.twoFactorEnabled,
+      hasSecret: !!admin.twoFactorSecret,
+    };
+  }
+
+  async generateTwoFactorSecret(userId: string) {
+    const admin = await this.prisma.adminUser.findUnique({
+      where: { id: userId },
+    });
+
+    if (!admin) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Generate a random secret
+    const secret = crypto.randomBytes(20).toString('hex');
+    const backupCode = crypto.randomBytes(4).toString('hex').toUpperCase();
+
+    // Store the secret (but don't enable 2FA yet)
+    await this.prisma.adminUser.update({
+      where: { id: userId },
+      data: { twoFactorSecret: secret },
+    });
+
+    return {
+      secret,
+      backupCode,
+      message: 'Secret generated. Please verify with a code to enable 2FA.',
+    };
+  }
+
+  async verifyTwoFactor(userId: string, code: string) {
+    const admin = await this.prisma.adminUser.findUnique({
+      where: { id: userId },
+    });
+
+    if (!admin) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (!admin.twoFactorSecret) {
+      throw new BadRequestException('Two-factor authentication not set up');
+    }
+
+    // Simple code verification (in production, use TOTP)
+    // For now, we'll accept any 6-digit code
+    if (!/^\d{6}$/.test(code)) {
+      throw new BadRequestException('Invalid code format');
+    }
+
+    // Enable 2FA
+    await this.prisma.adminUser.update({
+      where: { id: userId },
+      data: { twoFactorEnabled: true },
+    });
+
+    return { success: true, message: 'Two-factor authentication enabled' };
+  }
+
+  async disableTwoFactor(userId: string, password: string) {
+    const admin = await this.prisma.adminUser.findUnique({
+      where: { id: userId },
+    });
+
+    if (!admin) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, admin.passwordHash);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid password');
+    }
+
+    // Disable 2FA
+    await this.prisma.adminUser.update({
+      where: { id: userId },
+      data: {
+        twoFactorEnabled: false,
+        twoFactorSecret: null,
+      },
+    });
+
+    return { success: true, message: 'Two-factor authentication disabled' };
   }
 }

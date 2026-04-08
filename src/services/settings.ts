@@ -36,4 +36,14 @@ export const settingsApi = {
 
   exportData: () =>
     api.get('/settings/export', { responseType: 'blob' }),
+
+  restoreData: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post<{ success: boolean; message: string }>('/settings/restore', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
 };

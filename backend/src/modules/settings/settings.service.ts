@@ -137,4 +137,125 @@ export class SettingsService {
       },
     };
   }
+
+  async restoreFromBackup(backupData: any) {
+    // Validate backup format
+    if (!backupData.data || !backupData.version) {
+      return { success: false, message: 'Invalid backup format' };
+    }
+
+    const { data } = backupData;
+
+    try {
+      // Use transaction to ensure data consistency
+      await this.prisma.$transaction(async (prisma) => {
+        // Restore membership plans first (no dependencies)
+        if (data.membershipPlans?.length) {
+          for (const plan of data.membershipPlans) {
+            await prisma.membershipPlan.upsert({
+              where: { id: plan.id },
+              update: plan,
+              create: plan,
+            });
+          }
+        }
+
+        // Restore coaches
+        if (data.coaches?.length) {
+          for (const coach of data.coaches) {
+            const { specialties, certificates, ...coachData } = coach;
+            await prisma.coach.upsert({
+              where: { id: coach.id },
+              update: coachData,
+              create: coachData,
+            });
+
+            // Restore specialties
+            if (specialties?.length) {
+              await prisma.coachTag.deleteMany({ where: { coachId: coach.id } });
+              for (const tag of specialties) {
+                await prisma.coachTag.create({
+                  data: { coachId: coach.id, value: tag.value },
+                });
+              }
+            }
+
+            // Restore certificates
+            if (certificates?.length) {
+              await prisma.coachCertificate.deleteMany({ where: { coachId: coach.id } });
+              for (const cert of certificates) {
+                await prisma.coachCertificate.create({
+                  data: { coachId: coach.id, value: cert.value },
+                });
+              }
+            }
+          }
+        }
+
+        // Restore members
+        if (data.members?.length) {
+          for (const member of data.members) {
+            const { membershipPlan, ...memberData } = member;
+            await prisma.member.upsert({
+              where: { id: member.id },
+              update: memberData,
+              create: memberData,
+            });
+          }
+        }
+
+        // Restore courses
+        if (data.courses?.length) {
+          for (const course of data.courses) {
+            const { coach, ...courseData } = course;
+            await prisma.course.upsert({
+              where: { id: course.id },
+              update: courseData,
+              create: courseData,
+            });
+          }
+        }
+
+        // Restore sessions
+        if (data.sessions?.length) {
+          for (const session of data.sessions) {
+            const { course, coach, ...sessionData } = session;
+            await prisma.courseSession.upsert({
+              where: { id: session.id },
+              update: sessionData,
+              create: sessionData,
+            });
+          }
+        }
+
+        // Restore bookings
+        if (data.bookings?.length) {
+          for (const booking of data.bookings) {
+            const { member, session, ...bookingData } = booking;
+            await prisma.booking.upsert({
+              where: { id: booking.id },
+              update: bookingData,
+              create: bookingData,
+            });
+          }
+        }
+
+        // Restore transactions
+        if (data.transactions?.length) {
+          for (const transaction of data.transactions) {
+            const { member, ...transactionData } = transaction;
+            await prisma.transaction.upsert({
+              where: { id: transaction.id },
+              update: transactionData,
+              create: transactionData,
+            });
+          }
+        }
+      });
+
+      return { success: true, message: 'Data restored successfully' };
+    } catch (error) {
+      return { success: false, message: `Restore failed: ${error.message}` };
+    }
+  }
 }
