@@ -33,4 +33,7 @@ export const settingsApi = {
 
   initialize: () =>
     api.post<{ success: boolean }>('/settings/init', {}),
+
+  exportData: () =>
+    api.get('/settings/export', { responseType: 'blob' }),
 };

@@ -1,5 +1,6 @@
-import { Controller, Get, Put, Body, Post } from '@nestjs/common';
+import { Controller, Get, Put, Body, Post, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Response } from 'express';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { SettingsService } from './settings.service';
 import { UpdateStudioDto } from './dto/update-studio.dto';
@@ -45,5 +46,18 @@ export class SettingsController {
   async initializeSettings() {
     await this.settingsService.initializeDefaultSettings();
     return { success: true };
+  }
+
+  @Get('export')
+  @RequirePermissions('MANAGE:SETTINGS')
+  @ApiOperation({ summary: 'Export data as JSON' })
+  async exportData(@Res() res: Response) {
+    const data = await this.settingsService.exportAllData();
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = `pilates-backup-${timestamp}.json`;
+    
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.send(JSON.stringify(data, null, 2));
   }
 }

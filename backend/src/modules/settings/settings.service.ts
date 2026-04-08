@@ -80,4 +80,61 @@ export class SettingsService {
       }
     }
   }
+
+  async exportAllData() {
+    const [
+      members,
+      coaches,
+      courses,
+      sessions,
+      bookings,
+      transactions,
+      membershipPlans,
+      adminUsers,
+    ] = await Promise.all([
+      this.prisma.member.findMany({
+        include: { membershipPlan: true },
+      }),
+      this.prisma.coach.findMany({
+        include: { specialties: true, certificates: true },
+      }),
+      this.prisma.course.findMany({
+        include: { coach: true },
+      }),
+      this.prisma.courseSession.findMany({
+        include: { course: true, coach: true },
+      }),
+      this.prisma.booking.findMany({
+        include: { member: true, session: true },
+      }),
+      this.prisma.transaction.findMany({
+        include: { member: true },
+      }),
+      this.prisma.membershipPlan.findMany(),
+      this.prisma.adminUser.findMany({
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          role: true,
+          createdAt: true,
+        },
+      }),
+    ]);
+
+    return {
+      exportDate: new Date().toISOString(),
+      version: '1.0',
+      data: {
+        members,
+        coaches,
+        courses,
+        sessions,
+        bookings,
+        transactions,
+        membershipPlans,
+        adminUsers,
+      },
+    };
+  }
 }

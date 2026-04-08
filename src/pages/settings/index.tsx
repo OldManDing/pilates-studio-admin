@@ -9,6 +9,7 @@ import StatusTag from '@/components/StatusTag';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import { settingsApi, type StudioSetting, type NotificationSetting } from '@/services/settings';
+import { authApi } from '@/services/auth';
 
 interface StoreInfoValues {
   studioName: string;
@@ -178,13 +179,13 @@ export default function SettingsPage() {
   const [savedNotifications, setSavedNotifications] = useState<NotificationSetting[]>([]);
   const [notificationSavedAt, setNotificationSavedAt] = useState('今天 09:30');
   const [securityState, setSecurityState] = useState<Record<SecurityActionTitle, SecurityActionState>>({
-    修改密码: { title: '修改密码', description: '定期更新管理员账号密码', status: '待激活', detail: '功能开发中' },
+    修改密码: { title: '修改密码', description: '定期更新管理员账号密码', status: '正常', detail: '可通过此功能修改密码' },
     两步验证: { title: '两步验证', description: '为核心账号开启短信或邮箱二次验证', status: '待激活', detail: '功能开发中' },
     权限管理: { title: '权限管理', description: '配置前台、店长和财务的页面权限', status: '正常', detail: '可在"角色权限"页面配置' }
   });
   const [dataState, setDataState] = useState<Record<DataActionTitle, DataActionState>>({
-    数据备份: { title: '数据备份', description: '每日自动备份课程、预约和交易数据', status: '待激活', detail: '功能开发中' },
-    导出数据: { title: '导出数据', description: '按时间范围导出经营与会员报表', status: '待激活', detail: '功能开发中' },
+    数据备份: { title: '数据备份', description: '每日自动备份课程、预约和交易数据', status: '正常', detail: '可通过导出功能手动备份' },
+    导出数据: { title: '导出数据', description: '按时间范围导出经营与会员报表', status: '正常', detail: '点击导出按钮开始' },
     数据恢复: { title: '数据恢复', description: '从最近一次备份恢复门店数据', status: '待激活', detail: '功能开发中' }
   });
   const [passwordDraft, setPasswordDraft] = useState({ current: '', next: '', confirm: '' });
@@ -329,8 +330,32 @@ export default function SettingsPage() {
     }, 1000);
   };
 
-  const handleSavePassword = () => {
-    message.info('密码修改功能开发中');
+  const handleSavePassword = async () => {
+    if (!passwordDraft.current || !passwordDraft.next || !passwordDraft.confirm) {
+      message.warning('请完整填写密码信息');
+      return;
+    }
+    if (passwordDraft.next !== passwordDraft.confirm) {
+      message.error('两次输入的新密码不一致');
+      return;
+    }
+    try {
+      await authApi.changePassword({
+        currentPassword: passwordDraft.current,
+        newPassword: passwordDraft.next,
+        confirmPassword: passwordDraft.confirm,
+      });
+      const timestamp = todayText();
+      setSecurityState((current) => ({
+        ...current,
+        修改密码: { ...current.修改密码, status: '正常', detail: `最近更新于 ${timestamp}` }
+      }));
+      setPasswordDraft({ current: '', next: '', confirm: '' });
+      message.success('密码已更新');
+      setOpenSecurityDrawer(null);
+    } catch (err: any) {
+      message.error(err.message || '密码修改失败');
+    }
   };
 
   const handleSaveTwoFactor = () => {
@@ -347,12 +372,40 @@ export default function SettingsPage() {
     setOpenSecurityDrawer(null);
   };
 
-  const handleRunBackup = () => {
-    message.info('数据备份功能开发中');
+  const handleRunBackup = async () => {
+    try {
+      await handleExportData();
+      const timestamp = todayText();
+      setDataState((current) => ({
+        ...current,
+        数据备份: { ...current.数据备份, status: '正常', detail: `最近备份于 ${timestamp}` }
+      }));
+    } catch (err) {
+      message.error('备份失败');
+    }
   };
 
-  const handleExportData = () => {
-    message.info('数据导出功能开发中');
+  const handleExportData = async () => {
+    try {
+      const blob = await settingsApi.exportData();
+      const url = URL.createObjectURL(blob as Blob);
+      const link = document.createElement('a');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      link.href = url;
+      link.download = `pilates-backup-${timestamp}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      const now = todayText();
+      setDataState((current) => ({
+        ...current,
+        导出数据: { ...current.导出数据, status: '正常', detail: `最近导出：${now}` }
+      }));
+      message.success('数据已导出');
+      setOpenDataDrawer(null);
+    } catch (err: any) {
+      message.error(err.message || '导出失败');
+    }
   };
 
   const handleRestoreData = () => {

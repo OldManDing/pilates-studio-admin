@@ -34,6 +34,9 @@ export const authApi = {
   logout: () => api.post('/auth/logout', {}),
 
   getMe: () => api.get<AuthResponse['user']>('/auth/me'),
+
+  changePassword: (data: { currentPassword: string; newPassword: string; confirmPassword: string }) =>
+    api.post<{ success: boolean; message: string }>('/auth/change-password', data),
 };
 
 export const setTokens = (accessToken: string, refreshToken: string) => {

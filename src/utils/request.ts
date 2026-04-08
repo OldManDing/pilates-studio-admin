@@ -6,6 +6,7 @@ const API_BASE_URL = process.env.NODE_ENV === 'development'
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | undefined>;
+  responseType?: 'json' | 'blob';
 }
 
 interface ApiResponse<T> {
@@ -52,7 +53,7 @@ export const request = async <T>(
   options: RequestOptions = {}
 ): Promise<T> => {
   const token = getToken();
-  const { params, ...fetchOptions } = options;
+  const { params, responseType = 'json', ...fetchOptions } = options;
 
   const url = `${API_BASE_URL}${buildUrl(endpoint, params)}`;
 
@@ -67,6 +68,10 @@ export const request = async <T>(
       ...fetchOptions,
       headers,
     });
+
+    if (responseType === 'blob') {
+      return response.blob() as Promise<T>;
+    }
 
     const data: ApiResponse<T> = await response.json();
 
