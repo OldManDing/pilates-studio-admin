@@ -1,0 +1,161 @@
+.profileHeroCard {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfbfb 100%);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  box-shadow: 0 18px 36px rgba(18, 38, 63, 0.08);
+}
+
+.profileHeroTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.profileHeroIdentity {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.profileHeroBadges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.profileTierBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(196, 165, 116, 0.3);
+  color: #c4a574;
+  background: rgba(196, 165, 116, 0.08);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.profileCodeBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(248, 250, 251, 0.9);
+  border: 1px solid var(--border-soft);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+}
+
+.profileHeroMeta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.profileMetaLabel {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  margin-bottom: 6px;
+  letter-spacing: 0.04em;
+}
+
+.profileMetaValue {
+  color: var(--text-heading);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-bold);
+  line-height: 1.35;
+}
+
+.profileMetaSub {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.profileProgressBlock {
+  display: grid;
+  gap: 10px;
+}
+
+.profileProgressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.profileProgressText {
+  color: #c4a574;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-bold);
+}
+
+.profileHeroActionRow {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.profileStatGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.profileStatCard {
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(248, 250, 251, 0.84);
+  border: 1px solid var(--border-soft);
+}
+
+.profileStatValue {
+  color: var(--text-heading);
+  font-size: 22px;
+  font-weight: var(--font-black);
+  line-height: 1.2;
+}
+
+.activityList {
+  gap: 10px;
+}
+
+.transactionAside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 140px;
+}
+
+@media (max-width: 768px) {
+  .profileHeroTop,
+  .profileHeroMeta,
+  .profileStatGrid {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .profileHeroTop {
+    gap: 14px;
+  }
+
+  .profileCodeBadge {
+    justify-self: start;
+  }
+
+  .transactionAside {
+    align-items: flex-start;
+    min-width: 0;
+  }
+}

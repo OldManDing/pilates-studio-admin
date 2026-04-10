@@ -4,19 +4,27 @@ import { useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
 import FilterModalFooter from '@/components/FilterModalFooter';
-import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
+import SectionCard from '@/components/SectionCard';
 import StatusTag from '@/components/StatusTag';
 import { CRUD_MODAL_WIDTH, NARROW_DETAIL_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
-import { memberStatusLabels, type MemberStatus } from '@/types';
+import { bookingStatusLabels, memberStatusLabels, type MemberStatus, type TransactionKind, type TransactionStatus } from '@/types';
 import { membersApi, type Member } from '@/services/members';
 import { membershipPlansApi, type MembershipPlan } from '@/services/membershipPlans';
+import { bookingsApi, type Booking } from '@/services/bookings';
+import { transactionsApi, type Transaction } from '@/services/transactions';
 import { reportsApi } from '@/services/reports';
 import { getErrorMessage } from '@/utils/errors';
 import { getToneFromName } from '@/utils/tone';
+import {
+  MemberProfileOverviewCard,
+  MemberProfileStats,
+  MemberRecordCard,
+} from './components';
+import styles from './index.module.css';
 
 const iconMap = {
   team: <TeamOutlined />,
@@ -41,6 +49,23 @@ type MemberFilterDraft = {
 
 const memberStatusOptions: MemberStatus[] = ['ACTIVE', 'PENDING', 'EXPIRED'];
 
+const transactionStatusLabels: Record<TransactionStatus, string> = {
+  COMPLETED: '已完成',
+  PENDING: '待处理',
+  PROCESSING: '处理中',
+  REFUNDED: '已退款',
+  FAILED: '失败',
+};
+
+const transactionKindLabels: Record<TransactionKind, string> = {
+  MEMBERSHIP_PURCHASE: '会籍购买',
+  MEMBERSHIP_RENEWAL: '会籍续费',
+  CLASS_PACKAGE_PURCHASE: '课程套餐',
+  PRIVATE_CLASS_PURCHASE: '私教课程',
+  REFUND: '退款',
+  ADJUSTMENT: '调整',
+};
+
 export default function MembersPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm<MemberFormValues>();
@@ -54,6 +79,9 @@ export default function MembersPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [detailMember, setDetailMember] = useState<Member | null>(null);
+  const [detailBookings, setDetailBookings] = useState<Booking[]>([]);
+  const [detailTransactions, setDetailTransactions] = useState<Transaction[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [membershipPlans, setMembershipPlans] = useState<MembershipPlan[]>([]);
   const [stats, setStats] = useState({
     totalMembers: 0,
@@ -118,6 +146,46 @@ export default function MembersPage() {
     fetchMembers(1);
   }, []);
 
+  useEffect(() => {
+    if (!detailMember) {
+      setDetailBookings([]);
+      setDetailTransactions([]);
+      setDetailLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchDetailActivity = async () => {
+      try {
+        setDetailLoading(true);
+        const [bookings, transactions] = await Promise.all([
+          membersApi.getBookings(detailMember.id) as Promise<Booking[]>,
+          membersApi.getTransactions(detailMember.id) as Promise<Transaction[]>,
+        ]);
+
+        if (cancelled) return;
+
+        setDetailBookings((bookings || []).slice(0, 5));
+        setDetailTransactions((transactions || []).slice(0, 5));
+      } catch (err) {
+        if (!cancelled) {
+          messageApi.error(getErrorMessage(err, '加载会员近期记录失败'));
+        }
+      } finally {
+        if (!cancelled) {
+          setDetailLoading(false);
+        }
+      }
+    };
+
+    fetchDetailActivity();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [detailMember]);
+
   const filteredMembers = useMemo(() => {
     const keyword = searchValue.trim().toLowerCase();
 
@@ -140,11 +208,6 @@ export default function MembersPage() {
     { title: '本月新增', value: String(stats.newMembersThisMonth), hint: '较上月新增', tone: 'pink' as const, icon: 'plus' as const },
     { title: '即将到期', value: String(stats.expiringSoonCount), hint: '需跟进续费', tone: 'orange' as const, icon: 'alert' as const },
   ], [stats]);
-
-  const planOptions = useMemo(() =>
-    Array.from(new Set(membershipPlans.map((plan) => plan.name))),
-    [membershipPlans]
-  );
 
   const openCreateModal = () => {
     setEditingMember(null);
@@ -278,6 +341,54 @@ export default function MembersPage() {
     }
   };
 
+  const formatDateTime = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleString('zh-CN', {
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatCurrency = (amountCents: number) => `¥${(amountCents / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const getMemberTierLabel = (member: Member) => {
+    if (member.plan?.name?.includes('金')) return 'GOLD';
+    if (member.plan?.name?.includes('年')) return 'ANNUAL';
+    if (member.remainingCredits >= 20) return 'PREMIUM';
+    return 'ACTIVE';
+  };
+
+  const getMemberProgressPercent = (member: Member) => {
+    if (member.remainingCredits <= 0) return 0;
+    return Math.min(100, Math.max(12, Math.round((member.remainingCredits / 40) * 100)));
+  };
+
+  const getMemberSummaryStats = (member: Member) => [
+    {
+      key: 'credits',
+      label: '剩余课时',
+      value: `${member.remainingCredits}`,
+      hint: member.remainingCredits > 0 ? '仍可继续预约课程' : '建议尽快补充课时',
+    },
+    {
+      key: 'joined',
+      label: '加入时间',
+      value: formatDate(member.joinedAt),
+      hint: member.memberCode || '会员编号待补充',
+    },
+    {
+      key: 'plan',
+      label: '当前会籍',
+      value: member.plan?.name || '-',
+      hint: memberStatusLabels[member.status],
+    },
+  ];
+
   if (loading && members.length === 0) {
     return (
       <div className={`${pageCls.page} ${pageCls.workPage}`}>
@@ -330,40 +441,21 @@ export default function MembersPage() {
         <>
           <div className={`${widgetCls.recordList} ${pageCls.workSection}`}>
             {filteredMembers.map((member) => (
-              <div key={member.id} className={`${widgetCls.recordItem} ${widgetCls.workRecordItem} ${pageCls.surface} ${pageCls.memberRecordItem}`}>
-                <div className={widgetCls.recordMeta}>
-                  <MemberAvatar name={member.name} tone={getToneFromName(member.name)} />
-                  <div className={pageCls.memberRecordHead}>
-                    <div className={pageCls.memberRecordNameRow}>
-                      <span className={pageCls.membersName}>{member.name}</span>
-                      <StatusTag status={memberStatusLabels[member.status]} />
-                    </div>
-                    <div className={widgetCls.recordSub}>{member.phone}</div>
-                    <div className={pageCls.membersSubtext}>{member.email || '-'}</div>
-                  </div>
-                </div>
-
-                <div className={pageCls.memberRecordGrid}>
-                  <div className={pageCls.memberRecordField}>
-                    <div className={pageCls.memberRecordLabel}>会籍类型</div>
-                    <div className={pageCls.memberRecordValue}>{member.plan?.name || '-'}</div>
-                  </div>
-                  <div className={pageCls.memberRecordField}>
-                    <div className={pageCls.memberRecordLabel}>加入日期</div>
-                    <div className={pageCls.memberRecordValue}>{formatDate(member.joinedAt)}</div>
-                  </div>
-                  <div className={pageCls.memberRecordField}>
-                    <div className={pageCls.memberRecordLabel}>剩余课时</div>
-                    <div className={pageCls.memberRecordValue}>{member.remainingCredits} 节</div>
-                  </div>
-                </div>
-
-                <div className={widgetCls.detailActionGroup}>
-                  <div className={pageCls.memberRemainingBadge}>剩余课时 {member.remainingCredits} 节</div>
-                  <Button size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={() => openEditModal(member)}>编辑</Button>
-                  <Button size="large" className={pageCls.cardActionHalf} onClick={() => setDetailMember(member)}>查看详情</Button>
-                </div>
-              </div>
+              <MemberRecordCard
+                key={member.id}
+                id={member.id}
+                name={member.name}
+                phone={member.phone}
+                email={member.email || '-'}
+                planName={member.plan?.name || '-'}
+                joinedDateText={formatDate(member.joinedAt)}
+                remainingCreditsText={`剩余课时 ${member.remainingCredits} 节`}
+                memberCodeText={member.memberCode || 'MEMBER'}
+                statusLabel={memberStatusLabels[member.status]}
+                tone={getToneFromName(member.name)}
+                onEdit={() => openEditModal(member)}
+                onViewDetail={() => setDetailMember(member)}
+              />
             ))}
           </div>
           <div className={pageCls.centerPagination}>
@@ -485,43 +577,94 @@ export default function MembersPage() {
       >
         {detailMember ? (
           <div className={pageCls.detailContentStack}>
-            <div className={widgetCls.detailOverviewPanel}>
-              <div className={widgetCls.recordMeta}>
-                <MemberAvatar name={detailMember.name} tone={getToneFromName(detailMember.name)} />
-                <div>
-                  <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
-                    {detailMember.name}
-                     <StatusTag status={memberStatusLabels[detailMember.status]} />
-                  </div>
-                  <div className={widgetCls.recordSub}>{detailMember.phone}</div>
-                  <div className={widgetCls.recordSub}>{detailMember.email || '-'}</div>
-                </div>
-              </div>
-              <div className={widgetCls.detailOverviewStatGrid}>
-                <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatMint}`}>
-                  <div className={widgetCls.detailInsightLabel}>剩余课时</div>
-                  <div className={widgetCls.detailOverviewStatValue}>{detailMember.remainingCredits} 节</div>
-                </div>
-                <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatViolet}`}>
-                  <div className={widgetCls.detailInsightLabel}>会籍类型</div>
-                  <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{detailMember.plan?.name || '-'}</div>
-                </div>
-                <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatOrange}`}>
-                  <div className={widgetCls.detailInsightLabel}>加入日期</div>
-                  <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{formatDate(detailMember.joinedAt)}</div>
-                </div>
-              </div>
-            </div>
+            <MemberProfileOverviewCard
+              name={detailMember.name}
+              phone={detailMember.phone}
+              email={detailMember.email || '-'}
+              memberCodeText={detailMember.memberCode || 'MEMBER'}
+              tierLabel={getMemberTierLabel(detailMember)}
+              planName={detailMember.plan?.name || '未分配会籍'}
+              statusLabel={memberStatusLabels[detailMember.status]}
+              joinedDateText={formatDate(detailMember.joinedAt)}
+              remainingCreditsText={`${detailMember.remainingCredits} 节`}
+              progressPercent={getMemberProgressPercent(detailMember)}
+              progressLabel={`剩余课时 ${detailMember.remainingCredits} 节`}
+              tone={getToneFromName(detailMember.name)}
+              onPrimaryAction={() => openEditModal(detailMember)}
+            />
 
-            <Descriptions column={1} size="small" bordered>
-              <Descriptions.Item label="姓名">{detailMember.name}</Descriptions.Item>
-              <Descriptions.Item label="手机号">{detailMember.phone}</Descriptions.Item>
-              <Descriptions.Item label="邮箱">{detailMember.email || '-'}</Descriptions.Item>
-              <Descriptions.Item label="会籍类型">{detailMember.plan?.name || '-'}</Descriptions.Item>
-               <Descriptions.Item label="会籍状态">{memberStatusLabels[detailMember.status]}</Descriptions.Item>
-              <Descriptions.Item label="剩余课时">{detailMember.remainingCredits} 节</Descriptions.Item>
-              <Descriptions.Item label="加入日期">{formatDate(detailMember.joinedAt)}</Descriptions.Item>
-            </Descriptions>
+            <MemberProfileStats items={getMemberSummaryStats(detailMember)} />
+
+            <SectionCard title="基础档案" subtitle="保留管理员所需的完整字段，便于快速核对与后续编辑。">
+              <Descriptions column={1} size="small" bordered>
+                <Descriptions.Item label="姓名">{detailMember.name}</Descriptions.Item>
+                <Descriptions.Item label="会员编号">{detailMember.memberCode || '-'}</Descriptions.Item>
+                <Descriptions.Item label="手机号">{detailMember.phone}</Descriptions.Item>
+                <Descriptions.Item label="邮箱">{detailMember.email || '-'}</Descriptions.Item>
+                <Descriptions.Item label="会籍类型">{detailMember.plan?.name || '-'}</Descriptions.Item>
+                <Descriptions.Item label="会籍状态">{memberStatusLabels[detailMember.status]}</Descriptions.Item>
+                <Descriptions.Item label="剩余课时">{detailMember.remainingCredits} 节</Descriptions.Item>
+                <Descriptions.Item label="加入日期">{formatDate(detailMember.joinedAt)}</Descriptions.Item>
+              </Descriptions>
+            </SectionCard>
+
+            <SectionCard title="近期预约" subtitle="展示最近预约记录，方便跟进到课、取消与课程偏好。">
+              {detailLoading ? (
+                <div className={pageCls.centeredStatePadded}><Spin /></div>
+              ) : detailBookings.length ? (
+                <div className={`${widgetCls.recordList} ${styles.activityList}`}>
+                  {detailBookings.map((booking) => (
+                    <div key={booking.id} className={`${widgetCls.recordItem} ${widgetCls.workRecordItem}`}>
+                      <div className={widgetCls.recordMeta}>
+                        <div>
+                          <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
+                            {booking.session?.course?.name || '未知课程'}
+                            <StatusTag status={bookingStatusLabels[booking.status]} />
+                          </div>
+                          <div className={widgetCls.recordSub}>{booking.bookingCode}</div>
+                          <div className={widgetCls.recordSub}>{formatDateTime(booking.session?.startsAt || booking.bookedAt)} · 教练 {booking.session?.coach?.name || '-'}</div>
+                        </div>
+                      </div>
+                      <div className={widgetCls.infoStack}>
+                        <div>来源：{booking.source === 'MINI_PROGRAM' ? '小程序' : '后台'}</div>
+                        <div>预约时间：{formatDateTime(booking.bookedAt)}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState title="暂无预约记录" description="该会员最近还没有预约课程，后续有记录后会展示在这里。" />
+              )}
+            </SectionCard>
+
+            <SectionCard title="近期交易" subtitle="展示会籍购买、续费与课时相关交易，便于核对营收与跟进说明。">
+              {detailLoading ? (
+                <div className={pageCls.centeredStatePadded}><Spin /></div>
+              ) : detailTransactions.length ? (
+                <div className={`${widgetCls.recordList} ${styles.activityList}`}>
+                  {detailTransactions.map((transaction) => (
+                    <div key={transaction.id} className={`${widgetCls.recordItem} ${widgetCls.workRecordItem}`}>
+                      <div className={widgetCls.recordMeta}>
+                        <div>
+                          <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
+                            {transactionKindLabels[transaction.kind]}
+                            <StatusTag status={transactionStatusLabels[transaction.status]} />
+                          </div>
+                          <div className={widgetCls.recordSub}>{transaction.transactionCode}</div>
+                          <div className={widgetCls.recordSub}>{transaction.plan?.name || '未关联会籍'} · {formatDateTime(transaction.happenedAt)}</div>
+                        </div>
+                      </div>
+                      <div className={styles.transactionAside}>
+                        <span className={widgetCls.chipPrimary}>{formatCurrency(transaction.amountCents)}</span>
+                        {transaction.notes ? <span className={widgetCls.chip}>{transaction.notes}</span> : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState title="暂无交易记录" description="该会员最近没有可展示的会籍或课时交易记录。" />
+              )}
+            </SectionCard>
           </div>
         ) : null}
       </Drawer>
