@@ -10,5 +10,7 @@ export default () => ({
   rateLimit: {
     windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS ?? 900000), // 15 minutes
     maxRequests: Number(process.env.RATE_LIMIT_MAX_REQUESTS ?? 100),
+    authWindowMs: Number(process.env.AUTH_RATE_LIMIT_WINDOW_MS ?? 300000), // 5 minutes
+    authMaxRequests: Number(process.env.AUTH_RATE_LIMIT_MAX_REQUESTS ?? 10),
   },
 });
