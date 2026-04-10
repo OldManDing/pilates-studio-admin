@@ -1,5 +1,4 @@
 import {
-  DeleteOutlined,
   DownloadOutlined,
   EditOutlined,
   EyeOutlined,
@@ -10,7 +9,7 @@ import {
   SearchOutlined,
   WalletOutlined
 } from '@ant-design/icons';
-import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Spin, message } from 'antd';
+import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Row, Select, Spin, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import ActionButton from '@/components/ActionButton';
@@ -20,17 +19,17 @@ import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import StatCard from '@/components/StatCard';
 import StatusTag from '@/components/StatusTag';
+import { CRUD_MODAL_WIDTH, NARROW_DETAIL_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import { transactionsApi, type Transaction } from '@/services/transactions';
 import { reportsApi } from '@/services/reports';
 import type { TransactionStatus, TransactionKind } from '@/types';
+import { getErrorMessage } from '@/utils/errors';
 import { formatCurrency, formatPercent } from '@/utils/format';
 import { useIsMobile } from '@/utils/useResponsive';
-import type { AccentTone } from '@/types';
-
-const chartGrid = 'rgba(148, 163, 184, 0.14)';
-const axisTick = { fill: '#6f8198', fontSize: 12, fontWeight: 600 };
+import { axisTick, chartGrid } from '@/utils/chartTheme';
+import { getToneFromName } from '@/utils/tone';
 
 const iconMap = {
   wallet: <WalletOutlined />,
@@ -41,30 +40,27 @@ const iconMap = {
 
 const statusMap: Record<TransactionStatus, string> = {
   COMPLETED: '已完成',
-  PENDING: '处理中',
+  PENDING: '待处理',
+  PROCESSING: '处理中',
   REFUNDED: '已退款',
   FAILED: '失败',
 };
 
 const kindMap: Record<TransactionKind, string> = {
-  PLAN_PURCHASE: '会籍购买',
-  PLAN_RENEWAL: '会籍续费',
-  PRIVATE_SESSION: '私教课程',
-  MERCHANDISE: '周边商品',
-  OTHER: '其他',
+  MEMBERSHIP_PURCHASE: '会籍购买',
+  MEMBERSHIP_RENEWAL: '会籍续费',
+  CLASS_PACKAGE_PURCHASE: '课程套餐',
+  PRIVATE_CLASS_PURCHASE: '私教课程',
+  REFUND: '退款',
+  ADJUSTMENT: '调整',
 };
 
 const reverseStatusMap: Record<string, TransactionStatus> = {
   '已完成': 'COMPLETED',
-  '处理中': 'PENDING',
+  '待处理': 'PENDING',
+  '处理中': 'PROCESSING',
   '已退款': 'REFUNDED',
   '失败': 'FAILED',
-};
-
-const getToneFromName = (name: string): AccentTone => {
-  const tones: AccentTone[] = ['mint', 'violet', 'orange', 'pink'];
-  const charSum = name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return tones[charSum % tones.length];
 };
 
 type TransactionFormValues = {
@@ -83,15 +79,16 @@ type TransactionFilterDraft = {
 const transactionStatusOptions = Object.entries(statusMap).map(([k, v]) => ({ label: v, value: k }));
 const transactionKindOptions = Object.entries(kindMap).map(([k, v]) => ({ label: v, value: k }));
 
-const kindColorMap: Record<TransactionKind, string> = {
-  PLAN_PURCHASE: '#43c7ab',
-  PLAN_RENEWAL: '#8b7cff',
-  PRIVATE_SESSION: '#ffb760',
-  MERCHANDISE: '#ff8da8',
-  OTHER: '#73a7ff',
-};
+const SIX_MONTHS_MS = 180 * 24 * 60 * 60 * 1000;
 
-const CRUD_MODAL_WIDTH = 780;
+const kindColorMap: Record<TransactionKind, string> = {
+  MEMBERSHIP_PURCHASE: '#43c7ab',
+  MEMBERSHIP_RENEWAL: '#8b7cff',
+  CLASS_PACKAGE_PURCHASE: '#ff8da8',
+  PRIVATE_CLASS_PURCHASE: '#ffb760',
+  REFUND: '#73a7ff',
+  ADJUSTMENT: '#73a7ff',
+};
 
 export default function FinancePage() {
   const isMobile = useIsMobile();
@@ -109,7 +106,7 @@ export default function FinancePage() {
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
   const [revenueStructure, setRevenueStructure] = useState<Array<{ name: string; value: number; fill: string }>>([]);
-  const [financeBar, setFinanceBar] = useState<Array<{ month: string; revenue: number; profit: number }>>([]);
+  const [financeBar, setFinanceBar] = useState<Array<{ month: string; revenue: number }>>([]);
   const [stats, setStats] = useState({
     totalRevenue: 0,
     totalExpense: 0,
@@ -119,7 +116,7 @@ export default function FinancePage() {
 
   const fetchTransactions = async (page = 1, pageSize = 100) => {
     try {
-      const from = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const from = new Date(Date.now() - SIX_MONTHS_MS).toISOString().split('T')[0];
       const to = new Date().toISOString().split('T')[0];
       const [txRes, summaryRes, reportsRes] = await Promise.all([
         transactionsApi.getAll({ page, pageSize, from, to }),
@@ -132,9 +129,9 @@ export default function FinancePage() {
       const totalRevenue = summaryRes.totalRevenueCents / 100;
       setStats({
         totalRevenue,
-        totalExpense: 0, // 后端暂无支出数据
-        netProfit: totalRevenue, // 暂时用营收作为净利润
-        profitMargin: '-', // 后端暂无支出数据
+        totalExpense: 0,
+        netProfit: 0,
+        profitMargin: '待接入',
       });
 
       // Build pie chart data from reports
@@ -148,12 +145,12 @@ export default function FinancePage() {
       }
 
       // Build bar chart data (aggregate by month from transactions)
-      const monthlyData: Record<string, { revenue: number; profit: number }> = {};
+      const monthlyData: Record<string, { revenue: number }> = {};
       for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setMonth(d.getMonth() - i);
         const key = `${d.getMonth() + 1}月`;
-        monthlyData[key] = { revenue: 0, profit: 0 };
+        monthlyData[key] = { revenue: 0 };
       }
       txRes.data.forEach((tx) => {
         const date = new Date(tx.happenedAt);
@@ -161,13 +158,11 @@ export default function FinancePage() {
         if (monthlyData[key]) {
           const amount = tx.amountCents / 100;
           monthlyData[key].revenue += amount;
-          monthlyData[key].profit += amount * 0.62;
         }
       });
       const barData = Object.entries(monthlyData).map(([month, values]) => ({
         month,
         revenue: Math.round(values.revenue),
-        profit: Math.round(values.profit),
       }));
       setFinanceBar(barData);
     } catch (err) {
@@ -207,10 +202,10 @@ export default function FinancePage() {
   }, [filteredTransactions, searchValue, showAllTransactions, statusFilter, kindFilter]);
 
   const financeStats = useMemo(() => [
-    { title: '本月营收', value: formatCurrency(stats.totalRevenue), hint: '↑ 12.5% vs 上月', tone: 'mint' as const, icon: 'wallet' as const },
-    { title: '本月支出', value: formatCurrency(stats.totalExpense), hint: '场地与人员成本', tone: 'orange' as const, icon: 'pay' as const },
-    { title: '净利润', value: formatCurrency(stats.netProfit), hint: '经营状态良好', tone: 'violet' as const, icon: 'line' as const },
-    { title: '利润率', value: stats.profitMargin, hint: '保持行业领先', tone: 'pink' as const, icon: 'pie' as const },
+    { title: '本月营收', value: formatCurrency(stats.totalRevenue), hint: '月度环比待接入', tone: 'mint' as const, icon: 'wallet' as const },
+    { title: '本月支出', value: '待接入', hint: '后端暂未提供支出汇总', tone: 'orange' as const, icon: 'pay' as const },
+    { title: '净利润', value: '待接入', hint: '需接入真实支出后计算', tone: 'violet' as const, icon: 'line' as const },
+    { title: '利润率', value: stats.profitMargin, hint: '需接入真实支出后计算', tone: 'pink' as const, icon: 'pie' as const },
   ], [stats]);
 
   const exportTransactions = (rows: Transaction[], fileName: string, successMessage: string) => {
@@ -258,7 +253,7 @@ export default function FinancePage() {
     setEditingTransaction(null);
     form.setFieldsValue({
       memberName: '',
-      kind: 'PLAN_PURCHASE',
+      kind: 'MEMBERSHIP_PURCHASE',
       status: 'COMPLETED',
       amount: 0,
       notes: '',
@@ -311,17 +306,8 @@ export default function FinancePage() {
 
       setShowAllTransactions(true);
       closeFormModal();
-    } catch (err: any) {
-      messageApi.error(err.message || '保存失败');
-    }
-  };
-
-  const handleDeleteTransaction = async (transaction: Transaction) => {
-    try {
-      // transactionsApi doesn't have delete endpoint visible; skip or use placeholder
-      messageApi.warning('删除功能暂不可用');
-    } catch (err: any) {
-      messageApi.error(err.message || '删除失败');
+    } catch (err) {
+      messageApi.error(getErrorMessage(err, '保存失败'));
     }
   };
 
@@ -367,7 +353,7 @@ export default function FinancePage() {
       : '查看全部';
 
   const FinanceTrendTooltip = createChartTooltip({
-    labelMap: { revenue: '营收', profit: '利润' },
+    labelMap: { revenue: '营收' },
     valueFormatter: (value) => (typeof value === 'number' ? formatCurrency(value) : value)
   });
 
@@ -409,7 +395,7 @@ export default function FinancePage() {
       </div>
 
       <div className={pageCls.financeTwoCol}>
-        <SectionCard title="营收趋势" subtitle="过去 7 个月营收与利润对比">
+        <SectionCard title="营收趋势" subtitle="过去 7 个月真实营收变化">
           <div className={pageCls.chartPanelTall}>
             <ResponsiveContainer>
               <BarChart data={financeBar} margin={{ top: 18, right: 8, left: 0, bottom: 0 }}>
@@ -418,20 +404,16 @@ export default function FinancePage() {
                     <stop offset="0%" stopColor="#43c7ab" stopOpacity={0.96} />
                     <stop offset="100%" stopColor="#6be0c8" stopOpacity={0.78} />
                   </linearGradient>
-                  <linearGradient id="financeProfit" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#8b7cff" stopOpacity={0.96} />
-                    <stop offset="100%" stopColor="#b2a8ff" stopOpacity={0.76} />
-                  </linearGradient>
                 </defs>
                 <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} tick={axisTick} />
                 <YAxis axisLine={false} tickLine={false} tick={axisTick} />
-                <Tooltip cursor={{ fill: 'rgba(139, 124, 255, 0.08)' }} content={<FinanceTrendTooltip />} />
+                <Tooltip cursor={{ fill: 'rgba(67, 199, 171, 0.08)' }} content={<FinanceTrendTooltip />} />
                 <Bar dataKey="revenue" fill="url(#financeRevenue)" radius={[10, 10, 0, 0]} barSize={isMobile ? 16 : 24} />
-                <Bar dataKey="profit" fill="url(#financeProfit)" radius={[10, 10, 0, 0]} barSize={isMobile ? 16 : 24} />
               </BarChart>
             </ResponsiveContainer>
           </div>
+          <div className={widgetCls.smallText}>利润、利润率和支出指标待后端接入真实成本数据后开放。</div>
         </SectionCard>
 
         <SectionCard title="营收构成" subtitle="按会员类型分类">
@@ -518,13 +500,13 @@ export default function FinancePage() {
                   <div className={pageCls.memberRecordLabel}>交易金额</div>
                   <div className={pageCls.memberRecordValue}>{formatCurrency(item.amountCents / 100)}</div>
                 </div>
-              <div className={pageCls.memberRecordField}>
-                <div className={pageCls.memberRecordLabel}>交易状态</div>
-                <div className={pageCls.memberRecordValue} style={{ fontSize: 'var(--font-size-xl)' }}>{statusMap[item.status] || item.status}</div>
-              </div>
+                <div className={pageCls.memberRecordField}>
+                  <div className={pageCls.memberRecordLabel}>交易状态</div>
+                  <div className={`${pageCls.memberRecordValue} ${widgetCls.detailOverviewStatValueLarge}`}>{statusMap[item.status] || item.status}</div>
+                </div>
                 <div className={pageCls.memberRecordField}>
                   <div className={pageCls.memberRecordLabel}>交易日期</div>
-                  <div className={pageCls.memberRecordValue} style={{ fontSize: 'var(--font-size-xl)' }}>{new Date(item.happenedAt).toLocaleDateString('zh-CN')}</div>
+                  <div className={`${pageCls.memberRecordValue} ${widgetCls.detailOverviewStatValueLarge}`}>{new Date(item.happenedAt).toLocaleDateString('zh-CN')}</div>
                 </div>
               </div>
 
@@ -630,7 +612,7 @@ export default function FinancePage() {
 
       <Drawer
         open={detailTransaction !== null}
-        width={440}
+        width={NARROW_DETAIL_DRAWER_WIDTH}
         title={detailTransaction?.member?.name ?? '交易详情'}
         onClose={() => setDetailTransaction(null)}
         extra={detailTransaction ? (
@@ -660,11 +642,11 @@ export default function FinancePage() {
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatViolet}`}>
                   <div className={widgetCls.detailInsightLabel}>交易状态</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{statusMap[detailTransaction.status] || detailTransaction.status}</div>
+                  <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{statusMap[detailTransaction.status] || detailTransaction.status}</div>
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatOrange}`}>
                   <div className={widgetCls.detailInsightLabel}>交易日期</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{new Date(detailTransaction.happenedAt).toLocaleDateString('zh-CN')}</div>
+                  <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{new Date(detailTransaction.happenedAt).toLocaleDateString('zh-CN')}</div>
                 </div>
               </div>
             </div>
