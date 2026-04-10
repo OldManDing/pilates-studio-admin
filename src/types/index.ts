@@ -1,4 +1,4 @@
-export type AccentTone = 'mint' | 'violet' | 'orange' | 'pink' | 'blue';
+export type AccentTone = 'mint' | 'violet' | 'orange' | 'pink';
 
 export type StatItem = {
   title: string;
