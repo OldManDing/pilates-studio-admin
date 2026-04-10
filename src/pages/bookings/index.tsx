@@ -7,6 +7,7 @@ import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
 import StatusTag from '@/components/StatusTag';
+import { CRUD_MODAL_WIDTH, DETAIL_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import type { BookingStatus } from '@/types';
@@ -14,7 +15,8 @@ import { bookingsApi, type Booking } from '@/services/bookings';
 import { membersApi, type Member } from '@/services/members';
 import { courseSessionsApi, type CourseSession } from '@/services/courseSessions';
 import { reportsApi } from '@/services/reports';
-import type { AccentTone } from '@/types';
+import { getErrorMessage } from '@/utils/errors';
+import { getToneFromName } from '@/utils/tone';
 
 const iconMap = {
   calendar: <CalendarOutlined />,
@@ -35,12 +37,6 @@ type BookingFilterDraft = {
 
 const bookingStatusOptions: BookingStatus[] = ['待确认', '已确认', '已完成', '已取消'];
 const bookingPeriods: BookingPeriod[] = ['今天', '明天', '本周'];
-
-const getToneFromName = (name: string): AccentTone => {
-  const tones: AccentTone[] = ['mint', 'violet', 'orange', 'pink'];
-  const charSum = name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return tones[charSum % tones.length];
-};
 
 const formatDateTime = (dateStr: string) => {
   try {
@@ -91,8 +87,6 @@ const getNextBookingStatus = (status: BookingStatus): BookingStatus => {
   if (status === '已确认') return '已完成';
   return '待确认';
 };
-
-const CRUD_MODAL_WIDTH = 780;
 
 export default function BookingsPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -241,8 +235,8 @@ export default function BookingsPage() {
 
       await fetchBookings(currentPage);
       closeFormModal();
-    } catch (err: any) {
-      messageApi.error(err.message || '保存失败');
+    } catch (err) {
+      messageApi.error(getErrorMessage(err, '保存失败'));
     } finally {
       setIsSaving(false);
     }
@@ -258,8 +252,8 @@ export default function BookingsPage() {
       }
 
       messageApi.success(`已删除预约 ${booking.bookingCode}`);
-    } catch (err: any) {
-      messageApi.error(err.message || '删除失败');
+    } catch (err) {
+      messageApi.error(getErrorMessage(err, '删除失败'));
     }
   };
 
@@ -274,8 +268,8 @@ export default function BookingsPage() {
       }
 
       messageApi.success(`预约 ${booking.bookingCode} 已更新为${nextStatus}`);
-    } catch (err: any) {
-      messageApi.error(err.message || '更新失败');
+    } catch (err) {
+      messageApi.error(getErrorMessage(err, '更新失败'));
     }
   };
 
@@ -455,7 +449,7 @@ export default function BookingsPage() {
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="status" label="预约状态" rules={[{ required: true, message: '请选择预约状态' }]}>
-                <Select className={pageCls.settingsInput} options={bookingStatusOptions.map((item) => ({ label: item, value: item }))} />
+                <Select className={pageCls.settingsInput} options={bookingStatusOptions.map((item) => ({ label: bookingStatusLabels[item], value: item }))} />
               </Form.Item>
             </Col>
           </Row>
@@ -481,9 +475,8 @@ export default function BookingsPage() {
             <div className={`${widgetCls.smallText} ${pageCls.filterFieldLabel}`}>预约状态</div>
             <Select
               value={filterDraft.status}
-              className={pageCls.settingsInput}
-              style={{ width: '100%' }}
-              options={[{ label: '全部状态', value: '全部' }, ...bookingStatusOptions.map((item) => ({ label: item, value: item }))]}
+              className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`}
+              options={[{ label: '全部状态', value: '全部' }, ...bookingStatusOptions.map((item) => ({ label: bookingStatusLabels[item], value: item }))]}
               onChange={(value: BookingStatus | '全部') => setFilterDraft((current) => ({ ...current, status: value }))}
             />
           </div>
@@ -492,7 +485,7 @@ export default function BookingsPage() {
 
       <Drawer
         open={detailBooking !== null}
-        width={480}
+        width={DETAIL_DRAWER_WIDTH}
         title={detailBooking?.bookingCode ?? '预约详情'}
         onClose={() => setDetailBooking(null)}
         extra={detailBooking ? (
@@ -510,11 +503,11 @@ export default function BookingsPage() {
             <div className={widgetCls.detailOverviewPanel}>
               <div className={widgetCls.recordMeta}>
                 <MemberAvatar name={detailBooking.member?.name || '未知'} tone={getToneFromName(detailBooking.member?.name || '未知')} />
-                <div>
-                  <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
-                    {detailBooking.member?.name || '未知会员'}
-                    <StatusTag status={detailBooking.status} />
-                  </div>
+                  <div>
+                    <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
+                      {detailBooking.member?.name || '未知会员'}
+                      <StatusTag status={bookingStatusLabels[detailBooking.status] || detailBooking.status} />
+                    </div>
                   <div className={widgetCls.recordSub}>{detailBooking.bookingCode}</div>
                   <div className={widgetCls.recordSub}>{detailBooking.session?.course?.name || '未知课程'} · {formatDateTime(detailBooking.session?.startsAt || detailBooking.bookedAt)}</div>
                 </div>
@@ -522,15 +515,15 @@ export default function BookingsPage() {
               <div className={widgetCls.detailOverviewStatGrid}>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatMint}`}>
                   <div className={widgetCls.detailInsightLabel}>教练</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailBooking.session?.coach?.name || '-'}</div>
+                  <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{detailBooking.session?.coach?.name || '-'}</div>
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatViolet}`}>
                   <div className={widgetCls.detailInsightLabel}>预约来源</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailBooking.source === 'ADMIN' ? '后台' : '小程序'}</div>
+                  <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{detailBooking.source === 'ADMIN' ? '后台' : '小程序'}</div>
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatOrange}`}>
                   <div className={widgetCls.detailInsightLabel}>预约时间</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{formatTime(detailBooking.bookedAt)}</div>
+                  <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{formatTime(detailBooking.bookedAt)}</div>
                 </div>
               </div>
             </div>
@@ -543,7 +536,7 @@ export default function BookingsPage() {
               <Descriptions.Item label="授课教练">{detailBooking.session?.coach?.name || '-'}</Descriptions.Item>
               <Descriptions.Item label="上课时间">{formatDateTime(detailBooking.session?.startsAt || detailBooking.bookedAt)}</Descriptions.Item>
               <Descriptions.Item label="预约时间">{formatDateTime(detailBooking.bookedAt)}</Descriptions.Item>
-              <Descriptions.Item label="状态">{detailBooking.status}</Descriptions.Item>
+              <Descriptions.Item label="状态">{bookingStatusLabels[detailBooking.status] || detailBooking.status}</Descriptions.Item>
             </Descriptions>
           </div>
         ) : null}

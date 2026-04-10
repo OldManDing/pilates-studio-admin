@@ -7,13 +7,15 @@ import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
 import StatusTag from '@/components/StatusTag';
+import { CRUD_MODAL_WIDTH, NARROW_DETAIL_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import type { MemberStatus } from '@/types';
 import { membersApi, type Member } from '@/services/members';
 import { membershipPlansApi, type MembershipPlan } from '@/services/membershipPlans';
 import { reportsApi } from '@/services/reports';
-import type { AccentTone } from '@/types';
+import { getErrorMessage } from '@/utils/errors';
+import { getToneFromName } from '@/utils/tone';
 
 const iconMap = {
   team: <TeamOutlined />,
@@ -37,14 +39,6 @@ type MemberFilterDraft = {
 };
 
 const memberStatusOptions: MemberStatus[] = ['正常', '待激活', '已过期'];
-
-const getToneFromName = (name: string): AccentTone => {
-  const tones: AccentTone[] = ['mint', 'violet', 'orange', 'pink'];
-  const charSum = name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return tones[charSum % tones.length];
-};
-
-const CRUD_MODAL_WIDTH = 780;
 
 export default function MembersPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -84,8 +78,8 @@ export default function MembersPage() {
           newMembersThisMonth: data.newMembersThisMonth,
           expiringSoonCount,
         });
-      } catch (err: any) {
-        messageApi.error(err.message || '加载会员统计失败');
+      } catch (err) {
+        messageApi.error(getErrorMessage(err, '加载会员统计失败'));
       }
     };
     fetchStats();
@@ -97,8 +91,8 @@ export default function MembersPage() {
       try {
         const plans = await membershipPlansApi.getAll();
         setMembershipPlans(plans);
-      } catch (err: any) {
-        messageApi.error(err.message || '加载会籍计划失败');
+      } catch (err) {
+        messageApi.error(getErrorMessage(err, '加载会籍计划失败'));
       }
     };
     fetchPlans();
@@ -196,8 +190,8 @@ export default function MembersPage() {
       }
       await fetchMembers(currentPage);
       closeFormModal();
-    } catch (err: any) {
-      messageApi.error(err.message || '保存失败');
+    } catch (err) {
+      messageApi.error(getErrorMessage(err, '保存失败'));
     }
   };
 
@@ -211,8 +205,8 @@ export default function MembersPage() {
       }
 
       messageApi.success(`已删除会员 ${member.name}`);
-    } catch (err: any) {
-      messageApi.error(err.message || '删除失败');
+    } catch (err) {
+      messageApi.error(getErrorMessage(err, '删除失败'));
     }
   };
 
@@ -435,7 +429,7 @@ export default function MembersPage() {
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="remainingCredits" label="剩余课时" rules={[{ required: true, message: '请输入剩余课时' }]}>
-                <InputNumber className={pageCls.settingsInput} style={{ width: '100%' }} min={0} precision={0} />
+                <InputNumber className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`} min={0} precision={0} />
               </Form.Item>
             </Col>
           </Row>
@@ -462,8 +456,7 @@ export default function MembersPage() {
             <Select
               value={filterDraft.status}
               className={pageCls.settingsInput}
-              style={{ width: '100%' }}
-              options={[{ label: '全部状态', value: '全部' }, ...memberStatusOptions.map((item) => ({ label: item, value: item }))]}
+              options={[{ label: '全部状态', value: '全部' }, ...memberStatusOptions.map((item) => ({ label: memberStatusLabels[item], value: item }))]}
               onChange={(value: MemberStatus | '全部') => setFilterDraft((current) => ({ ...current, status: value }))}
             />
           </div>
@@ -472,7 +465,6 @@ export default function MembersPage() {
             <Select
               value={filterDraft.planId}
               className={pageCls.settingsInput}
-              style={{ width: '100%' }}
               options={[{ label: '全部会籍', value: '全部' }, ...membershipPlans.map((plan) => ({ label: plan.name, value: plan.id }))]}
               onChange={(value: string) => setFilterDraft((current) => ({ ...current, planId: value }))}
             />
@@ -482,7 +474,7 @@ export default function MembersPage() {
 
       <Drawer
         open={detailMember !== null}
-        width={440}
+        width={NARROW_DETAIL_DRAWER_WIDTH}
         title={detailMember?.name ?? '会员详情'}
         onClose={() => setDetailMember(null)}
         extra={detailMember ? (
@@ -515,11 +507,11 @@ export default function MembersPage() {
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatViolet}`}>
                   <div className={widgetCls.detailInsightLabel}>会籍类型</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailMember.plan?.name || '-'}</div>
+                  <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{detailMember.plan?.name || '-'}</div>
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatOrange}`}>
                   <div className={widgetCls.detailInsightLabel}>加入日期</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{formatDate(detailMember.joinedAt)}</div>
+                  <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{formatDate(detailMember.joinedAt)}</div>
                 </div>
               </div>
             </div>
