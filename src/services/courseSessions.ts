@@ -1,4 +1,5 @@
 import { api } from '@/utils/request';
+import type { PaginatedResponse } from './members';
 
 export interface CourseSession {
   id: string;
@@ -35,11 +36,15 @@ export interface CreateCourseSessionData {
 }
 
 export const courseSessionsApi = {
-  getAll: (params?: { from?: string; to?: string; courseId?: string; coachId?: string }) =>
-    api.get<CourseSession[]>('/course-sessions', { params }),
+  getAll: async (params?: { from?: string; to?: string; courseId?: string; coachId?: string }) => {
+    const res = await api.get<PaginatedResponse<CourseSession>>('/course-sessions', { params });
+    return res.data || [];
+  },
 
-  getUpcoming: () =>
-    api.get<CourseSession[]>('/course-sessions/upcoming'),
+  getUpcoming: async () => {
+    const res = await api.get<PaginatedResponse<CourseSession>>('/course-sessions/upcoming');
+    return res.data || [];
+  },
 
   getById: (id: string) =>
     api.get<CourseSession>(`/course-sessions/${id}`),

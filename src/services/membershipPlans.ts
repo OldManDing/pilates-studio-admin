@@ -1,23 +1,25 @@
 import { api } from '@/utils/request';
+import type { MembershipPlanCategory } from '@/types';
 
 export interface MembershipPlan {
   id: string;
-  planCode: string;
+  code: string;
   name: string;
   description?: string;
-  category: 'SINGLE' | 'RECURRING' | 'PACKAGE' | 'PRIVATE' | 'TAILOR';
-  totalCredits: number;
-  validityDays: number;
+  category: MembershipPlanCategory;
+  totalCredits?: number;
+  durationDays?: number;
   priceCents: number;
   isActive: boolean;
 }
 
 export interface CreatePlanData {
+  code?: string;
   name: string;
   description?: string;
-  category: string;
-  totalCredits: number;
-  validityDays: number;
+  category: MembershipPlanCategory;
+  totalCredits?: number;
+  durationDays?: number;
   priceCents: number;
   isActive?: boolean;
 }
