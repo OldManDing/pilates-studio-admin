@@ -1,18 +1,18 @@
-import { CalendarOutlined, DeleteOutlined, EditOutlined, EyeOutlined, HeartOutlined, PlusOutlined, SearchOutlined, StarOutlined, TeamOutlined } from '@ant-design/icons';
+import { CalendarOutlined, DeleteOutlined, EditOutlined, HeartOutlined, PlusOutlined, SearchOutlined, StarOutlined, TeamOutlined } from '@ant-design/icons';
 import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Popconfirm, Row, Select, Spin, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
-import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
+import SectionCard from '@/components/SectionCard';
 import StatCard from '@/components/StatCard';
-import StatusTag from '@/components/StatusTag';
 import { CRUD_MODAL_WIDTH, DETAIL_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
-import type { CoachStatus } from '@/types';
+import { coachStatusLabels, type CoachStatus } from '@/types';
 import { coachesApi, type Coach } from '@/services/coaches';
 import { getErrorMessage } from '@/utils/errors';
 import { getToneFromName } from '@/utils/tone';
+import { CoachProfileOverviewCard, CoachProfileStats, CoachRecordCard, type CoachProfileStatItem } from './components';
 
 const { TextArea } = Input;
 
@@ -34,15 +34,39 @@ type CoachFormValues = {
   certificatesText: string;
 };
 
-const coachStatusLabels: Record<CoachStatus, string> = {
-  ACTIVE: '在职',
-  ON_LEAVE: '休假中',
-  INACTIVE: '停用',
-};
-
 const coachStatusOptions: CoachStatus[] = ['ACTIVE', 'ON_LEAVE', 'INACTIVE'];
 
 const parseListText = (value: string) => value.split(/\n|,|，/).map((item) => item.trim()).filter(Boolean);
+
+const formatCoachRating = (rating?: number) => (typeof rating === 'number' ? rating.toFixed(1) : '-');
+
+const getDisplayListText = (
+  items: Array<{ value: string }> | undefined,
+  emptyText: string,
+  limit = 3,
+) => {
+  const values = (items || []).map((item) => item.value).filter(Boolean);
+
+  if (!values.length) {
+    return emptyText;
+  }
+
+  return values.slice(0, limit).join(' · ');
+};
+
+const getCoachSummaryText = (coach: Coach) => {
+  if (coach.bio?.trim()) {
+    return coach.bio.trim();
+  }
+
+  const specialtiesText = getDisplayListText(coach.specialties, '', 3);
+
+  if (specialtiesText) {
+    return `${coach.experience || '经验信息待补充'}，当前主授 ${specialtiesText}。`;
+  }
+
+  return coach.experience || '暂未填写个人简介，可在编辑教练时补充。';
+};
 
 export default function CoachesPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -208,6 +232,27 @@ export default function CoachesPage() {
     }
   };
 
+  const detailCoachStatItems: CoachProfileStatItem[] = detailCoach ? [
+    {
+      key: 'rating',
+      label: '学员评分',
+      value: formatCoachRating(detailCoach.rating),
+      hint: `当前状态 ${coachStatusLabels[detailCoach.status]}`,
+    },
+    {
+      key: 'specialties',
+      label: '专长方向',
+      value: `${detailCoach.specialties?.length || 0} 项`,
+      hint: getDisplayListText(detailCoach.specialties, '待补充擅长方向', 2),
+    },
+    {
+      key: 'certificates',
+      label: '资质认证',
+      value: `${detailCoach.certificates?.length || 0} 项`,
+      hint: getDisplayListText(detailCoach.certificates, '待补充资质认证', 2),
+    },
+  ] : [];
+
   if (loading && coachList.length === 0) {
     return (
       <div className={`${pageCls.page} ${pageCls.workPage}`}>
@@ -261,43 +306,32 @@ export default function CoachesPage() {
         </div>
       </div>
 
-      <div className={widgetCls.coachGrid}>
-        {filteredCoaches.map((coach) => (
-          <div key={coach.id} className={widgetCls.detailCard}>
-            <div className={widgetCls.detailHeader}>
-              <div className={widgetCls.recordMeta}>
-                <MemberAvatar name={coach.name} tone={getToneFromName(coach.name)} />
-                <div>
-                  <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
-                    {coach.name}
-                    <StatusTag status={coachStatusLabels[coach.status] || coach.status} />
-                  </div>
-                  <div className={widgetCls.recordSub}>
-                    {coach.experience || '暂无经验信息'} · 评分 {coach.rating || '-'}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className={widgetCls.infoStack}>
-              <div>电话：{coach.phone}</div>
-              <div>邮箱：{coach.email || '-'}</div>
-            </div>
-
-            <div className={widgetCls.twoButtons}>
-              <Button type="primary" size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={() => openEditModal(coach)}>编辑资料</Button>
-              <Button size="large" className={pageCls.cardActionHalf} icon={<EyeOutlined />} onClick={() => setDetailCoach(coach)}>查看详情</Button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filteredCoaches.length === 0 ? (
-          <div className={`${pageCls.surface} ${widgetCls.detailCard} ${pageCls.surfaceTopSpace}`}>
-            <div className={widgetCls.detailTitle}>暂无符合条件的教练</div>
-            <div className={`${widgetCls.smallText} ${pageCls.topSpaceSm}`}>可以调整搜索词，或者切换状态筛选。</div>
-          </div>
-        ) : null}
+      {filteredCoaches.length ? (
+        <div className={`${widgetCls.recordList} ${pageCls.workSection}`}>
+          {filteredCoaches.map((coach) => (
+            <CoachRecordCard
+              key={coach.id}
+              name={coach.name}
+              coachCodeText={coach.coachCode || 'COACH'}
+              statusLabel={coachStatusLabels[coach.status] || coach.status}
+              experienceText={coach.experience || '经验信息待补充'}
+              emailText={coach.email || '-'}
+              phoneText={coach.phone}
+              ratingText={formatCoachRating(coach.rating)}
+              specialtiesText={getDisplayListText(coach.specialties, '待补充擅长方向', 2)}
+              specialtiesCountText={coach.specialties?.length ? `${coach.specialties.length} 项专长` : '待补充专长'}
+              tone={getToneFromName(coach.name)}
+              onEdit={() => openEditModal(coach)}
+              onViewDetail={() => setDetailCoach(coach)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className={`${pageCls.surface} ${widgetCls.detailCard} ${pageCls.surfaceTopSpace}`}>
+          <div className={widgetCls.detailTitle}>暂无符合条件的教练</div>
+          <div className={`${widgetCls.smallText} ${pageCls.topSpaceSm}`}>可以调整搜索词，或者切换状态筛选。</div>
+        </div>
+      )}
 
       <Modal
         className={pageCls.crudModal}
@@ -371,68 +405,67 @@ export default function CoachesPage() {
         ) : null}
       >
         {detailCoach ? (
-          <div className={pageCls.detailContentStackSpacious}>
-            {/* 头部信息 */}
-            <div className={widgetCls.detailOverviewPanel}>
-              <div className={widgetCls.recordMeta}>
-                <MemberAvatar name={detailCoach.name} tone={getToneFromName(detailCoach.name)} />
-                <div>
-                  <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
-                    {detailCoach.name}
-                    <StatusTag status={coachStatusLabels[detailCoach.status] || detailCoach.status} />
-                  </div>
-                  <div className={widgetCls.recordSub}>{detailCoach.email || '-'}</div>
-                </div>
-              </div>
-              <div className={widgetCls.detailOverviewStatGrid}>
-                <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatMint}`}>
-                  <div className={widgetCls.detailInsightLabel}>评分</div>
-                  <div className={widgetCls.detailOverviewStatValue}>{detailCoach.rating || '-'}</div>
-                </div>
-                <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatViolet}`}>
-                  <div className={widgetCls.detailInsightLabel}>状态</div>
-                  <div className={widgetCls.detailOverviewStatValue}>{coachStatusLabels[detailCoach.status] || detailCoach.status}</div>
-                </div>
-              </div>
-            </div>
+          <div className={pageCls.detailContentStack}>
+            <CoachProfileOverviewCard
+              name={detailCoach.name}
+              coachCodeText={detailCoach.coachCode || 'COACH'}
+              statusLabel={coachStatusLabels[detailCoach.status] || detailCoach.status}
+              phoneText={detailCoach.phone}
+              emailText={detailCoach.email || '-'}
+              experienceText={detailCoach.experience || '经验信息待补充'}
+              ratingText={formatCoachRating(detailCoach.rating)}
+              specialtiesText={getDisplayListText(detailCoach.specialties, '待补充擅长方向', 3)}
+              summaryText={getCoachSummaryText(detailCoach)}
+              tone={getToneFromName(detailCoach.name)}
+            />
 
-            {/* 联系信息 */}
-            <Descriptions column={2} size="small" bordered>
-              <Descriptions.Item label="电话">{detailCoach.phone}</Descriptions.Item>
-              <Descriptions.Item label="邮箱">{detailCoach.email || '-'}</Descriptions.Item>
-              <Descriptions.Item label="经验">{detailCoach.experience || '-'}</Descriptions.Item>
-            </Descriptions>
+            <CoachProfileStats items={detailCoachStatItems} />
 
-            {/* 个人简介 */}
-            {detailCoach.bio && (
-              <div>
-                <div className={`${widgetCls.smallText} ${pageCls.filterFieldLabel}`}>个人简介</div>
-                <div className={widgetCls.detailOverviewText}>{detailCoach.bio}</div>
-              </div>
-            )}
+            <SectionCard title="教练档案" subtitle="保留管理员日常查看与编辑所需的基础字段，便于核对档案状态。">
+              <Descriptions column={1} size="small" bordered>
+                <Descriptions.Item label="教练编号">{detailCoach.coachCode || '-'}</Descriptions.Item>
+                <Descriptions.Item label="教练姓名">{detailCoach.name}</Descriptions.Item>
+                <Descriptions.Item label="状态">{coachStatusLabels[detailCoach.status] || detailCoach.status}</Descriptions.Item>
+                <Descriptions.Item label="电话">{detailCoach.phone}</Descriptions.Item>
+                <Descriptions.Item label="邮箱">{detailCoach.email || '-'}</Descriptions.Item>
+                <Descriptions.Item label="经验">{detailCoach.experience || '-'}</Descriptions.Item>
+                <Descriptions.Item label="评分">{formatCoachRating(detailCoach.rating)}</Descriptions.Item>
+              </Descriptions>
+            </SectionCard>
 
-            {/* 专长领域 */}
-            {detailCoach.specialties?.length ? (
-              <div>
-                <div className={`${widgetCls.smallText} ${pageCls.filterFieldLabel}`}>专长领域</div>
-                <div className={widgetCls.chipRow}>
-                  {detailCoach.specialties.map((item) => (
-                    <span key={item.value} className={widgetCls.chip}>{item.value}</span>
-                  ))}
+            {detailCoach.bio || detailCoach.specialties?.length || detailCoach.certificates?.length ? (
+              <SectionCard title="专业信息" subtitle="集中展示简介、专长与资质，方便快速判断教练定位与资料完备度。">
+                <div className={pageCls.workSection}>
+                  {detailCoach.bio ? (
+                    <div>
+                      <div className={`${widgetCls.smallText} ${pageCls.filterFieldLabel}`}>个人简介</div>
+                      <div className={widgetCls.detailOverviewText}>{detailCoach.bio}</div>
+                    </div>
+                  ) : null}
+
+                  {detailCoach.specialties?.length ? (
+                    <div>
+                      <div className={`${widgetCls.smallText} ${pageCls.filterFieldLabel}`}>专长领域</div>
+                      <div className={widgetCls.chipRow}>
+                        {detailCoach.specialties.map((item) => (
+                          <span key={item.value} className={widgetCls.chip}>{item.value}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {detailCoach.certificates?.length ? (
+                    <div>
+                      <div className={`${widgetCls.smallText} ${pageCls.filterFieldLabel}`}>资质认证</div>
+                      <div className={widgetCls.chipRow}>
+                        {detailCoach.certificates.map((item) => (
+                          <span key={item.value} className={widgetCls.chip}>{item.value}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
-              </div>
-            ) : null}
-
-            {/* 资质认证 */}
-            {detailCoach.certificates?.length ? (
-              <div>
-                <div className={`${widgetCls.smallText} ${pageCls.filterFieldLabel}`}>资质认证</div>
-                <div className={widgetCls.chipRow}>
-                  {detailCoach.certificates.map((item) => (
-                    <span key={item.value} className={widgetCls.chip}>{item.value}</span>
-                  ))}
-                </div>
-              </div>
+              </SectionCard>
             ) : null}
           </div>
         ) : null}
