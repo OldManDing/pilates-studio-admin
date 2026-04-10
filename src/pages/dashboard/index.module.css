@@ -1,0 +1,366 @@
+.dashboardStack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.topGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
+  gap: 16px;
+}
+
+.bottomGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.sectionAction {
+  min-height: 36px;
+  padding: 0 14px !important;
+  border-radius: var(--radius-sm) !important;
+  background: var(--control-surface) !important;
+  border: 1px solid var(--control-border) !important;
+  color: var(--button-text-secondary) !important;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-bold);
+  box-shadow: var(--control-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.76);
+}
+
+.sectionAction:hover {
+  background: var(--control-surface-hover) !important;
+  border-color: var(--control-border-strong) !important;
+  color: var(--button-text-secondary-hover) !important;
+}
+
+.membershipCard {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 4px 2px 2px;
+}
+
+.membershipCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.membershipEyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #c4a574;
+  margin-bottom: 10px;
+}
+
+.membershipTierRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.membershipTierBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(196, 165, 116, 0.28);
+  background: rgba(196, 165, 116, 0.08);
+  color: #c4a574;
+  font-size: 12px;
+  font-weight: var(--font-bold);
+}
+
+.membershipPlanName {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-bold);
+  color: var(--text-heading);
+}
+
+.membershipDetailGroup {
+  text-align: right;
+}
+
+.membershipDetailLabel {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  margin-bottom: 6px;
+}
+
+.membershipDetailValue {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-medium);
+  color: var(--text-heading);
+}
+
+.membershipMetaGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.membershipMetaCard {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft);
+  background: rgba(248, 250, 251, 0.86);
+}
+
+.membershipPrimaryValue {
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--text-heading);
+  font-weight: 300;
+}
+
+.membershipSecondaryValue {
+  font-size: var(--font-size-lg);
+  color: var(--text-heading);
+  font-weight: 300;
+}
+
+.membershipProgressWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.membershipProgress {
+  flex: 1;
+  margin: 0 !important;
+}
+
+.membershipProgressText {
+  white-space: nowrap;
+  color: #c4a574;
+  font-size: 12px;
+  font-weight: var(--font-medium);
+}
+
+.membershipPrimaryAction {
+  align-self: stretch;
+  min-height: 48px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #25323c 0%, #1f2a33 100%) !important;
+  box-shadow: 0 12px 24px rgba(31, 42, 51, 0.14);
+}
+
+.quickActionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.quickActionCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: rgba(248, 250, 251, 0.86);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.quickActionCard:hover {
+  border-color: color-mix(in srgb, var(--mint) 18%, transparent);
+  box-shadow: 0 12px 24px rgba(31, 42, 51, 0.06);
+  transform: translateY(-1px);
+}
+
+.quickActionIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-sm);
+  background: var(--mint-soft);
+  color: var(--mint);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.quickActionBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.quickActionLabel {
+  color: var(--text-heading);
+  font-weight: var(--font-bold);
+  margin-bottom: 2px;
+}
+
+.quickActionSubLabel {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.inlineGhostButton {
+  padding-inline: 0 !important;
+  color: var(--text-tertiary) !important;
+}
+
+.trainingSummaryWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.trainingHeadlineRow {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.8fr) 1px minmax(0, 1.2fr);
+  align-items: end;
+  gap: 18px;
+}
+
+.trainingPrimaryValue {
+  font-size: clamp(40px, 5vw, 56px);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  color: var(--text-heading);
+  font-weight: 200;
+}
+
+.trainingSplit {
+  width: 1px;
+  height: 72px;
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.trainingProgressBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trainingGoalText {
+  color: #c4a574;
+  font-size: 12px;
+}
+
+.upcomingList {
+  display: flex;
+  flex-direction: column;
+}
+
+.upcomingItem {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  padding: 18px 4px;
+  border: none;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.upcomingItem:last-child {
+  border-bottom: none;
+  padding-bottom: 6px;
+}
+
+.upcomingDateBlock {
+  width: 52px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.upcomingDay {
+  font-size: 32px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--text-heading);
+  font-weight: 200;
+}
+
+.upcomingWeekday {
+  margin-top: 4px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.upcomingDivider {
+  width: 1px;
+  align-self: stretch;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(196, 165, 116, 0.4) 0%, rgba(15, 23, 42, 0.05) 100%);
+}
+
+.upcomingBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.upcomingTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.upcomingTitle {
+  color: var(--text-heading);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-bold);
+}
+
+.upcomingMeta {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.itemButtonReset {
+  width: 100%;
+  border: none;
+  text-align: left;
+}
+
+@media (max-width: 1200px) {
+  .topGrid,
+  .bottomGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .membershipCardTop,
+  .trainingHeadlineRow {
+    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .membershipDetailGroup {
+    text-align: left;
+  }
+
+  .membershipMetaGrid,
+  .quickActionGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .trainingSplit {
+    display: none;
+  }
+}

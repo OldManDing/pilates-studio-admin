@@ -1,0 +1,52 @@
+import {
+  CalendarOutlined,
+  RightOutlined,
+  SettingOutlined,
+  TeamOutlined,
+  UnorderedListOutlined,
+} from '@ant-design/icons';
+import SectionCard from '@/components/SectionCard';
+import styles from '../index.module.css';
+
+export type QuickActionItem = {
+  key: 'members' | 'courses' | 'bookings' | 'settings';
+  label: string;
+  subLabel: string;
+  path: string;
+};
+
+export type QuickActionPanelProps = {
+  items: QuickActionItem[];
+  onNavigate: (path: string) => void;
+};
+
+const iconMap: Record<QuickActionItem['key'], JSX.Element> = {
+  members: <TeamOutlined />,
+  courses: <CalendarOutlined />,
+  bookings: <UnorderedListOutlined />,
+  settings: <SettingOutlined />,
+};
+
+export default function QuickActionPanel({ items, onNavigate }: QuickActionPanelProps) {
+  return (
+    <SectionCard title="快捷入口" subtitle="保留首页导航节奏，快速进入后台核心工作区。">
+      <div className={styles.quickActionGrid}>
+        {items.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            className={styles.quickActionCard}
+            onClick={() => onNavigate(item.path)}
+          >
+            <div className={styles.quickActionIcon}>{iconMap[item.key] ?? <RightOutlined />}</div>
+            <div className={styles.quickActionBody}>
+              <div className={styles.quickActionLabel}>{item.label}</div>
+              <div className={styles.quickActionSubLabel}>{item.subLabel}</div>
+            </div>
+            <span className={styles.inlineGhostButton}>前往</span>
+          </button>
+        ))}
+      </div>
+    </SectionCard>
+  );
+}
