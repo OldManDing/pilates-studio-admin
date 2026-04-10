@@ -6,10 +6,12 @@ import ActionButton from '@/components/ActionButton';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import StatusTag from '@/components/StatusTag';
+import { SETTINGS_DETAIL_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import { settingsApi, type StudioSetting, type NotificationSetting } from '@/services/settings';
 import { authApi } from '@/services/auth';
+import { getErrorMessage } from '@/utils/errors';
 
 interface StoreInfoValues {
   studioName: string;
@@ -50,7 +52,7 @@ const todayText = () => new Date().toLocaleString('zh-CN', {
   minute: '2-digit'
 }).replace(/\//g, '-');
 
-const defaultStoreInfo: StoreInfoValues = {
+const PLACEHOLDER_STORE_INFO: StoreInfoValues = {
   studioName: 'Pilates Studio',
   phone: '400-820-8899',
   email: 'hello@pilates.com',
@@ -206,14 +208,15 @@ export default function SettingsPage() {
     const fetchSettings = async () => {
       try {
         setLoading(true);
-        const [studioData, notificationsData] = await Promise.all([
+        const [studioData, notificationsData, twoFactorStatus] = await Promise.all([
           settingsApi.getStudio().catch(() => null),
-          settingsApi.getNotifications().catch(() => [])
+          settingsApi.getNotifications().catch(() => []),
+          authApi.getTwoFactorStatus().catch(() => ({ enabled: false, hasSecret: false })),
         ]);
 
         if (studioData) {
           // 解析地址：尝试从地址字符串中提取省市区
-          const addressStr = studioData.address || defaultStoreInfo.address;
+          const addressStr = studioData.address || PLACEHOLDER_STORE_INFO.address;
           let province = '', city = '', district = '', remainingAddress = addressStr;
           
           // 简单解析：检查地址是否包含省市区信息
@@ -238,10 +241,10 @@ export default function SettingsPage() {
           }
           
           const info: StoreInfoValues = {
-            studioName: studioData.studioName || defaultStoreInfo.studioName,
-            phone: studioData.phone || defaultStoreInfo.phone,
-            email: studioData.email || defaultStoreInfo.email,
-            businessHours: studioData.businessHours || defaultStoreInfo.businessHours,
+            studioName: studioData.studioName || PLACEHOLDER_STORE_INFO.studioName,
+            phone: studioData.phone || PLACEHOLDER_STORE_INFO.phone,
+            email: studioData.email || PLACEHOLDER_STORE_INFO.email,
+            businessHours: studioData.businessHours || PLACEHOLDER_STORE_INFO.businessHours,
             province,
             city,
             district,
@@ -263,6 +266,20 @@ export default function SettingsPage() {
           setNotifications(initialized);
           setSavedNotifications(initialized);
         }
+
+        setTwoFactorEnabled(twoFactorStatus.enabled);
+        setSecurityState((current) => ({
+          ...current,
+          两步验证: {
+            ...current.两步验证,
+            status: twoFactorStatus.enabled ? '正常' : twoFactorStatus.hasSecret ? '处理中' : '待激活',
+            detail: twoFactorStatus.enabled
+              ? '当前账号已开启两步验证'
+              : twoFactorStatus.hasSecret
+                ? '已生成密钥，等待输入验证码完成启用'
+                : '点击设置两步验证',
+          },
+        }));
       } catch (err) {
         antdMessage.error('获取设置失败');
       } finally {
@@ -305,8 +322,8 @@ export default function SettingsPage() {
       setSavedStoreInfo({ ...values, province, city, district, address: fullAddress });
       setStoreSavedAt(todayText());
       message.success('门店信息已保存');
-    } catch (err: any) {
-      message.error(err.message || '保存失败');
+    } catch (err) {
+      message.error(getErrorMessage(err, '保存失败'));
     }
   };
 
@@ -314,8 +331,8 @@ export default function SettingsPage() {
     try {
       await settingsApi.updateNotification(key, checked);
       setNotifications((current) => current.map((item) => (item.key === key ? { ...item, enabled: checked } : item)));
-    } catch (err: any) {
-      message.error(err.message || '更新失败');
+    } catch (err) {
+      message.error(getErrorMessage(err, '更新失败'));
     }
   };
 
@@ -356,8 +373,8 @@ export default function SettingsPage() {
       setPasswordDraft({ current: '', next: '', confirm: '' });
       message.success('密码已更新');
       setOpenSecurityDrawer(null);
-    } catch (err: any) {
-      message.error(err.message || '密码修改失败');
+    } catch (err) {
+      message.error(getErrorMessage(err, '密码修改失败'));
     }
   };
 
@@ -369,23 +386,35 @@ export default function SettingsPage() {
         setTwoFactorEnabled(false);
         setTwoFactorSecret(null);
         setDisablePassword('');
+        setSecurityState((current) => ({
+          ...current,
+          两步验证: { ...current.两步验证, status: '待激活', detail: '点击设置两步验证' },
+        }));
         message.success('已关闭两步验证');
       } else if (twoFactorSecret) {
         // Verify and enable 2FA
         await authApi.verifyTwoFactor(twoFactorCode);
         setTwoFactorEnabled(true);
         setTwoFactorCode('');
+        setSecurityState((current) => ({
+          ...current,
+          两步验证: { ...current.两步验证, status: '正常', detail: `最近启用于 ${todayText()}` },
+        }));
         message.success('已开启两步验证');
       } else {
         // Generate secret first
         const res = await authApi.generateTwoFactorSecret();
         setTwoFactorSecret(res.secret);
+        setSecurityState((current) => ({
+          ...current,
+          两步验证: { ...current.两步验证, status: '处理中', detail: '已生成密钥，请输入验证码完成启用' },
+        }));
         message.info('请使用验证器扫描密钥，然后输入验证码');
         return;
       }
       setOpenSecurityDrawer(null);
-    } catch (err: any) {
-      message.error(err.message || '操作失败');
+    } catch (err) {
+      message.error(getErrorMessage(err, '操作失败'));
     }
   };
 
@@ -430,8 +459,8 @@ export default function SettingsPage() {
       }));
       message.success('数据已导出');
       setOpenDataDrawer(null);
-    } catch (err: any) {
-      message.error(err.message || '导出失败');
+    } catch (err) {
+      message.error(getErrorMessage(err, '导出失败'));
     }
   };
 
@@ -458,13 +487,13 @@ export default function SettingsPage() {
             message.error(res.message || '恢复失败');
           }
           setOpenDataDrawer(null);
-        } catch (err: any) {
-          message.error(err.message || '恢复失败');
+        } catch (err) {
+          message.error(getErrorMessage(err, '恢复失败'));
         }
       };
       input.click();
-    } catch (err: any) {
-      message.error(err.message || '恢复失败');
+    } catch (err) {
+      message.error(getErrorMessage(err, '恢复失败'));
     }
   };
 
@@ -664,7 +693,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <Drawer open={openSecurityDrawer !== null} width={420} title={openSecurityDrawer ?? '安全设置'} onClose={() => setOpenSecurityDrawer(null)}>
+      <Drawer open={openSecurityDrawer !== null} width={SETTINGS_DETAIL_DRAWER_WIDTH} title={openSecurityDrawer ?? '安全设置'} onClose={() => setOpenSecurityDrawer(null)}>
         {openSecurityDrawer ? (
           <div className={pageCls.settingsDetailDrawerBody}>
             <div className={widgetCls.detailOverviewPanel}>
@@ -751,7 +780,7 @@ export default function SettingsPage() {
         ) : null}
       </Drawer>
 
-      <Drawer open={openDataDrawer !== null} width={420} title={openDataDrawer ?? '数据管理'} onClose={() => setOpenDataDrawer(null)}>
+      <Drawer open={openDataDrawer !== null} width={SETTINGS_DETAIL_DRAWER_WIDTH} title={openDataDrawer ?? '数据管理'} onClose={() => setOpenDataDrawer(null)}>
           {openDataDrawer ? (
             <div className={pageCls.settingsDetailDrawerBody}>
             <div className={widgetCls.detailOverviewPanel}>
