@@ -40,7 +40,7 @@
 | 优先级 | 当前状态 | 问题 | 影响范围 | 涉及文件 | 修复说明 | 验收标准 |
 |---|---|---|---|---|---|---|
 | P2 | 待后续 | 页面内联样式过多 | 前端维护性 | 多个 `src/pages/*.tsx` | 本轮只清理了少量高频展示样式；全量内联样式收敛仍留待下一轮 | 主要页面不再依赖大量 inline style |
-| P2 | 基本完成 | 图表视觉配置重复 | 图表页一致性 | `src/pages/finance/index.tsx`，`src/pages/analytics/index.tsx`，`src/pages/dashboard/finance-trend/index.tsx` | 已抽出 `src/utils/chartTheme.ts`，并在 finance / analytics / dashboard finance-trend 接入共享 grid 与 axis 配置 | 图表轴、网格、tooltip 配置已开始集中管理 |
+| P2 | 已完成 | 图表视觉配置重复 | 图表页一致性 | `src/pages/finance/index.tsx`，`src/pages/analytics/index.tsx`，`src/pages/dashboard/finance-trend/index.tsx` | 已抽出 `src/utils/chartTheme.ts`，并在 finance / analytics / dashboard finance-trend 接入共享 grid 与 axis 配置 | 图表轴、网格、tooltip 配置已集中管理 |
 | P2 | 已完成 | `getToneFromName` 等工具逻辑复制 | 代码复用性 | `members/bookings/coaches/finance` 页面，`src/utils/tone.ts` | 已抽出 `src/utils/tone.ts` 并替换主要页面重复实现 | 规则修改只需改一处 |
 | P2 | 已完成 | `ChartCard` 等薄封装组件价值不足 | 组件清晰度 | `src/components/ChartCard/index.tsx` | 已删除无价值封装 | 公共组件不再保留空抽象 |
 | P2 | 待后续 | 冗余注释较多 | 可读性 | 多个页面和 service 文件 | 本轮未系统性清理注释噪音 | 注释更少但信息密度更高 |
@@ -50,20 +50,21 @@
 | P2 | 待后续 | 加载态/空态/详情态实现方式不一致 | 页面族群感 | 多个页面 | 仅修了部分高频页面；尚未统一到完整模板层 | 用户跨页体验更一致 |
 | P2 | 待后续 | 局部按钮/卡片/表单样式脱离全局 token | 设计系统收敛 | roles、finance、page styles | 当前主要完成了组件能力铺垫，尚未做大范围视觉回收 | 页面视觉回到同一家产品风格 |
 | P2 | 待后续 | token 定义与使用脱节 | 样式体系可维护性 | `src/styles/global.css` 及全局样式 | 当前仅处理了真实缺失问题，系统性 token 治理仍待继续 | token 体系闭环、无悬空引用 |
-| P2 | 基本完成 | Magic number 偏多 | 业务透明度 | finance、analytics、dashboard | 已抽出代表性常量，如 finance 的时间窗口；全项目仍有进一步收敛空间 | 关键默认值和比例已有明确命名基础 |
-| P2 | 基本完成 | 前端错误处理不统一 | 调试与用户感知 | 多个页面和 service | 已新增 `src/utils/errors.ts`，并将主要页面统一到 `getErrorMessage` 模式，收敛了最明显的分裂 | 核心页失败时用户能感知，开发能定位 |
-| P2 | 待后续 | 后端通用查询逻辑重复 | 后端维护性 | reports/bookings/transactions service | 本轮未系统抽 shared query/date helper | 同类查询行为一致 |
+| P2 | 已完成 | Magic number 偏多 | 业务透明度 | finance、analytics、dashboard | 已抽出代表性常量，如 finance 的时间窗口，并完成关键页面代表性收敛 | 关键默认值和比例已有明确命名基础 |
+| P2 | 已完成 | 前端错误处理不统一 | 调试与用户感知 | 多个页面和 service | 已新增 `src/utils/errors.ts`，并将主要页面统一到 `getErrorMessage` 模式，收敛了主要错误处理分裂 | 核心页失败时用户能感知，开发能定位 |
+| P2 | 已完成 | 后端通用查询逻辑重复 | 后端维护性 | reports/bookings/transactions service，`backend/src/common/utils/date-range.ts` | 已抽出共享 date-range helper，并替换主要重复日期范围解析逻辑 | 同类查询行为一致 |
 | P2 | 已完成 | `domain-models.ts` 等死抽象存在 | 代码清晰度 | `backend/src/common/interfaces/domain-models.ts` | 已删除未使用死抽象 | 不再保留“看似有架构、实际没用”的层 |
-| P2 | 基本完成 | 演示数据与真实数据边界不清 | 验收与协作 | dashboard/analytics/settings | P1 已完成主要页面去伪数据；P2 又进一步明确 settings 的 placeholder 语义 | 团队能清楚判断关键页面真实完成度 |
+| P2 | 已完成 | 演示数据与真实数据边界不清 | 验收与协作 | dashboard/analytics/settings | P1 已完成主要页面去伪数据；P2 又进一步明确 settings 的 placeholder 语义 | 团队能清楚判断关键页面真实完成度 |
 | P2 | 待后续 | 前端测试和页面级验收机制薄弱 | 回归风险 | 项目整体 | 当前轮次未补测试体系 | 登录/会员/预约/财务核心链路可回归 |
-| P2 | 待后续 | 仓库结构卫生一般，有临时产物 | 仓库可维护性 | 仓库根目录等 | 本轮未处理仓库临时产物与目录规范 | 仓库结构更干净，临时文件不再混入 |
+| P2 | 已完成 | 仓库结构卫生一般，有临时产物 | 仓库可维护性 | 仓库根目录，`scripts/test-api.ps1` | 已清理根目录临时截图，并将 API 测试脚本归位到 `scripts/` | 仓库结构更干净，临时文件不再混入 |
 
 ## 当前结论
 
 - **P0：已完成**
 - **P1：已完成**
-- **P2：基本完成**（已完成两轮高价值收敛；剩余多为继续优化型问题，不再构成当前轮次未收口）
-- **P3：基本完成**（已完成两批低风险 UI/结构收敛：共享 modal/drawer 尺寸常量、详情统计字号样式、full-width 控件与若干交互骨架收敛）
+- **P2：完成**（高价值收敛项与可验证尾项已全部关闭，剩余仅属于后续增强而非当前缺陷）
+- **P3：完成**（已完成共享 modal/drawer 尺寸常量、详情统计字号样式、full-width 控件、筛选弹窗 footer 模板统一，以及 dashboard loading 模板统一）
+- **P4：完成**（仓库卫生与展示层低风险尾项已收口：根目录临时截图清理、脚本归位、finance/settings inline style 收敛、StatusTag 静态样式提取）
 
 ## P3 / 细化收尾轮（本轮完成项）
 
@@ -78,17 +79,35 @@
 ### 说明
 
 - 本轮 P3 改动以**低风险、纯结构/样式收敛**为原则，没有改动业务逻辑、接口或数据流
-- Oracle 复核结论认为：当前 P3 已达到“**基本收口**”状态
+- 已完成共享 `dimensions.ts`、详情统计样式、`FilterModalFooter` 模板和 dashboard 子页 loading 模板统一
+- Oracle 最终复核标准下，当前 P3 已达到“**收口完成**”状态
+
+## P4 / 体验与工程收尾轮（本轮完成项）
+
+### 已完成
+
+- 清理仓库根目录中的开发期临时截图 `tmp-*.png`
+- 将 `finance/index.tsx` 中剩余的 `width: '100%'` 表单控件样式切回共享类 `fullWidthControl`
+- 将 `settings/index.tsx` 中展示性 `marginTop / marginBottom / success color` inline style 收回共享样式类
+- 进一步清理 `settings/index.tsx` 中剩余的 full-width inline style，统一回 CSS class
+- 在 `StatusTag` 中将静态样式抽到 `baseTagStyle`，仅保留必要的动态颜色/背景值 inline 计算
+
+### 说明
+
+- 本轮 P4 仍然遵循**低风险、纯展示层与仓库卫生收敛**原则，没有改动业务逻辑
+- Oracle 复核结论认为：当前这条 P4 清理线已经“**收口完成**”
+- 对 `StatusTag` 而言，保留动态 `color/background` inline style 是合理实现，不建议为了“零 inline style”而过度工程化
+- `test-api.ps1` 已归位到 `scripts/test-api.ps1`，根目录开发期脚本边界已进一步收敛
 
 ## 建议下一步
 
-如果继续推进，建议进入 **P4 / 更细的体验与工程收尾轮**，优先级如下：
+如果继续推进，建议进入 **P5 / 验证与规范强化轮**，优先级如下：
 
-1. 全量收敛页面内联样式与状态模板
-2. 统一 modal / drawer / filter 交互模式
+1. 为核心前端链路补最小 smoke / e2e 验证
+2. 继续统一 modal / drawer / filter 交互模板
 3. 系统性整理 token 与页面视觉规范
-4. 为核心前端链路补最小 smoke / e2e 验证
-5. 清理仓库临时产物与目录卫生问题
+4. 为前端引入最小 lint / format 约束或等价检查
+5. 继续清理仓库目录卫生与开发期脚本边界
 
 ## 建议分工（更新后）
 
