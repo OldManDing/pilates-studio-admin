@@ -22,9 +22,18 @@ export interface AuthResponse {
   };
 }
 
+export interface LoginMfaChallenge {
+  requiresTwoFactor: true;
+  mfaToken: string;
+  message: string;
+}
+
 export const authApi = {
   login: (credentials: LoginCredentials) =>
-    api.post<AuthResponse>('/auth/login', credentials),
+    api.post<AuthResponse | LoginMfaChallenge>('/auth/login', credentials),
+
+  verifyLoginTwoFactor: (data: { mfaToken: string; code: string }) =>
+    api.post<AuthResponse>('/auth/2fa/verify-login', data),
 
   refresh: (refreshToken: string) =>
     api.post<Pick<AuthResponse, 'accessToken' | 'refreshToken' | 'expiresIn'>>('/auth/refresh', {
