@@ -52,13 +52,6 @@ Base prefix: `/api`
 - `PATCH /membership-plans/:id`
 - `DELETE /membership-plans/:id`
 
-## Mini-program users
-
-- `GET /mini-users/me`
-- `GET /mini-users/:id`
-- `PATCH /mini-users/:id`
-- `POST /mini-users/:id/link-member`
-
 ## Coaches
 
 - `GET /coaches`
@@ -108,14 +101,6 @@ Base prefix: `/api`
 - `GET /transactions/:id`
 - `PATCH /transactions/:id`
 - `DELETE /transactions/:id`
-
-## Analytics
-
-- `GET /analytics/dashboard`
-- `GET /analytics/members/growth`
-- `GET /analytics/bookings/distribution`
-- `GET /analytics/courses/popularity`
-- `GET /analytics/retention`
 
 ## Reports
 
