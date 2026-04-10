@@ -58,7 +58,7 @@ export default function DashboardSchedulePage() {
   }, scheduleCards[0] as ScheduleCard | undefined), [scheduleCards]);
 
   if (loading) {
-    return <div className={pageCls.page} style={{ display: 'flex', justifyContent: 'center', paddingTop: 120 }}><Spin /></div>;
+    return <div className={`${pageCls.page} ${pageCls.dashboardSubpageLoadingState}`}><Spin /></div>;
   }
 
   return (

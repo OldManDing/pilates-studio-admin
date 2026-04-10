@@ -36,7 +36,7 @@ export default function DashboardCoursesPage() {
   const openCount = Math.max(0, courses.length - fullCount);
 
   if (loading) {
-    return <div className={pageCls.page} style={{ display: 'flex', justifyContent: 'center', paddingTop: 120 }}><Spin /></div>;
+    return <div className={`${pageCls.page} ${pageCls.dashboardSubpageLoadingState}`}><Spin /></div>;
   }
 
   return (

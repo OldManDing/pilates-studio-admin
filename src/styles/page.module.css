@@ -883,6 +883,12 @@
   padding-top: 120px;
 }
 
+.dashboardSubpageLoadingState {
+  display: flex;
+  justify-content: center;
+  padding-top: 120px;
+}
+
 .recordTitleRow {
   display: flex;
   align-items: center;
@@ -963,6 +969,26 @@
 
 .fullWidthControl {
   width: 100%;
+}
+
+.topSpaceLg {
+  margin-top: 16px;
+}
+
+.bottomSpaceSm {
+  margin-bottom: 8px;
+}
+
+.bottomSpaceMd {
+  margin-bottom: 12px;
+}
+
+.bottomSpaceLg {
+  margin-bottom: 16px;
+}
+
+.successText {
+  color: #52c41a;
 }
 
 .topSpaceSm {

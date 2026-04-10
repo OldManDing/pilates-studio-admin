@@ -42,16 +42,16 @@ export default function DashboardBookingsPage() {
     fetchData();
   }, []);
 
-  const pendingBookings = useMemo(() => bookings.filter((item) => item.status === '待确认'), [bookings]);
-  const confirmedBookings = useMemo(() => bookings.filter((item) => item.status === '已确认'), [bookings]);
-  const cancelledBookings = useMemo(() => bookings.filter((item) => item.status === '已取消'), [bookings]);
+  const pendingBookings = useMemo(() => bookings.filter((item) => item.status === 'PENDING'), [bookings]);
+  const confirmedBookings = useMemo(() => bookings.filter((item) => item.status === 'CONFIRMED'), [bookings]);
+  const cancelledBookings = useMemo(() => bookings.filter((item) => item.status === 'CANCELLED'), [bookings]);
   const fullCourses = useMemo(() => courses.filter((course) => (course._count?.sessions || 0) >= course.capacity), [courses]);
 
   const priorityBooking = pendingBookings[0] ?? bookings[0];
   const priorityCourse = fullCourses[0] ?? courses[0];
 
   if (loading) {
-    return <div className={pageCls.page} style={{ display: 'flex', justifyContent: 'center', paddingTop: 120 }}><Spin /></div>;
+    return <div className={`${pageCls.page} ${pageCls.dashboardSubpageLoadingState}`}><Spin /></div>;
   }
 
   return (
@@ -128,7 +128,7 @@ export default function DashboardBookingsPage() {
                 </div>
               </div>
               <div className={widgetCls.detailActionGroup}>
-                <Button type="primary" size="large" className={pageCls.cardActionHalf}>{item.status === '待确认' ? '立即确认' : '联系会员'}</Button>
+                <Button type="primary" size="large" className={pageCls.cardActionHalf}>{item.status === 'PENDING' ? '立即确认' : '联系会员'}</Button>
                 <Button size="large" className={pageCls.cardActionHalf}>查看详情</Button>
               </div>
             </div>
