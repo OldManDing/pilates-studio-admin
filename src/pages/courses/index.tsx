@@ -4,11 +4,13 @@ import { useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
+import { COURSE_DETAIL_DRAWER_WIDTH, CRUD_MODAL_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import { coursesApi, type Course } from '@/services/courses';
 import { coachesApi, type Coach } from '@/services/coaches';
 import { reportsApi } from '@/services/reports';
+import { getErrorMessage } from '@/utils/errors';
 
 const iconMap = {
   calendar: <CalendarOutlined />,
@@ -26,8 +28,6 @@ type CourseFormValues = {
   capacity: number;
   isActive: boolean;
 };
-
-const CRUD_MODAL_WIDTH = 780;
 
 export default function CoursesPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -111,8 +111,8 @@ export default function CoursesPage() {
         weeklySessions,
         popularCourse,
       }));
-    } catch (err: any) {
-      messageApi.error(err.message || '刷新课程失败');
+    } catch (err) {
+      messageApi.error(getErrorMessage(err, '刷新课程失败'));
     } finally {
       if (!silent) setIsRefreshing(false);
     }
@@ -206,8 +206,8 @@ export default function CoursesPage() {
       }
 
       closeFormModal();
-    } catch (err: any) {
-      messageApi.error(err.message || '保存失败');
+    } catch (err) {
+      messageApi.error(getErrorMessage(err, '保存失败'));
     } finally {
       setIsSaving(false);
     }
@@ -223,8 +223,8 @@ export default function CoursesPage() {
       }
 
       messageApi.success(`已删除课程 ${course.name}`);
-    } catch (err: any) {
-      messageApi.error(err.message || '删除失败');
+    } catch (err) {
+      messageApi.error(getErrorMessage(err, '删除失败'));
     }
   };
 
@@ -405,12 +405,12 @@ export default function CoursesPage() {
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="durationMinutes" label="课程时长（分钟）" rules={[{ required: true, message: '请输入课程时长' }]}>
-                <InputNumber className={pageCls.settingsInput} style={{ width: '100%' }} min={1} precision={0} />
+                <InputNumber className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`} min={1} precision={0} />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="capacity" label="课程容量（人）" rules={[{ required: true, message: '请输入课程容量' }]}>
-                <InputNumber className={pageCls.settingsInput} style={{ width: '100%' }} min={1} precision={0} />
+                <InputNumber className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`} min={1} precision={0} />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
@@ -430,7 +430,7 @@ export default function CoursesPage() {
 
       <Drawer
         open={detailCourse !== null}
-        width={460}
+        width={COURSE_DETAIL_DRAWER_WIDTH}
         title={detailCourse?.name ?? '课程详情'}
         onClose={() => setDetailCourse(null)}
         extra={detailCourse ? (
@@ -455,15 +455,15 @@ export default function CoursesPage() {
               <div className={widgetCls.detailOverviewStatGrid}>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatMint}`}>
                   <div className={widgetCls.detailInsightLabel}>教练</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailCourse.coach?.name || '-'}</div>
+                  <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{detailCourse.coach?.name || '-'}</div>
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatViolet}`}>
                   <div className={widgetCls.detailInsightLabel}>时长</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailCourse.durationMinutes} 分钟</div>
+                  <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{detailCourse.durationMinutes} 分钟</div>
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatOrange}`}>
                   <div className={widgetCls.detailInsightLabel}>容量</div>
-                  <div className={widgetCls.detailOverviewStatValue} style={{ fontSize: 'var(--font-size-xl)' }}>{detailCourse.capacity} 人</div>
+                  <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{detailCourse.capacity} 人</div>
                 </div>
               </div>
             </div>

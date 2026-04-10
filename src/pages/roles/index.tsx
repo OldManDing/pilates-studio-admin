@@ -20,7 +20,9 @@ import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import StatusTag from '@/components/StatusTag';
 import { rolesApi, type Permission, type Role } from '@/services/roles';
+import { CRUD_MODAL_WIDTH, NARROW_DETAIL_DRAWER_WIDTH, ROLE_PERMISSION_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
+import { getErrorMessage } from '@/utils/errors';
 import roleCss from './index.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 
@@ -99,8 +101,6 @@ const actionLabelMap: Record<string, string> = {
   WRITE: '写入',
 };
 
-const CRUD_MODAL_WIDTH = 780;
-
 export default function RolesPage() {
   const [form] = Form.useForm<RoleFormValues>();
   const { message } = App.useApp();
@@ -124,8 +124,8 @@ export default function RolesPage() {
       const roleList = await rolesApi.getAll();
       setRoles(roleList);
       setPermissions(permissionList);
-    } catch (err: any) {
-      message.error(err?.message || '获取角色权限数据失败');
+    } catch (err) {
+      message.error(getErrorMessage(err, '获取角色权限数据失败'));
     } finally {
       setLoading(false);
     }
@@ -171,8 +171,8 @@ export default function RolesPage() {
       message.success('角色创建成功');
       closeCreateModal();
       await fetchData();
-    } catch (err: any) {
-      message.error(err?.message || '角色创建失败');
+    } catch (err) {
+      message.error(getErrorMessage(err, '角色创建失败'));
     } finally {
       setSaving(false);
     }
@@ -200,8 +200,8 @@ export default function RolesPage() {
       message.success('权限模板已保存并生效');
       setEditingPermissionRole(null);
       await fetchData();
-    } catch (err: any) {
-      message.error(err?.message || '保存权限失败');
+    } catch (err) {
+      message.error(getErrorMessage(err, '保存权限失败'));
     } finally {
       setSaving(false);
     }
@@ -259,12 +259,6 @@ export default function RolesPage() {
                       size="large"
                       icon={<EyeOutlined />}
                       onClick={() => setDetailRole(item)}
-                      style={{
-                        borderColor: 'rgba(116, 132, 154, 0.25)',
-                        color: '#415061',
-                        background: '#fff',
-                        fontWeight: 500,
-                      }}
                     >
                       详情
                     </Button>
@@ -273,13 +267,6 @@ export default function RolesPage() {
                       type="primary"
                       icon={<EditOutlined />}
                       onClick={() => openPermissionEditor(item)}
-                      style={{
-                        background: 'linear-gradient(135deg, #43c7ab 0%, #6be0c8 100%)',
-                        border: 'none',
-                        color: '#1f2a33',
-                        fontWeight: 600,
-                        boxShadow: '0 4px 12px rgba(67, 199, 171, 0.3)',
-                      }}
                     >
                       编辑权限
                     </Button>
@@ -334,7 +321,7 @@ export default function RolesPage() {
 
       <Drawer
         open={editingPermissionRole !== null}
-        width={560}
+        width={ROLE_PERMISSION_DRAWER_WIDTH}
         title={editingPermissionRole ? `编辑权限 · ${editingPermissionRole.name}` : '编辑权限'}
         onClose={() => setEditingPermissionRole(null)}
         extra={(
@@ -370,7 +357,7 @@ export default function RolesPage() {
 
       <Drawer
         open={detailRole !== null}
-        width={440}
+        width={NARROW_DETAIL_DRAWER_WIDTH}
         title={detailRole?.name || '角色详情'}
         onClose={() => setDetailRole(null)}
       >

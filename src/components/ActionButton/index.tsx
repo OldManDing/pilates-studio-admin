@@ -1,5 +1,6 @@
 import type { FC, ReactNode } from 'react';
 import { Button } from 'antd';
+import type { ButtonProps } from 'antd';
 import cls from './index.module.css';
 
 type Props = {
@@ -11,13 +12,15 @@ type Props = {
   onClick?: () => void;
   disabled?: boolean;
   loading?: boolean;
+  className?: string;
+  size?: ButtonProps['size'];
 };
 
-const ActionButton: FC<Props> = ({ children, icon, ghost, text, htmlType = 'button', onClick, disabled, loading }) => (
+const ActionButton: FC<Props> = ({ children, icon, ghost, text, htmlType = 'button', onClick, disabled, loading, className, size = 'large' }) => (
   <Button
-    className={cls.button}
+    className={className ? `${cls.button} ${className}` : cls.button}
     icon={icon}
-    size="large"
+    size={size}
     htmlType={htmlType}
     onClick={onClick}
     disabled={disabled}

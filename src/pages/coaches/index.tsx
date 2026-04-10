@@ -6,11 +6,13 @@ import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
 import StatusTag from '@/components/StatusTag';
+import { CRUD_MODAL_WIDTH, DETAIL_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import type { CoachStatus } from '@/types';
 import { coachesApi, type Coach } from '@/services/coaches';
-import type { AccentTone } from '@/types';
+import { getErrorMessage } from '@/utils/errors';
+import { getToneFromName } from '@/utils/tone';
 
 const { TextArea } = Input;
 
@@ -32,17 +34,15 @@ type CoachFormValues = {
   certificatesText: string;
 };
 
-const coachStatusOptions: CoachStatus[] = ['在职', '休假中'];
-
-const getToneFromName = (name: string): AccentTone => {
-  const tones: AccentTone[] = ['mint', 'violet', 'orange', 'pink'];
-  const charSum = name.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return tones[charSum % tones.length];
+const coachStatusLabels: Record<CoachStatus, string> = {
+  ACTIVE: '在职',
+  ON_LEAVE: '休假中',
+  INACTIVE: '停用',
 };
 
-const parseListText = (value: string) => value.split(/\n|,|，/).map((item) => item.trim()).filter(Boolean);
+const coachStatusOptions: CoachStatus[] = ['ACTIVE', 'ON_LEAVE', 'INACTIVE'];
 
-const CRUD_MODAL_WIDTH = 780;
+const parseListText = (value: string) => value.split(/\n|,|，/).map((item) => item.trim()).filter(Boolean);
 
 export default function CoachesPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -68,7 +68,7 @@ export default function CoachesPage() {
         const coachesData = await coachesApi.getAll();
         setCoachList(coachesData);
 
-        const activeCoaches = coachesData.filter(c => c.status === '在职').length;
+        const activeCoaches = coachesData.filter(c => c.status === 'ACTIVE').length;
         const avgRating = coachesData.length > 0
           ? (coachesData.reduce((sum, c) => sum + (c.rating || 0), 0) / coachesData.length).toFixed(1)
           : '0.0';
@@ -125,7 +125,7 @@ export default function CoachesPage() {
     setEditingCoach(null);
     form.setFieldsValue({
       name: '',
-      status: '在职',
+      status: 'ACTIVE',
       phone: '',
       email: '',
       experience: '',
@@ -188,8 +188,8 @@ export default function CoachesPage() {
       }
 
       closeFormModal();
-    } catch (err: any) {
-      messageApi.error(err.message || '保存失败');
+    } catch (err) {
+      messageApi.error(getErrorMessage(err, '保存失败'));
     }
   };
 
@@ -203,8 +203,8 @@ export default function CoachesPage() {
       }
 
       messageApi.success(`已删除教练 ${coach.name}`);
-    } catch (err: any) {
-      messageApi.error(err.message || '删除失败');
+    } catch (err) {
+      messageApi.error(getErrorMessage(err, '删除失败'));
     }
   };
 
@@ -217,7 +217,7 @@ export default function CoachesPage() {
           subtitle="管理教练信息、排班和绩效。"
           extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增教练</ActionButton>}
         />
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
           <Spin size="large" />
         </div>
       </div>
@@ -255,7 +255,7 @@ export default function CoachesPage() {
             size="large"
             value={statusFilter}
             className={`${pageCls.settingsInput} ${pageCls.toolbarSelect}`}
-            options={[{ label: '全部状态', value: '全部' }, ...coachStatusOptions.map((item) => ({ label: item, value: item }))]}
+            options={[{ label: '全部状态', value: '全部' }, ...coachStatusOptions.map((item) => ({ label: coachStatusLabels[item], value: item }))]}
             onChange={(value: CoachStatus | '全部') => setStatusFilter(value)}
           />
         </div>
@@ -268,9 +268,9 @@ export default function CoachesPage() {
               <div className={widgetCls.recordMeta}>
                 <MemberAvatar name={coach.name} tone={getToneFromName(coach.name)} />
                 <div>
-                  <div className={widgetCls.recordTitle} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
                     {coach.name}
-                    <StatusTag status={coach.status} />
+                    <StatusTag status={coachStatusLabels[coach.status] || coach.status} />
                   </div>
                   <div className={widgetCls.recordSub}>
                     {coach.experience || '暂无经验信息'} · 评分 {coach.rating || '-'}
@@ -293,11 +293,11 @@ export default function CoachesPage() {
       </div>
 
       {filteredCoaches.length === 0 ? (
-        <div className={`${pageCls.surface} ${widgetCls.detailCard}`} style={{ marginTop: 16 }}>
-          <div className={widgetCls.detailTitle}>暂无符合条件的教练</div>
-          <div className={widgetCls.smallText} style={{ marginTop: 8 }}>可以调整搜索词，或者切换状态筛选。</div>
-        </div>
-      ) : null}
+          <div className={`${pageCls.surface} ${widgetCls.detailCard} ${pageCls.surfaceTopSpace}`}>
+            <div className={widgetCls.detailTitle}>暂无符合条件的教练</div>
+            <div className={`${widgetCls.smallText} ${pageCls.topSpaceSm}`}>可以调整搜索词，或者切换状态筛选。</div>
+          </div>
+        ) : null}
 
       <Modal
         className={pageCls.crudModal}
@@ -319,7 +319,7 @@ export default function CoachesPage() {
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
-                <Select className={pageCls.settingsInput} options={coachStatusOptions.map((item) => ({ label: item, value: item }))} />
+                <Select className={pageCls.settingsInput} options={coachStatusOptions.map((item) => ({ label: coachStatusLabels[item], value: item }))} />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
@@ -358,7 +358,7 @@ export default function CoachesPage() {
 
       <Drawer
         open={detailCoach !== null}
-        width={480}
+        width={DETAIL_DRAWER_WIDTH}
         title={detailCoach?.name ?? '教练详情'}
         onClose={() => setDetailCoach(null)}
         extra={detailCoach ? (
@@ -371,15 +371,15 @@ export default function CoachesPage() {
         ) : null}
       >
         {detailCoach ? (
-          <div style={{ display: 'grid', gap: 20 }}>
+          <div className={pageCls.detailContentStackSpacious}>
             {/* 头部信息 */}
             <div className={widgetCls.detailOverviewPanel}>
               <div className={widgetCls.recordMeta}>
                 <MemberAvatar name={detailCoach.name} tone={getToneFromName(detailCoach.name)} />
                 <div>
-                  <div className={widgetCls.recordTitle} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
                     {detailCoach.name}
-                    <StatusTag status={detailCoach.status} />
+                    <StatusTag status={coachStatusLabels[detailCoach.status] || detailCoach.status} />
                   </div>
                   <div className={widgetCls.recordSub}>{detailCoach.email || '-'}</div>
                 </div>
@@ -391,7 +391,7 @@ export default function CoachesPage() {
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatViolet}`}>
                   <div className={widgetCls.detailInsightLabel}>状态</div>
-                  <div className={widgetCls.detailOverviewStatValue}>{detailCoach.status}</div>
+                  <div className={widgetCls.detailOverviewStatValue}>{coachStatusLabels[detailCoach.status] || detailCoach.status}</div>
                 </div>
               </div>
             </div>
@@ -406,15 +406,15 @@ export default function CoachesPage() {
             {/* 个人简介 */}
             {detailCoach.bio && (
               <div>
-                <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>个人简介</div>
-                <div style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.6 }}>{detailCoach.bio}</div>
+                <div className={`${widgetCls.smallText} ${pageCls.filterFieldLabel}`}>个人简介</div>
+                <div className={widgetCls.detailOverviewText}>{detailCoach.bio}</div>
               </div>
             )}
 
             {/* 专长领域 */}
             {detailCoach.specialties?.length ? (
               <div>
-                <div className={widgetCls.smallText} style={{ marginBottom: 10 }}>专长领域</div>
+                <div className={`${widgetCls.smallText} ${pageCls.filterFieldLabel}`}>专长领域</div>
                 <div className={widgetCls.chipRow}>
                   {detailCoach.specialties.map((item) => (
                     <span key={item.value} className={widgetCls.chip}>{item.value}</span>
@@ -426,7 +426,7 @@ export default function CoachesPage() {
             {/* 资质认证 */}
             {detailCoach.certificates?.length ? (
               <div>
-                <div className={widgetCls.smallText} style={{ marginBottom: 10 }}>资质认证</div>
+                <div className={`${widgetCls.smallText} ${pageCls.filterFieldLabel}`}>资质认证</div>
                 <div className={widgetCls.chipRow}>
                   {detailCoach.certificates.map((item) => (
                     <span key={item.value} className={widgetCls.chip}>{item.value}</span>
