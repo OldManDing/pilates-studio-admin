@@ -1,20 +1,9 @@
 import { api } from '@/utils/request';
 import type { CoachStatus } from '@/types';
 
-const coachStatusToApi: Record<CoachStatus, string> = {
-  '在职': 'ACTIVE',
-  '休假中': 'ON_LEAVE',
-};
-
-const coachStatusFromApi: Record<string, CoachStatus> = {
-  ACTIVE: '在职',
-  ON_LEAVE: '休假中',
-  INACTIVE: '休假中',
-};
-
 const mapCoach = (raw: any): Coach => ({
   ...raw,
-  status: coachStatusFromApi[raw.status] || '在职',
+  status: raw.status,
 });
 
 export interface Coach {
@@ -59,20 +48,12 @@ export const coachesApi = {
   },
 
   create: async (data: CreateCoachData) => {
-    const payload: any = { ...data };
-    if (payload.status) {
-      payload.status = coachStatusToApi[payload.status as CoachStatus] || payload.status;
-    }
-    const res = await api.post<any>('/coaches', payload);
+    const res = await api.post<any>('/coaches', data);
     return mapCoach(res);
   },
 
   update: async (id: string, data: Partial<CreateCoachData>) => {
-    const payload: any = { ...data };
-    if (payload.status) {
-      payload.status = coachStatusToApi[payload.status as CoachStatus] || payload.status;
-    }
-    const res = await api.patch<any>(`/coaches/${id}`, payload);
+    const res = await api.patch<any>(`/coaches/${id}`, data);
     return mapCoach(res);
   },
 

@@ -2,24 +2,9 @@ import { api } from '@/utils/request';
 import type { BookingStatus } from '@/types';
 import type { PaginatedResponse } from './members';
 
-const bookingStatusToApi: Record<BookingStatus, string> = {
-  '待确认': 'PENDING',
-  '已确认': 'CONFIRMED',
-  '已完成': 'COMPLETED',
-  '已取消': 'CANCELLED',
-};
-
-const bookingStatusFromApi: Record<string, BookingStatus> = {
-  PENDING: '待确认',
-  CONFIRMED: '已确认',
-  COMPLETED: '已完成',
-  CANCELLED: '已取消',
-  NO_SHOW: '已取消',
-};
-
 const mapBooking = (raw: any): Booking => ({
   ...raw,
-  status: bookingStatusFromApi[raw.status] || '待确认',
+  status: raw.status,
 });
 
 export interface Booking {
@@ -62,11 +47,7 @@ export interface CreateBookingData {
 
 export const bookingsApi = {
   getAll: async (params?: { page?: number; pageSize?: number; status?: BookingStatus; from?: string; to?: string }) => {
-    const normalized: any = { ...(params || {}) };
-    if (normalized.status) {
-      normalized.status = bookingStatusToApi[normalized.status as BookingStatus] || normalized.status;
-    }
-    const res = await api.get<PaginatedResponse<any>>('/bookings', { params: normalized });
+    const res = await api.get<PaginatedResponse<any>>('/bookings', { params: params || {} });
     return {
       ...res,
       data: (res.data || []).map(mapBooking),
@@ -84,8 +65,7 @@ export const bookingsApi = {
   },
 
   updateStatus: async (id: string, status: BookingStatus) => {
-    const mappedStatus = bookingStatusToApi[status] || status;
-    const res = await api.patch<any>(`/bookings/${id}/status`, { status: mappedStatus });
+    const res = await api.patch<any>(`/bookings/${id}/status`, { status });
     return mapBooking(res);
   },
 

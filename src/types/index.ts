@@ -7,9 +7,10 @@ export type StatItem = {
   tone?: AccentTone;
 };
 
-export type BookingStatus = '已确认' | '待确认' | '已取消' | '已完成';
-export type MemberStatus = '正常' | '待激活' | '已过期';
-export type CoachStatus = '在职' | '休假中';
+export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | 'NO_SHOW';
+export type MemberStatus = 'ACTIVE' | 'PENDING' | 'EXPIRED' | 'SUSPENDED';
+export type CoachStatus = 'ACTIVE' | 'ON_LEAVE' | 'INACTIVE';
 export type PaymentStatus = '已完成' | '处理中';
-export type TransactionStatus = 'COMPLETED' | 'PENDING' | 'REFUNDED' | 'FAILED';
-export type TransactionKind = 'PLAN_PURCHASE' | 'PLAN_RENEWAL' | 'PRIVATE_SESSION' | 'MERCHANDISE' | 'OTHER';
+export type TransactionStatus = 'COMPLETED' | 'PENDING' | 'PROCESSING' | 'REFUNDED' | 'FAILED';
+export type TransactionKind = 'MEMBERSHIP_PURCHASE' | 'MEMBERSHIP_RENEWAL' | 'CLASS_PACKAGE_PURCHASE' | 'PRIVATE_CLASS_PURCHASE' | 'REFUND' | 'ADJUSTMENT';
+export type MembershipPlanCategory = 'TIME_CARD' | 'PERIOD_CARD' | 'PRIVATE_PACKAGE';

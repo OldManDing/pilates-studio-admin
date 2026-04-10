@@ -1,22 +1,9 @@
 import { api } from '@/utils/request';
 import type { MemberStatus } from '@/types';
 
-const memberStatusToApi: Record<MemberStatus, string> = {
-  '正常': 'ACTIVE',
-  '待激活': 'PENDING',
-  '已过期': 'EXPIRED',
-};
-
-const memberStatusFromApi: Record<string, MemberStatus> = {
-  ACTIVE: '正常',
-  PENDING: '待激活',
-  EXPIRED: '已过期',
-  SUSPENDED: '已过期',
-};
-
 const mapMember = (raw: any): Member => ({
   ...raw,
-  status: memberStatusFromApi[raw.status] || '待激活',
+  status: raw.status,
 });
 
 export interface Member {
@@ -76,20 +63,12 @@ export const membersApi = {
   },
 
   create: async (data: CreateMemberData & { status?: MemberStatus }) => {
-    const payload: any = { ...data };
-    if (payload.status) {
-      payload.status = memberStatusToApi[payload.status as MemberStatus] || 'PENDING';
-    }
-    const res = await api.post<any>('/members', payload);
+    const res = await api.post<any>('/members', data);
     return mapMember(res);
   },
 
   update: async (id: string, data: UpdateMemberData) => {
-    const payload: any = { ...data };
-    if (payload.status) {
-      payload.status = memberStatusToApi[payload.status as MemberStatus] || 'PENDING';
-    }
-    const res = await api.patch<any>(`/members/${id}`, payload);
+    const res = await api.patch<any>(`/members/${id}`, data);
     return mapMember(res);
   },
 
