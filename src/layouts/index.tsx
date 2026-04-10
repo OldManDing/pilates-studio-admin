@@ -5,6 +5,7 @@ import { MenuOutlined } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import AppSidebar from '@/components/AppSidebar';
 import cls from '@/styles/layout.module.css';
+import { MOBILE_SIDEBAR_DRAWER_WIDTH } from '@/styles/dimensions';
 import { authApi, clearTokens } from '@/services/auth';
 import { getSafeRedirectPath } from '@/utils/mockAuth';
 
@@ -94,7 +95,7 @@ const AppLayout: FC<PropsWithChildren> = ({ children }) => {
         open={mobileSidebarOpen}
         onClose={() => setMobileSidebarOpen(false)}
         placement="left"
-        width={300}
+        width={MOBILE_SIDEBAR_DRAWER_WIDTH}
         className={cls.mobileDrawer}
         rootClassName={cls.mobileDrawerRoot}
         closable={false}

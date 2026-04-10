@@ -720,6 +720,10 @@
   color: var(--text-heading);
 }
 
+.detailOverviewStatValueLarge {
+  font-size: var(--font-size-xl);
+}
+
 .detailOverviewStatMint .detailOverviewStatValue {
   color: var(--mint);
 }
