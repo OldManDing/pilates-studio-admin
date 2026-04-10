@@ -15,10 +15,10 @@ export const todayCourses = [
 ];
 
 export const todayBookings: Array<{ name: string; status: BookingStatus; course: string; phone: string; tone: 'mint' | 'violet' | 'orange' | 'pink' }> = [
-  { name: '林若溪', status: '已确认', course: 'Morning Flow · 08:00', phone: '138****5612', tone: 'mint' },
-  { name: '宋知予', status: '待确认', course: 'Core Fundamentals · 10:30', phone: '139****1186', tone: 'violet' },
-  { name: '顾念', status: '已取消', course: 'Tower & Mat · 14:00', phone: '136****4721', tone: 'orange' },
-  { name: '傅轻岚', status: '已确认', course: 'Evening Stretch · 18:30', phone: '150****7843', tone: 'pink' }
+  { name: '林若溪', status: 'CONFIRMED', course: 'Morning Flow · 08:00', phone: '138****5612', tone: 'mint' },
+  { name: '宋知予', status: 'PENDING', course: 'Core Fundamentals · 10:30', phone: '139****1186', tone: 'violet' },
+  { name: '顾念', status: 'CANCELLED', course: 'Tower & Mat · 14:00', phone: '136****4721', tone: 'orange' },
+  { name: '傅轻岚', status: 'CONFIRMED', course: 'Evening Stretch · 18:30', phone: '150****7843', tone: 'pink' }
 ];
 
 export const scheduleCards = [
@@ -60,11 +60,11 @@ export const membersStats: Array<StatItem & { icon: 'team' | 'flash' | 'plus' | 
 ];
 
 export const membersTable: Array<{ key: string; name: string; phone: string; email: string; membership: string; status: MemberStatus; remaining: number; joinedAt: string; tone: 'mint' | 'violet' | 'orange' | 'pink' }> = [
-  { key: '1', name: '林若溪', phone: '138****5612', email: 'ruoxi@demo.com', membership: '年卡会员', status: '正常', remaining: 28, joinedAt: '2025-06-18', tone: 'mint' },
-  { key: '2', name: '宋知予', phone: '139****1186', email: 'zhiyu@demo.com', membership: '季度会籍', status: '待激活', remaining: 12, joinedAt: '2026-03-12', tone: 'violet' },
-  { key: '3', name: '顾念', phone: '136****4721', email: 'gunian@demo.com', membership: '月度会籍', status: '已过期', remaining: 0, joinedAt: '2025-10-08', tone: 'orange' },
-  { key: '4', name: '傅轻岚', phone: '150****7843', email: 'qinglan@demo.com', membership: '私教组合包', status: '正常', remaining: 16, joinedAt: '2025-12-19', tone: 'pink' },
-  { key: '5', name: '周听夏', phone: '137****3381', email: 'tingxia@demo.com', membership: '次卡会员', status: '正常', remaining: 7, joinedAt: '2026-01-04', tone: 'mint' }
+  { key: '1', name: '林若溪', phone: '138****5612', email: 'ruoxi@demo.com', membership: '年卡会员', status: 'ACTIVE', remaining: 28, joinedAt: '2025-06-18', tone: 'mint' },
+  { key: '2', name: '宋知予', phone: '139****1186', email: 'zhiyu@demo.com', membership: '季度会籍', status: 'PENDING', remaining: 12, joinedAt: '2026-03-12', tone: 'violet' },
+  { key: '3', name: '顾念', phone: '136****4721', email: 'gunian@demo.com', membership: '月度会籍', status: 'EXPIRED', remaining: 0, joinedAt: '2025-10-08', tone: 'orange' },
+  { key: '4', name: '傅轻岚', phone: '150****7843', email: 'qinglan@demo.com', membership: '私教组合包', status: 'ACTIVE', remaining: 16, joinedAt: '2025-12-19', tone: 'pink' },
+  { key: '5', name: '周听夏', phone: '137****3381', email: 'tingxia@demo.com', membership: '次卡会员', status: 'ACTIVE', remaining: 7, joinedAt: '2026-01-04', tone: 'mint' }
 ];
 
 export const courseStats: Array<StatItem & { icon: 'calendar' | 'app' | 'percent' | 'star' }> = [
@@ -125,10 +125,10 @@ export const bookingStats: Array<StatItem & { icon: 'calendar' | 'schedule' | 'c
 ];
 
 export const bookingList: Array<{ id: string; name: string; status: BookingStatus; code: string; course: string; time: string; coach: string; bookedAt: string; tone: 'mint' | 'violet' | 'orange' | 'pink' }> = [
-  { id: 'BKG-1032', name: '林若溪', status: '已确认', code: 'NO.1032', course: 'Morning Flow', time: '今天 08:00', coach: '李静', bookedAt: '07:12', tone: 'mint' },
-  { id: 'BKG-1033', name: '宋知予', status: '待确认', code: 'NO.1033', course: 'Core Fundamentals', time: '今天 10:30', coach: '王芳', bookedAt: '08:45', tone: 'violet' },
-  { id: 'BKG-1034', name: '顾念', status: '已取消', code: 'NO.1034', course: 'Tower & Mat', time: '今天 14:00', coach: '张敏', bookedAt: '09:03', tone: 'orange' },
-  { id: 'BKG-1035', name: '傅轻岚', status: '已完成', code: 'NO.1035', course: 'Evening Stretch', time: '今天 18:30', coach: '陈瑶', bookedAt: '09:42', tone: 'pink' }
+  { id: 'BKG-1032', name: '林若溪', status: 'CONFIRMED', code: 'NO.1032', course: 'Morning Flow', time: '今天 08:00', coach: '李静', bookedAt: '07:12', tone: 'mint' },
+  { id: 'BKG-1033', name: '宋知予', status: 'PENDING', code: 'NO.1033', course: 'Core Fundamentals', time: '今天 10:30', coach: '王芳', bookedAt: '08:45', tone: 'violet' },
+  { id: 'BKG-1034', name: '顾念', status: 'CANCELLED', code: 'NO.1034', course: 'Tower & Mat', time: '今天 14:00', coach: '张敏', bookedAt: '09:03', tone: 'orange' },
+  { id: 'BKG-1035', name: '傅轻岚', status: 'COMPLETED', code: 'NO.1035', course: 'Evening Stretch', time: '今天 18:30', coach: '陈瑶', bookedAt: '09:42', tone: 'pink' }
 ];
 
 export const coachStats: Array<StatItem & { icon: 'team' | 'star' | 'calendar' | 'heart' }> = [
@@ -140,19 +140,19 @@ export const coachStats: Array<StatItem & { icon: 'team' | 'star' | 'calendar' |
 
 export const coaches: Array<{ name: string; status: CoachStatus; experience: string; rating: string; phone: string; email: string; specialties: string[]; certificates: string[]; totalCourses: string; weeklyCourses: string; tone: 'mint' | 'violet' | 'orange' | 'pink' }> = [
   {
-    name: '李静', status: '在职', experience: '8 年经验', rating: '4.9', phone: '138-1111-0202', email: 'lijing@pilates.com',
+    name: '李静', status: 'ACTIVE', experience: '8 年经验', rating: '4.9', phone: '138-1111-0202', email: 'lijing@pilates.com',
     specialties: ['Reformer', 'Prenatal', 'Recovery'], certificates: ['BASI Pilates', 'PMA 认证'], totalCourses: '286 节', weeklyCourses: '16 节', tone: 'mint'
   },
   {
-    name: '王芳', status: '在职', experience: '6 年经验', rating: '4.8', phone: '138-2222-0202', email: 'wangfang@pilates.com',
+    name: '王芳', status: 'ACTIVE', experience: '6 年经验', rating: '4.8', phone: '138-2222-0202', email: 'wangfang@pilates.com',
     specialties: ['Mat', 'Tower', 'Chair'], certificates: ['STOTT Pilates', '运动康复训练'], totalCourses: '241 节', weeklyCourses: '14 节', tone: 'violet'
   },
   {
-    name: '张敏', status: '休假中', experience: '10 年经验', rating: '4.9', phone: '138-3333-0202', email: 'zhangmin@pilates.com',
+    name: '张敏', status: 'ON_LEAVE', experience: '10 年经验', rating: '4.9', phone: '138-3333-0202', email: 'zhangmin@pilates.com',
     specialties: ['Athletic', 'Tower', 'Reformer'], certificates: ['Peak Pilates', '功能性训练'], totalCourses: '328 节', weeklyCourses: '0 节', tone: 'orange'
   },
   {
-    name: '陈瑶', status: '在职', experience: '5 年经验', rating: '4.7', phone: '138-4444-0202', email: 'chenyao@pilates.com',
+    name: '陈瑶', status: 'ACTIVE', experience: '5 年经验', rating: '4.7', phone: '138-4444-0202', email: 'chenyao@pilates.com',
     specialties: ['Seniors', 'Mat', 'Recovery'], certificates: ['Balanced Body', '老年运动指导'], totalCourses: '214 节', weeklyCourses: '12 节', tone: 'pink'
   }
 ];

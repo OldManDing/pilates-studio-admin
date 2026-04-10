@@ -1,4 +1,4 @@
-import type { FC } from 'react';
+import type { CSSProperties, FC } from 'react';
 import cls from './index.module.css';
 
 type Props = {
@@ -9,7 +9,7 @@ type Props = {
 };
 
 const Skeleton: FC<Props> = ({ width, height, circle, className }) => {
-  const style: React.CSSProperties = {
+  const style: CSSProperties = {
     width: width ?? '100%',
     height: height ?? 16,
   };
@@ -40,6 +40,6 @@ const Card: FC<CardProps> = ({ rows = 3 }) => (
   </div>
 );
 
-Skeleton.Card = Card;
+const SkeletonWithCard = Object.assign(Skeleton, { Card });
 
-export default Skeleton;
+export default SkeletonWithCard;

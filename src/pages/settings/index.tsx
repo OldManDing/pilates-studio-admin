@@ -22,6 +22,7 @@ interface StoreInfoValues {
   city: string;
   district: string;
   address: string;
+  area?: string[];
 }
 
 type SecurityActionTitle = '修改密码' | '两步验证' | '权限管理';
@@ -57,7 +58,15 @@ const PLACEHOLDER_STORE_INFO: StoreInfoValues = {
   phone: '400-820-8899',
   email: 'hello@pilates.com',
   businessHours: '06:00-22:00',
+  province: '',
+  city: '',
+  district: '',
   address: '上海市静安区愚园路 168 号'
+};
+
+const defaultStoreInfo: StoreInfoValues = {
+  ...PLACEHOLDER_STORE_INFO,
+  area: [],
 };
 
 const securityActionsList: Array<{ title: SecurityActionTitle; description: string }> = [
@@ -545,8 +554,7 @@ export default function SettingsPage() {
             <Col span={12}>
               <Form.Item label="营业时间" name="hours" rules={[{ required: true, message: '请选择营业时间' }]}>
                 <TimePicker.RangePicker
-                  className={pageCls.settingsInput}
-                  style={{ width: '100%' }}
+                  className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`}
                   size="large"
                   format="HH:mm"
                   minuteStep={30}
@@ -561,8 +569,7 @@ export default function SettingsPage() {
             <Col span={24}>
               <Form.Item label="省市区" name="area" rules={[{ required: true, message: '请选择省市区' }]}>
                 <Cascader
-                  className={pageCls.settingsInput}
-                  style={{ width: '100%' }}
+                  className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`}
                   size="large"
                   options={provinceCityDistrictData}
                   placeholder="请选择省市区"
@@ -731,14 +738,14 @@ export default function SettingsPage() {
                     ) : (
                       <div>
                         <div className={widgetCls.recordTitle}>验证密钥</div>
-                        <div className={widgetCls.smallText} style={{ marginBottom: 12 }}>请使用验证器应用（如 Google Authenticator）扫描或手动输入以下密钥：</div>
+                        <div className={`${widgetCls.smallText} ${pageCls.bottomSpaceMd}`}>请使用验证器应用（如 Google Authenticator）扫描或手动输入以下密钥：</div>
                         <Input.TextArea
                           value={twoFactorSecret}
                           readOnly
                           rows={2}
-                          style={{ marginBottom: 16 }}
+                          className={pageCls.bottomSpaceLg}
                         />
-                        <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>输入验证器生成的 6 位验证码：</div>
+                        <div className={`${widgetCls.smallText} ${pageCls.bottomSpaceSm}`}>输入验证器生成的 6 位验证码：</div>
                         <Input
                           className={pageCls.settingsInput}
                           placeholder="6 位验证码"
@@ -746,22 +753,22 @@ export default function SettingsPage() {
                           onChange={(e) => setTwoFactorCode(e.target.value)}
                           maxLength={6}
                         />
-                        <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleSaveTwoFactor} style={{ marginTop: 16 }}>验证并开启</Button>
+                        <Button type="primary" className={`${pageCls.cardActionPrimary} ${pageCls.topSpaceLg}`} size="large" onClick={handleSaveTwoFactor}>验证并开启</Button>
                       </div>
                     )}
                   </>
                 ) : (
                   <div>
-                    <div className={widgetCls.recordTitle} style={{ color: '#52c41a', marginBottom: 8 }}>两步验证已开启</div>
-                    <div className={widgetCls.smallText} style={{ marginBottom: 16 }}>您的账号已启用两步验证保护。</div>
-                    <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>输入密码以关闭两步验证：</div>
+                    <div className={`${widgetCls.recordTitle} ${pageCls.successText} ${pageCls.bottomSpaceSm}`}>两步验证已开启</div>
+                    <div className={`${widgetCls.smallText} ${pageCls.bottomSpaceLg}`}>您的账号已启用两步验证保护。</div>
+                    <div className={`${widgetCls.smallText} ${pageCls.bottomSpaceSm}`}>输入密码以关闭两步验证：</div>
                     <Input.Password
                       className={pageCls.settingsInput}
                       placeholder="当前密码"
                       value={disablePassword}
                       onChange={(e) => setDisablePassword(e.target.value)}
                     />
-                    <Button danger className={pageCls.cardActionPrimary} size="large" onClick={handleSaveTwoFactor} style={{ marginTop: 16 }}>关闭两步验证</Button>
+                    <Button danger className={`${pageCls.cardActionPrimary} ${pageCls.topSpaceLg}`} size="large" onClick={handleSaveTwoFactor}>关闭两步验证</Button>
                   </div>
                 )}
               </div>
@@ -800,13 +807,12 @@ export default function SettingsPage() {
               <div className={pageCls.settingsDetailForm}>
                 <div>
                   <div className={`${widgetCls.smallText} ${pageCls.settingsFieldLabel}`}>导出时间范围</div>
-                  <Select
-                    value={exportRange}
-                    className={pageCls.settingsInput}
-                    style={{ width: '100%' }}
-                    options={['近 7 天', '近 30 天', '本季度'].map((item) => ({ label: item, value: item }))}
-                    onChange={setExportRange}
-                  />
+                    <Select
+                      value={exportRange}
+                      className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`}
+                      options={['近 7 天', '近 30 天', '本季度'].map((item) => ({ label: item, value: item }))}
+                      onChange={setExportRange}
+                    />
                 </div>
                 <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleExportData}>记录导出</Button>
               </div>
@@ -814,7 +820,7 @@ export default function SettingsPage() {
 
             {openDataDrawer === '数据恢复' ? (
               <div className={pageCls.settingsDetailForm}>
-                <div className={widgetCls.smallText} style={{ marginBottom: 8 }}>
+                <div className={`${widgetCls.smallText} ${pageCls.bottomSpaceSm}`}>
                   请上传之前导出的备份文件（.json 格式）。恢复操作会覆盖现有数据，请谨慎操作。
                 </div>
                 <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleRestoreData}>上传备份文件</Button>

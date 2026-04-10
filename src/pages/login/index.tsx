@@ -3,7 +3,7 @@ import { App, Form, Input } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
-import { authApi, setTokens, type LoginMfaChallenge } from '@/services/auth';
+import { authApi, setTokens, type AuthResponse, type LoginMfaChallenge } from '@/services/auth';
 import { getErrorMessage } from '@/utils/errors';
 import { getSafeRedirectPath } from '@/utils/mockAuth';
 import cls from './index.module.css';
@@ -48,7 +48,8 @@ export default function LoginPage() {
         return;
       }
 
-      setTokens(res.accessToken, res.refreshToken);
+      const authRes = res as AuthResponse;
+      setTokens(authRes.accessToken, authRes.refreshToken);
       message.success('登录成功，欢迎回来');
       navigate(redirectPath, { replace: true });
     } catch (err) {

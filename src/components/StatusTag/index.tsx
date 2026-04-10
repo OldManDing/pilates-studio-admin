@@ -1,4 +1,4 @@
-import type { FC } from 'react';
+import type { CSSProperties, FC } from 'react';
 import { Tag } from 'antd';
 
 const colorMap: Record<string, { color: string; bg: string }> = {
@@ -34,21 +34,22 @@ type Props = {
   status: string;
 };
 
+const baseTagStyle: CSSProperties = {
+  marginInlineEnd: 0,
+  borderRadius: 999,
+  paddingInline: 8,
+  lineHeight: '24px',
+  fontSize: 'var(--font-size-xs)',
+  fontWeight: 600
+};
+
 const StatusTag: FC<Props> = ({ status }) => {
   const item = colorMap[status] ?? { color: 'var(--text-secondary)', bg: 'rgba(241, 245, 249, 0.92)' };
   return (
     <Tag
       bordered={false}
-      style={{
-        marginInlineEnd: 0,
-        borderRadius: 999,
-        paddingInline: 8,
-        lineHeight: '24px',
-        color: item.color,
-        background: item.bg,
-        fontSize: 'var(--font-size-xs)',
-        fontWeight: 600
-      }}
+      // Keep the status colors inline because each tag is data-driven at runtime.
+      style={{ ...baseTagStyle, color: item.color, background: item.bg }}
     >
       {status}
     </Tag>
