@@ -79,7 +79,7 @@ export class SettingsController {
       },
     },
   })
-  async restoreData(@UploadedFile() file: Express.Multer.File) {
+  async restoreData(@UploadedFile() file: { buffer: Buffer } | undefined) {
     if (!file) {
       return { success: false, message: 'No file uploaded' };
     }

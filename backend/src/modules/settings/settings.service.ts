@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateStudioDto } from './dto/update-studio.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
+import { BookingStatus, CoachStatus, MembershipPlanCategory, NotificationChannel, TransactionKind, TransactionStatus, MemberStatus } from '../../common/enums/domain.enums';
 
 @Injectable()
 export class SettingsService {
@@ -56,7 +57,10 @@ export class SettingsService {
 
     return this.prisma.notificationSetting.update({
       where: { key: dto.key },
-      data: { enabled: dto.enabled },
+      data: {
+        enabled: dto.enabled,
+        ...(dto.channel ? { channel: dto.channel } : {}),
+      },
     });
   }
 
@@ -93,7 +97,7 @@ export class SettingsService {
       adminUsers,
     ] = await Promise.all([
       this.prisma.member.findMany({
-        include: { membershipPlan: true },
+        include: { plan: true },
       }),
       this.prisma.coach.findMany({
         include: { specialties: true, certificates: true },
@@ -147,6 +151,8 @@ export class SettingsService {
     const { data } = backupData;
 
     try {
+      this.validateBackupPayload(backupData);
+
       // Use transaction to ensure data consistency
       await this.prisma.$transaction(async (prisma) => {
         // Restore membership plans first (no dependencies)
@@ -195,7 +201,7 @@ export class SettingsService {
         // Restore members
         if (data.members?.length) {
           for (const member of data.members) {
-            const { membershipPlan, ...memberData } = member;
+            const { plan, membershipPlan, ...memberData } = member;
             await prisma.member.upsert({
               where: { id: member.id },
               update: memberData,
@@ -255,7 +261,87 @@ export class SettingsService {
 
       return { success: true, message: 'Data restored successfully' };
     } catch (error) {
-      return { success: false, message: `Restore failed: ${error.message}` };
+      const message = error instanceof Error ? error.message : 'Unknown restore error';
+      return { success: false, message: `Restore failed: ${message}` };
+    }
+  }
+
+  private validateBackupPayload(backupData: any) {
+    const { data } = backupData;
+
+    this.ensureArrayPayload(data.membershipPlans, 'membershipPlans');
+    this.ensureArrayPayload(data.coaches, 'coaches');
+    this.ensureArrayPayload(data.members, 'members');
+    this.ensureArrayPayload(data.courses, 'courses');
+    this.ensureArrayPayload(data.sessions, 'sessions');
+    this.ensureArrayPayload(data.bookings, 'bookings');
+    this.ensureArrayPayload(data.transactions, 'transactions');
+
+    data.membershipPlans?.forEach((plan: any, index: number) => {
+      this.ensureRequired(plan, ['id', 'code', 'name', 'category', 'priceCents'], `membershipPlans[${index}]`);
+      this.ensureEnumValue(plan.category, MembershipPlanCategory, `membershipPlans[${index}].category`);
+      this.ensureNumber(plan.priceCents, `membershipPlans[${index}].priceCents`);
+    });
+
+    data.coaches?.forEach((coach: any, index: number) => {
+      this.ensureRequired(coach, ['id', 'coachCode', 'name', 'phone', 'status'], `coaches[${index}]`);
+      this.ensureEnumValue(coach.status, CoachStatus, `coaches[${index}].status`);
+    });
+
+    data.members?.forEach((member: any, index: number) => {
+      this.ensureRequired(member, ['id', 'memberCode', 'name', 'phone', 'status', 'joinedAt', 'remainingCredits'], `members[${index}]`);
+      this.ensureEnumValue(member.status, MemberStatus, `members[${index}].status`);
+      this.ensureNumber(member.remainingCredits, `members[${index}].remainingCredits`);
+    });
+
+    data.courses?.forEach((course: any, index: number) => {
+      this.ensureRequired(course, ['id', 'courseCode', 'name', 'type', 'level', 'durationMinutes', 'capacity'], `courses[${index}]`);
+      this.ensureNumber(course.durationMinutes, `courses[${index}].durationMinutes`);
+      this.ensureNumber(course.capacity, `courses[${index}].capacity`);
+    });
+
+    data.sessions?.forEach((session: any, index: number) => {
+      this.ensureRequired(session, ['id', 'sessionCode', 'courseId', 'coachId', 'startsAt', 'endsAt', 'capacity', 'bookedCount'], `sessions[${index}]`);
+      this.ensureNumber(session.capacity, `sessions[${index}].capacity`);
+      this.ensureNumber(session.bookedCount, `sessions[${index}].bookedCount`);
+    });
+
+    data.bookings?.forEach((booking: any, index: number) => {
+      this.ensureRequired(booking, ['id', 'bookingCode', 'memberId', 'sessionId', 'source', 'status', 'bookedAt'], `bookings[${index}]`);
+      this.ensureEnumValue(booking.status, BookingStatus, `bookings[${index}].status`);
+    });
+
+    data.transactions?.forEach((transaction: any, index: number) => {
+      this.ensureRequired(transaction, ['id', 'transactionCode', 'kind', 'status', 'amountCents', 'happenedAt'], `transactions[${index}]`);
+      this.ensureEnumValue(transaction.kind, TransactionKind, `transactions[${index}].kind`);
+      this.ensureEnumValue(transaction.status, TransactionStatus, `transactions[${index}].status`);
+      this.ensureNumber(transaction.amountCents, `transactions[${index}].amountCents`);
+    });
+  }
+
+  private ensureArrayPayload(value: unknown, field: string) {
+    if (value !== undefined && !Array.isArray(value)) {
+      throw new BadRequestException(`${field} must be an array when provided`);
+    }
+  }
+
+  private ensureRequired(record: Record<string, any>, fields: string[], context: string) {
+    fields.forEach((field) => {
+      if (record?.[field] === undefined || record?.[field] === null || record?.[field] === '') {
+        throw new BadRequestException(`${context}.${field} is required`);
+      }
+    });
+  }
+
+  private ensureEnumValue<T extends Record<string, string>>(value: string, enumType: T, context: string) {
+    if (!Object.values(enumType).includes(value)) {
+      throw new BadRequestException(`${context} contains invalid enum value`);
+    }
+  }
+
+  private ensureNumber(value: unknown, context: string) {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+      throw new BadRequestException(`${context} must be a valid number`);
     }
   }
 }
