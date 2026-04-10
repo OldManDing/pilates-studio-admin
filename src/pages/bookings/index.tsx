@@ -1,12 +1,11 @@
-import { CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, EditOutlined, EyeOutlined, FilterOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
-import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Pagination, Popconfirm, Row, Select, Spin, message } from 'antd';
+import { CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, Col, Descriptions, Drawer, Form, Modal, Pagination, Popconfirm, Row, Select, Spin, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
 import FilterModalFooter from '@/components/FilterModalFooter';
 import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
-import StatCard from '@/components/StatCard';
 import StatusTag from '@/components/StatusTag';
 import { CRUD_MODAL_WIDTH, DETAIL_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
@@ -15,9 +14,13 @@ import { bookingStatusLabels, type BookingStatus } from '@/types';
 import { bookingsApi, type Booking } from '@/services/bookings';
 import { membersApi, type Member } from '@/services/members';
 import { courseSessionsApi, type CourseSession } from '@/services/courseSessions';
-import { reportsApi } from '@/services/reports';
 import { getErrorMessage } from '@/utils/errors';
 import { getToneFromName } from '@/utils/tone';
+import {
+  BookingHeroStats,
+  BookingListCard,
+  BookingPeriodSelector,
+} from './components';
 
 const iconMap = {
   calendar: <CalendarOutlined />,
@@ -36,8 +39,9 @@ type BookingFilterDraft = {
   status: BookingStatus | '全部';
 };
 
-const bookingStatusOptions: BookingStatus[] = ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'];
+const bookingStatusOptions: BookingStatus[] = ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
 const bookingPeriods: BookingPeriod[] = ['今天', '明天', '本周'];
+const BOOKING_QUERY_PAGE_SIZE = 200;
 
 const formatDateTime = (dateStr: string) => {
   try {
@@ -62,6 +66,52 @@ const formatTime = (dateStr: string) => {
   }
 };
 
+const formatMonthDay = (date: Date) => {
+  try {
+    return new Intl.DateTimeFormat('zh-CN', {
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date);
+  } catch {
+    return '';
+  }
+};
+
+const formatWeekday = (date: Date) => {
+  try {
+    return new Intl.DateTimeFormat('zh-CN', { weekday: 'short' }).format(date);
+  } catch {
+    return '';
+  }
+};
+
+const formatBookingDateLabel = (dateStr: string) => {
+  try {
+    const date = new Date(dateStr);
+    return `${formatMonthDay(date)} ${formatWeekday(date)}`;
+  } catch {
+    return dateStr;
+  }
+};
+
+const getBookingPeriodMeta = (period: BookingPeriod) => {
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const weekEnd = new Date(today);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+
+  if (period === '今天') {
+    return `${formatMonthDay(today)} ${formatWeekday(today)}`;
+  }
+
+  if (period === '明天') {
+    return `${formatMonthDay(tomorrow)} ${formatWeekday(tomorrow)}`;
+  }
+
+  return `${formatMonthDay(today)} - ${formatMonthDay(weekEnd)}`;
+};
+
 const getPeriodFromDate = (dateStr: string): BookingPeriod => {
   const date = new Date(dateStr);
   const now = new Date();
@@ -79,8 +129,10 @@ const getPeriodFromDate = (dateStr: string): BookingPeriod => {
 const getStatusActionLabel = (status: BookingStatus) => {
   if (status === 'PENDING') return '确认';
   if (status === 'CONFIRMED') return '签到';
-  if (status === 'COMPLETED') return '重新预约';
-  return '恢复预约';
+  if (status === 'COMPLETED') return '恢复待确认';
+  if (status === 'CANCELLED') return '恢复待确认';
+  if (status === 'NO_SHOW') return '标记待确认';
+  return '更新状态';
 };
 
 const getNextBookingStatus = (status: BookingStatus): BookingStatus => {
@@ -104,44 +156,32 @@ export default function BookingsPage() {
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [stats, setStats] = useState({
-    todayBookings: 0,
-    weeklyBookings: 0,
-    pendingConfirm: 0,
-    checkInRate: '94%',
-  });
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
-  const [total, setTotal] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+
+  const loadBookingsData = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const weekLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const [bookingsRes, membersRes, sessionsRes] = await Promise.all([
+      bookingsApi.getAll({ page: 1, pageSize: BOOKING_QUERY_PAGE_SIZE, from: today, to: weekLater }),
+      membersApi.getAll(1, 100),
+      courseSessionsApi.getUpcoming().catch(() => []),
+    ]);
+
+    setBookings(bookingsRes.data);
+    setMembers(membersRes.data);
+    setSessions(sessionsRes);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const today = new Date().toISOString().split('T')[0];
-        const weekLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-        const [bookingsRes, membersRes, sessionsRes, reportsData] = await Promise.all([
-          bookingsApi.getAll({ page: 1, pageSize: 100, from: today, to: weekLater }),
-          membersApi.getAll(1, 100),
-          courseSessionsApi.getUpcoming().catch(() => []),
-          reportsApi.getBookings(today, weekLater).catch(() => null),
-        ]);
-
-        setBookings(bookingsRes.data);
-        setTotal(bookingsRes.meta.total);
-        setMembers(membersRes.data);
-        setSessions(sessionsRes);
-
-        setStats({
-          todayBookings: bookingsRes.data.filter(b => getPeriodFromDate(b.session?.startsAt || b.bookedAt) === '今天').length,
-          weeklyBookings: bookingsRes.meta.total,
-           pendingConfirm: bookingsRes.data.filter(b => b.status === 'PENDING').length,
-          checkInRate: '94%',
-        });
+        await loadBookingsData();
       } catch (err) {
         messageApi.error('获取预约数据失败');
       } finally {
@@ -150,22 +190,6 @@ export default function BookingsPage() {
     };
     fetchData();
   }, []);
-
-  const fetchBookings = async (page = 1) => {
-    try {
-      setLoading(true);
-      const today = new Date().toISOString().split('T')[0];
-      const weekLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const res = await bookingsApi.getAll({ page, pageSize, from: today, to: weekLater });
-      setBookings(res.data);
-      setTotal(res.meta.total);
-      setCurrentPage(res.meta.page);
-    } catch (err) {
-      messageApi.error('获取预约列表失败');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filteredBookings = useMemo(() => {
     const keyword = searchValue.trim().toLowerCase();
@@ -184,12 +208,71 @@ export default function BookingsPage() {
     });
   }, [bookings, periodFilter, searchValue, statusFilter]);
 
+  const paginatedBookings = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredBookings.slice(start, start + pageSize);
+  }, [filteredBookings, currentPage, pageSize]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [periodFilter, searchValue, statusFilter]);
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredBookings.length / pageSize));
+    if (currentPage > maxPage) {
+      setCurrentPage(maxPage);
+    }
+  }, [filteredBookings.length, currentPage, pageSize]);
+
   const bookingStats = useMemo(() => [
-    { title: '今日预约', value: String(stats.todayBookings), hint: `${stats.pendingConfirm} 待确认`, tone: 'mint' as const, icon: 'calendar' as const },
-    { title: '本周预约', value: String(stats.weeklyBookings), hint: '满座率 87%', tone: 'violet' as const, icon: 'schedule' as const },
-    { title: '待确认', value: String(stats.pendingConfirm), hint: '需及时处理', tone: 'orange' as const, icon: 'clock' as const },
-    { title: '签到率', value: stats.checkInRate, hint: '↑ 2.1% vs 上周', tone: 'pink' as const, icon: 'check' as const },
-  ], [stats]);
+    {
+      key: 'today',
+      title: '今日预约',
+      value: String(bookings.filter((b) => getPeriodFromDate(b.session?.startsAt || b.bookedAt) === '今天').length),
+      hint: `${bookings.filter((b) => b.status === 'PENDING').length} 待确认`,
+      tone: 'mint' as const,
+      icon: iconMap.calendar,
+    },
+    {
+      key: 'week',
+      title: '本周预约',
+      value: String(bookings.length),
+      hint: `${bookings.filter((b) => b.status === 'CONFIRMED').length} 已确认`,
+      tone: 'violet' as const,
+      icon: iconMap.schedule,
+    },
+    {
+      key: 'pending',
+      title: '待确认',
+      value: String(bookings.filter((b) => b.status === 'PENDING').length),
+      hint: '需及时处理',
+      tone: 'orange' as const,
+      icon: iconMap.clock,
+    },
+    {
+      key: 'checkin',
+      title: '已完成',
+      value: String(bookings.filter((b) => b.status === 'COMPLETED').length),
+      hint: `${bookings.filter((b) => b.status === 'NO_SHOW').length} 未到场`,
+      tone: 'pink' as const,
+      icon: iconMap.check,
+    },
+  ], [bookings]);
+
+  const bookingPeriodItems = useMemo(() => bookingPeriods.map((period) => ({
+    value: period,
+    label: period,
+    metaText: getBookingPeriodMeta(period),
+    active: periodFilter === period,
+  })), [periodFilter]);
+
+  const bookingSelectorSubtitle = useMemo(() => {
+    if (statusFilter === '全部') {
+      return '切换预约日期，并按会员、课程或编号快速定位记录。';
+    }
+
+    return `当前正在查看${bookingStatusLabels[statusFilter]}状态的预约记录。`;
+  }, [statusFilter]);
 
   const openCreateModal = () => {
     setEditingBooking(null);
@@ -224,6 +307,9 @@ export default function BookingsPage() {
 
       if (editingBooking) {
         await bookingsApi.updateStatus(editingBooking.id, values.status);
+        if (detailBooking?.id === editingBooking.id) {
+          setDetailBooking({ ...detailBooking, status: values.status });
+        }
         messageApi.success('预约状态已更新');
       } else {
         await bookingsApi.create({
@@ -234,7 +320,7 @@ export default function BookingsPage() {
         messageApi.success('预约已创建');
       }
 
-      await fetchBookings(currentPage);
+      await loadBookingsData();
       closeFormModal();
     } catch (err) {
       messageApi.error(getErrorMessage(err, '保存失败'));
@@ -246,7 +332,7 @@ export default function BookingsPage() {
   const handleDeleteBooking = async (booking: Booking) => {
     try {
       await bookingsApi.delete(booking.id);
-      await fetchBookings(currentPage);
+      await loadBookingsData();
 
       if (detailBooking?.id === booking.id) {
         setDetailBooking(null);
@@ -262,13 +348,13 @@ export default function BookingsPage() {
     try {
       const nextStatus = getNextBookingStatus(booking.status);
       await bookingsApi.updateStatus(booking.id, nextStatus);
-      await fetchBookings(currentPage);
+      await loadBookingsData();
 
       if (detailBooking?.id === booking.id) {
         setDetailBooking({ ...detailBooking, status: nextStatus });
       }
 
-      messageApi.success(`预约 ${booking.bookingCode} 已更新为${nextStatus}`);
+        messageApi.success(`预约 ${booking.bookingCode} 已更新为${bookingStatusLabels[nextStatus]}`);
     } catch (err) {
       messageApi.error(getErrorMessage(err, '更新失败'));
     }
@@ -292,7 +378,7 @@ export default function BookingsPage() {
   };
 
   const handlePageChange = (page: number) => {
-    fetchBookings(page);
+    setCurrentPage(page);
   };
 
   if (loading && bookings.length === 0) {
@@ -320,80 +406,48 @@ export default function BookingsPage() {
         extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增预约</ActionButton>}
       />
 
-      <div className={pageCls.heroGrid}>
-        {bookingStats.map((item) => (
-          <StatCard key={item.title} {...item} icon={iconMap[item.icon]} />
-        ))}
-      </div>
+      <BookingHeroStats items={bookingStats} />
 
-      <div className={pageCls.toolbar}>
-        <div className={pageCls.toolbarLeft}>
-          <div className={pageCls.splitButtonGroup}>
-            {bookingPeriods.map((period) => {
-              const active = periodFilter === period;
-              return (
-                <Button
-                  key={period}
-                  type={active ? 'primary' : 'default'}
-                  className={`${pageCls.bookingDateTab} ${active ? pageCls.bookingDateTabActive : ''}`}
-                  onClick={() => setPeriodFilter(period)}
-                >
-                  {period}
-                </Button>
-              );
-            })}
-          </div>
-
-          <div className={pageCls.bookingSearchRow}>
-            <Input
-              className={pageCls.toolbarSearch}
-              size="large"
-              value={searchValue}
-              prefix={<SearchOutlined />}
-              placeholder="按会员、课程、编号搜索预约"
-              onChange={(event) => setSearchValue(event.target.value)}
-            />
-            <ActionButton icon={<FilterOutlined />} ghost onClick={openFilterModal}>筛选</ActionButton>
-          </div>
-        </div>
-      </div>
+      <BookingPeriodSelector
+        eyebrow="BOOKING SELECTOR"
+        title="预约日程"
+        subtitle={bookingSelectorSubtitle}
+        resultCountText={`共 ${filteredBookings.length} 条`}
+        periods={bookingPeriodItems}
+        searchValue={searchValue}
+        searchPlaceholder="按会员、课程、编号搜索预约"
+        onPeriodChange={(period) => setPeriodFilter(period as BookingPeriod)}
+        onSearchChange={setSearchValue}
+        onOpenFilter={openFilterModal}
+      />
 
       {filteredBookings.length ? (
         <>
           <div className={`${widgetCls.recordList} ${pageCls.workSection}`}>
-            {filteredBookings.map((item) => (
-              <div key={item.id} className={`${widgetCls.recordItem} ${widgetCls.workRecordItem} ${pageCls.surface}`}>
-                <div className={widgetCls.recordMeta}>
-                  <MemberAvatar name={item.member?.name || '未知'} tone={getToneFromName(item.member?.name || '未知')} />
-                  <div>
-                    <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
-                      {item.member?.name || '未知会员'}
-                      <StatusTag status={bookingStatusLabels[item.status]} />
-                    </div>
-                    <div className={widgetCls.recordSub}>{item.bookingCode}</div>
-                    <div className={widgetCls.recordSub}>{item.session?.course?.name || '未知课程'} · {formatDateTime(item.session?.startsAt || item.bookedAt)}</div>
-                  </div>
-                </div>
-
-                <div className={widgetCls.infoStack}>
-                  <div>教练：{item.session?.coach?.name || '-'}</div>
-                  <div>预约时间：{formatTime(item.bookedAt)}</div>
-                </div>
-
-                <div className={pageCls.actionRowWrap}>
-                  <Button type="primary" size="large" className={pageCls.cardActionHalf} onClick={() => handleStatusAdvance(item)}>
-                    {getStatusActionLabel(item.status)}
-                  </Button>
-                  <Button size="large" className={pageCls.cardActionHalf} onClick={() => setDetailBooking(item)}>详情</Button>
-                </div>
-              </div>
+            {paginatedBookings.map((item) => (
+              <BookingListCard
+                key={item.id}
+                memberName={item.member?.name || '未知会员'}
+                statusLabel={bookingStatusLabels[item.status]}
+                bookingCode={item.bookingCode}
+                courseName={item.session?.course?.name || '未知课程'}
+                sessionTimeText={formatTime(item.session?.startsAt || item.bookedAt)}
+                sessionDateText={formatBookingDateLabel(item.session?.startsAt || item.bookedAt)}
+                bookedAtText={formatDateTime(item.bookedAt)}
+                coachName={item.session?.coach?.name || '-'}
+                sourceText={item.source === 'ADMIN' ? '后台创建' : '小程序预约'}
+                tone={getToneFromName(item.member?.name || '未知会员')}
+                primaryActionLabel={getStatusActionLabel(item.status)}
+                onPrimaryAction={() => handleStatusAdvance(item)}
+                onViewDetail={() => setDetailBooking(item)}
+              />
             ))}
           </div>
           <div className={pageCls.centerPagination}>
             <Pagination
               current={currentPage}
               pageSize={pageSize}
-              total={total}
+               total={filteredBookings.length}
               onChange={handlePageChange}
               showSizeChanger={false}
             />
@@ -419,40 +473,52 @@ export default function BookingsPage() {
       >
         <Form form={form} className={pageCls.crudModalForm} layout="vertical">
           <Row gutter={18}>
-            <Col xs={24} md={12}>
-              <Form.Item name="memberId" label="会员" rules={[{ required: true, message: '请选择会员' }]}>
-                <Select
-                  className={pageCls.settingsInput}
-                  placeholder="选择会员"
-                  options={members.map((m) => ({ label: `${m.name} (${m.phone})`, value: m.id }))}
-                  showSearch
-                  filterOption={(input, option) =>
-                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                  }
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="sessionId" label="课程时段" rules={[{ required: true, message: '请选择课程时段' }]}>
-                <Select
-                  className={pageCls.settingsInput}
-                  placeholder="选择课程时段"
-                  options={sessions.map((s) => ({
-                    label: `${s.course?.name || '未知'} - ${formatDateTime(s.startsAt)}`,
-                    value: s.id,
-                  }))}
-                  showSearch
-                  filterOption={(input, option) =>
-                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                  }
-                />
-              </Form.Item>
-            </Col>
+            {!editingBooking ? (
+              <>
+                <Col xs={24} md={12}>
+                  <Form.Item name="memberId" label="会员" rules={[{ required: true, message: '请选择会员' }]}>
+                    <Select
+                      className={pageCls.settingsInput}
+                      placeholder="选择会员"
+                      options={members.map((m) => ({ label: `${m.name} (${m.phone})`, value: m.id }))}
+                      showSearch
+                      filterOption={(input, option) =>
+                        (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                      }
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item name="sessionId" label="课程时段" rules={[{ required: true, message: '请选择课程时段' }]}>
+                    <Select
+                      className={pageCls.settingsInput}
+                      placeholder="选择课程时段"
+                      options={sessions.map((s) => ({
+                        label: `${s.course?.name || '未知'} - ${formatDateTime(s.startsAt)}`,
+                        value: s.id,
+                      }))}
+                      showSearch
+                      filterOption={(input, option) =>
+                        (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                      }
+                    />
+                  </Form.Item>
+                </Col>
+              </>
+            ) : null}
             <Col xs={24} md={12}>
               <Form.Item name="status" label="预约状态" rules={[{ required: true, message: '请选择预约状态' }]}>
                 <Select className={pageCls.settingsInput} options={bookingStatusOptions.map((item) => ({ label: bookingStatusLabels[item], value: item }))} />
               </Form.Item>
             </Col>
+            {editingBooking ? (
+              <Col span={24}>
+                <Descriptions column={1} size="small" bordered>
+                  <Descriptions.Item label="会员">{editingBooking.member?.name || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="课程时段">{`${editingBooking.session?.course?.name || '未知课程'} · ${formatDateTime(editingBooking.session?.startsAt || editingBooking.bookedAt)}`}</Descriptions.Item>
+                </Descriptions>
+              </Col>
+            ) : null}
           </Row>
         </Form>
       </Modal>

@@ -1,0 +1,292 @@
+.bookingSelectorCard {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-5);
+}
+
+.bookingSelectorHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bookingSelectorEyebrow {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.bookingSelectorTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.bookingSelectorTitle {
+  margin: 0;
+  color: var(--text-heading);
+  font-size: var(--font-size-xl);
+  font-weight: 300;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.bookingSelectorCount {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(237, 248, 243, 0.86);
+  border: 1px solid color-mix(in srgb, var(--mint) 18%, transparent);
+  color: var(--mint);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+}
+
+.bookingSelectorSubtitle {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+}
+
+.bookingSelectorBody {
+  display: grid;
+  gap: 14px;
+}
+
+.bookingPeriodGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.bookingPeriodButton {
+  min-height: auto !important;
+  height: auto !important;
+  padding: 14px 16px !important;
+  border-radius: var(--radius-md) !important;
+  border-color: var(--border-soft) !important;
+  background: rgba(248, 250, 251, 0.92) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.bookingPeriodButton:hover {
+  border-color: color-mix(in srgb, var(--mint) 18%, transparent) !important;
+  background: rgba(250, 252, 251, 0.98) !important;
+}
+
+.bookingPeriodButtonActive,
+:global(.ant-btn-primary).bookingPeriodButtonActive,
+:global(.ant-btn-primary).bookingPeriodButtonActive:hover,
+:global(.ant-btn-primary).bookingPeriodButtonActive:focus {
+  border-color: rgba(47, 151, 131, 0.3) !important;
+  background: linear-gradient(135deg, var(--control-primary-start) 0%, var(--control-primary-end) 100%) !important;
+  box-shadow: 0 10px 22px rgba(52, 158, 136, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.bookingPeriodButtonBody {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.bookingPeriodMeta {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.bookingPeriodLabel {
+  color: var(--text-heading);
+  font-size: var(--font-size-lg);
+  font-weight: 300;
+  line-height: 1.2;
+}
+
+.bookingPeriodButtonActive .bookingPeriodMeta {
+  color: color-mix(in srgb, var(--button-text-primary) 72%, transparent);
+}
+
+.bookingPeriodButtonActive .bookingPeriodLabel {
+  color: var(--button-text-primary);
+}
+
+.bookingSelectorSearchRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.bookingSelectorSearch {
+  max-width: none;
+}
+
+.bookingRecordCard {
+  align-items: stretch;
+}
+
+.bookingRecordMain {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.bookingScheduleBlock {
+  display: flex;
+  min-width: 92px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.bookingScheduleBadge {
+  min-width: 92px;
+}
+
+.bookingScheduleDate {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bookingRecordBody {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.bookingIdentity {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bookingIdentityTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bookingIdentityCopy {
+  min-width: 0;
+}
+
+.bookingCourseTitle {
+  margin-top: 6px;
+  color: var(--text-heading);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-bold);
+  line-height: 1.35;
+}
+
+.bookingSubtext {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.bookingCodeBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(248, 250, 251, 0.9);
+  border: 1px solid var(--border-soft);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+  white-space: nowrap;
+}
+
+.bookingMetaGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.bookingMetaCard {
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(248, 250, 251, 0.84);
+  border: 1px solid var(--border-soft);
+}
+
+.bookingMetaLabel {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.bookingMetaValue {
+  margin-top: 8px;
+  color: var(--text-heading);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-bold);
+  line-height: 1.35;
+}
+
+.bookingRecordActions {
+  display: flex;
+  min-width: 220px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.bookingRecordActions :global(.ant-btn) {
+  width: 100%;
+}
+
+@media (max-width: 1200px) {
+  .bookingMetaGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 992px) {
+  .bookingSelectorSearchRow,
+  .bookingRecordMain {
+    grid-template-columns: 1fr;
+  }
+
+  .bookingPeriodGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .bookingScheduleBlock {
+    min-width: 0;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .bookingRecordActions {
+    min-width: 0;
+    width: 100%;
+  }
+}
