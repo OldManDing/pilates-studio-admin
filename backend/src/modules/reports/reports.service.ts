@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { BookingStatus, AttendanceStatus, TransactionStatus } from '../../common/enums/domain.enums';
+import { buildDateRange } from '../../common/utils/date-range';
 
 @Injectable()
 export class ReportsService {
@@ -45,7 +46,7 @@ export class ReportsService {
 
   async getBookingsReport(from: string, to: string) {
     const where = {
-      bookedAt: this.buildDateRange(from, to),
+      bookedAt: buildDateRange(from, to, 'reports.bookings'),
     };
 
     const [
@@ -77,7 +78,7 @@ export class ReportsService {
 
   async getTransactionsReport(from: string, to: string) {
     const where = {
-      happenedAt: this.buildDateRange(from, to),
+      happenedAt: buildDateRange(from, to, 'reports.transactions'),
     };
 
     const [
@@ -113,7 +114,7 @@ export class ReportsService {
 
   async getAttendanceReport(from: string, to: string) {
     const where = {
-      createdAt: this.buildDateRange(from, to),
+      createdAt: buildDateRange(from, to, 'reports.attendance'),
     };
 
     const [
@@ -141,33 +142,5 @@ export class ReportsService {
       absent,
       attendanceBySession,
     };
-  }
-
-  private buildDateRange(from: string, to: string) {
-    const fromDate = this.parseDateValue(from, false, 'from');
-    const toDate = this.parseDateValue(to, true, 'to');
-
-    if (fromDate > toDate) {
-      throw new BadRequestException('Invalid date range: from must be earlier than to');
-    }
-
-    return {
-      gte: fromDate,
-      lte: toDate,
-    };
-  }
-
-  private parseDateValue(value: string, endOfDay: boolean, fieldName: 'from' | 'to'): Date {
-    const parsed = new Date(value);
-
-    if (Number.isNaN(parsed.getTime())) {
-      throw new BadRequestException(`Invalid ${fieldName} date value: ${value}`);
-    }
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value) && endOfDay) {
-      parsed.setHours(23, 59, 59, 999);
-    }
-
-    return parsed;
   }
 }

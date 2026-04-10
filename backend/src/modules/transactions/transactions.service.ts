@@ -4,6 +4,7 @@ import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionStatusDto } from './dto/update-transaction-status.dto';
 import { TransactionStatus } from '../../common/enums/domain.enums';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
+import { buildDateRange } from '../../common/utils/date-range';
 
 @Injectable()
 export class TransactionsService {
@@ -35,16 +36,15 @@ export class TransactionsService {
   async findAll(query: PaginationDto & { memberId?: string; kind?: string; from?: string; to?: string }): Promise<PaginatedResponse<any>> {
     const page = Number(query.page) || 1;
     const pageSize = Number(query.pageSize) || 10;
-    const { memberId, kind, from, to } = query as any;
+    const { memberId, kind, from, to } = query;
     const skip = (page - 1) * pageSize;
 
     const where: any = {};
     if (memberId) where.memberId = memberId;
     if (kind) where.kind = kind;
-    if (from || to) {
-      where.happenedAt = {};
-      if (from) where.happenedAt.gte = new Date(from);
-      if (to) where.happenedAt.lte = new Date(to);
+    const happenedAtRange = buildDateRange(from, to, 'transactions.happenedAt');
+    if (happenedAtRange) {
+      where.happenedAt = happenedAtRange;
     }
 
     const [data, total] = await Promise.all([
