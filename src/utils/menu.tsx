@@ -7,7 +7,6 @@ import {
   SettingOutlined,
   TeamOutlined,
   UsergroupAddOutlined,
-  BarChartOutlined,
   WalletOutlined
 } from '@ant-design/icons';
 
@@ -27,7 +26,6 @@ export const menuItems: MenuItem[] = [
   { key: '/bookings', label: '预约管理', icon: <FundProjectionScreenOutlined />, description: '预约确认与签到' },
   { key: '/coaches', label: '教练管理', icon: <TeamOutlined />, description: '教练资料、专长与排班' },
   { key: '/finance', label: '财务报表', icon: <WalletOutlined />, description: '营收、支出与交易' },
-  { key: '/analytics', label: '数据分析', icon: <BarChartOutlined />, description: '趋势、留存与表现分析' },
   { key: '/roles', label: '角色权限', icon: <SafetyCertificateOutlined />, description: '角色分工与权限策略' },
   { key: '/settings', label: '系统设置', icon: <SettingOutlined />, description: '门店、通知与安全配置' }
 ];
