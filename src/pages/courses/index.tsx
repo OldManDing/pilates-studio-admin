@@ -1,16 +1,21 @@
-import { AppstoreOutlined, CalendarOutlined, DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, SearchOutlined, StarOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, CalendarOutlined, DeleteOutlined, EditOutlined, PlusOutlined, StarOutlined } from '@ant-design/icons';
 import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Spin, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import PageHeader from '@/components/PageHeader';
+import SectionCard from '@/components/SectionCard';
 import StatCard from '@/components/StatCard';
 import { COURSE_DETAIL_DRAWER_WIDTH, CRUD_MODAL_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
-import widgetCls from '@/styles/widgets.module.css';
 import { coursesApi, type Course } from '@/services/courses';
 import { coachesApi, type Coach } from '@/services/coaches';
 import { reportsApi } from '@/services/reports';
 import { getErrorMessage } from '@/utils/errors';
+import {
+  CourseBrowseShell,
+  CourseDetailOverviewCard,
+  type CourseListCardProps,
+} from './components';
 
 const iconMap = {
   calendar: <CalendarOutlined />,
@@ -128,6 +133,12 @@ export default function CoursesPage() {
     [courseList]
   );
 
+  const resetFilters = () => {
+    setSearchValue('');
+    setTypeFilter('全部');
+    setLevelFilter('全部');
+  };
+
   const filteredCourses = useMemo(() => {
     const keyword = searchValue.trim().toLowerCase();
 
@@ -149,6 +160,30 @@ export default function CoursesPage() {
     { title: '平均上座率', value: stats.avgOccupancy, hint: '↑ 5.3% vs 上周', tone: 'orange' as const, icon: 'percent' as const },
     { title: '最受欢迎', value: stats.popularCourse, hint: '满座率最高', tone: 'pink' as const, icon: 'star' as const },
   ], [stats]);
+
+  const courseBrowseSubtitle =
+    searchValue.trim().length > 0 || typeFilter !== '全部' || levelFilter !== '全部'
+      ? '已根据关键词、课程类型与难度缩小范围，保留全部课程维护与详情操作。'
+      : '按课程名称、课程类型与难度快速浏览课程，保持后台配置与查看路径清晰统一。';
+
+  const courseCardItems: CourseListCardProps[] = filteredCourses.map((course) => ({
+    id: course.id,
+    codeText: course.courseCode || 'COURSE',
+    name: course.name,
+    summaryText: course.isActive
+      ? '当前课程可继续用于排期与课程维护。'
+      : '当前课程已停用，仍保留基础档案与历史排期。',
+    typeLabel: course.type,
+    levelLabel: course.level,
+    statusLabel: course.isActive ? '正常开课' : '已停用',
+    statusTone: course.isActive ? 'active' : 'inactive',
+    coachName: course.coach?.name || '未安排教练',
+    durationText: `${course.durationMinutes} 分钟`,
+    capacityText: `${course.capacity} 人`,
+    sessionCountText: `已排 ${course._count?.sessions || 0} 节`,
+    onEdit: () => openEditModal(course),
+    onViewDetail: () => setDetailCourse(course),
+  }));
 
   const openCreateModal = () => {
     setEditingCourse(null);
@@ -185,10 +220,16 @@ export default function CoursesPage() {
   };
 
   const handleSaveCourse = async () => {
+    let values: CourseFormValues;
+
+    try {
+      values = await form.validateFields();
+    } catch {
+      return;
+    }
+
     try {
       setIsSaving(true);
-      const values = await form.validateFields();
-
       if (editingCourse) {
         await coursesApi.update(editingCourse.id, values);
         messageApi.success('课程信息已更新');
@@ -199,6 +240,19 @@ export default function CoursesPage() {
 
       const refreshed = await coursesApi.getAll();
       setCourseList(refreshed);
+
+      const totalCourses = refreshed.length;
+      const weeklySessions = refreshed.reduce((sum, c) => sum + (c._count?.sessions || 0), 0);
+      const popularCourse = totalCourses > 0
+        ? refreshed.reduce((max, c) => ((c._count?.sessions || 0) > (max._count?.sessions || 0) ? c : max), refreshed[0])?.name || '-'
+        : '-';
+
+      setStats((current) => ({
+        ...current,
+        totalCourses,
+        weeklySessions,
+        popularCourse,
+      }));
 
       if (detailCourse && editingCourse) {
         const updated = refreshed.find((c) => c.id === detailCourse.id) || null;
@@ -216,7 +270,21 @@ export default function CoursesPage() {
   const handleDeleteCourse = async (course: Course) => {
     try {
       await coursesApi.delete(course.id);
-      setCourseList((current) => current.filter((item) => item.id !== course.id));
+      const refreshed = await coursesApi.getAll();
+      setCourseList(refreshed);
+
+      const totalCourses = refreshed.length;
+      const weeklySessions = refreshed.reduce((sum, c) => sum + (c._count?.sessions || 0), 0);
+      const popularCourse = totalCourses > 0
+        ? refreshed.reduce((max, c) => ((c._count?.sessions || 0) > (max._count?.sessions || 0) ? c : max), refreshed[0])?.name || '-'
+        : '-';
+
+      setStats((current) => ({
+        ...current,
+        totalCourses,
+        weeklySessions,
+        popularCourse,
+      }));
 
       if (detailCourse?.id === course.id) {
         setDetailCourse(null);
@@ -259,104 +327,26 @@ export default function CoursesPage() {
         ))}
       </div>
 
-      <div className={pageCls.toolbar}>
-        <div className={pageCls.toolbarLeft}>
-          <Input
-            className={pageCls.toolbarSearch}
-            size="large"
-            value={searchValue}
-            prefix={<SearchOutlined />}
-            placeholder="按课程名称或教练搜索"
-            onChange={(event) => setSearchValue(event.target.value)}
-          />
-        </div>
-          <div className={pageCls.toolbarRight}>
-            <Select
-              value={typeFilter}
-              size="large"
-              className={pageCls.toolbarSelect}
-              options={[{ label: '全部类型', value: '全部' }, ...courseTypeOptions.map((item) => ({ label: item, value: item }))]}
-              onChange={(value: string) => setTypeFilter(value)}
-            />
-            <Select
-              value={levelFilter}
-              size="large"
-              className={pageCls.toolbarSelect}
-              options={[{ label: '全部难度', value: '全部' }, ...courseLevelOptions.map((item) => ({ label: item, value: item }))]}
-              onChange={(value: string) => setLevelFilter(value)}
-            />
-            <Button
-              size="large"
-              className={pageCls.toolbarGhostAction}
-              onClick={() => {
-                setSearchValue('');
-                setTypeFilter('全部');
-                setLevelFilter('全部');
-              }}
-            >
-              重置筛选
-            </Button>
-          </div>
-        </div>
-
-      <div className={widgetCls.courseGrid}>
-        {filteredCourses.map((course) => (
-          <div key={course.id} className={widgetCls.detailCard}>
-            <div className={widgetCls.detailHeader}>
-              <div>
-                <h3 className={widgetCls.detailTitle}>{course.name}</h3>
-                <div className={`${widgetCls.chipRow} ${pageCls.topSpaceSm}`}>
-                  <span className={widgetCls.chipPrimary}>{course.type}</span>
-                  {!course.isActive && <span className={widgetCls.chipLevel}>已停用</span>}
-                </div>
-              </div>
-              <span className={widgetCls.chipLevel}>{course.level}</span>
-            </div>
-
-            <div className={widgetCls.metricGrid}>
-              <div className={widgetCls.metricCard}>
-                <div className={widgetCls.metricLabel}>教练</div>
-                <div className={widgetCls.metricValue}>{course.coach?.name || '-'}</div>
-              </div>
-              <div className={widgetCls.metricCard}>
-                <div className={widgetCls.metricLabel}>时长</div>
-                <div className={widgetCls.metricValue}>{course.durationMinutes} 分钟</div>
-              </div>
-              <div className={widgetCls.metricCard}>
-                <div className={widgetCls.metricLabel}>容量</div>
-                <div className={widgetCls.metricValue}>{course.capacity} 人</div>
-              </div>
-            </div>
-
-            <div className={`${widgetCls.twoButtons} ${pageCls.courseCardActionGroup}`}>
-              <Button
-                type="primary"
-                size="large"
-                className={`${pageCls.cardActionPrimary} ${pageCls.courseCardActionBtn}`}
-                icon={<EditOutlined />}
-                onClick={() => openEditModal(course)}
-              >
-                编辑课程
-              </Button>
-              <Button
-                size="large"
-                className={`${pageCls.cardActionSecondary} ${pageCls.courseCardActionBtn}`}
-                icon={<EyeOutlined />}
-                onClick={() => setDetailCourse(course)}
-              >
-                查看详情
-              </Button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filteredCourses.length === 0 ? (
-        <div className={`${pageCls.surface} ${widgetCls.detailCard} ${pageCls.surfaceTopSpace}`}>
-          <div className={widgetCls.detailTitle}>暂无符合条件的课程</div>
-          <div className={`${widgetCls.smallText} ${pageCls.topSpaceSm}`}>修改搜索词或筛选条件后再试。</div>
-        </div>
-      ) : null}
+      <CourseBrowseShell
+        eyebrow="COURSE BROWSE"
+        title="课程浏览"
+        subtitle={courseBrowseSubtitle}
+        resultCountText={`共 ${filteredCourses.length} 门`}
+        searchValue={searchValue}
+        searchPlaceholder="按课程名称或教练搜索"
+        typeValue={typeFilter}
+        typeOptions={[{ label: '全部类型', value: '全部' }, ...courseTypeOptions.map((item) => ({ label: item, value: item }))]}
+        levelValue={levelFilter}
+        levelOptions={[{ label: '全部难度', value: '全部' }, ...courseLevelOptions.map((item) => ({ label: item, value: item }))]}
+        resetLabel="重置筛选"
+        emptyTitle="暂无符合条件的课程"
+        emptyDescription="修改搜索词或筛选条件后再试。"
+        courses={courseCardItems}
+        onSearchChange={setSearchValue}
+        onTypeChange={setTypeFilter}
+        onLevelChange={setLevelFilter}
+        onReset={resetFilters}
+      />
 
       <Modal
         className={pageCls.crudModal}
@@ -444,39 +434,38 @@ export default function CoursesPage() {
       >
         {detailCourse ? (
           <div className={pageCls.detailContentStack}>
-            <div className={widgetCls.detailOverviewPanel}>
-              <div className={widgetCls.detailOverviewSummary}>
-                <div className={widgetCls.recordTitle}>{detailCourse.name}</div>
-                <div className={widgetCls.chipRow}>
-                  <span className={widgetCls.chipPrimary}>{detailCourse.type}</span>
-                  <span className={widgetCls.chipLevel}>{detailCourse.level}</span>
-                </div>
-              </div>
-              <div className={widgetCls.detailOverviewStatGrid}>
-                <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatMint}`}>
-                  <div className={widgetCls.detailInsightLabel}>教练</div>
-                  <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{detailCourse.coach?.name || '-'}</div>
-                </div>
-                <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatViolet}`}>
-                  <div className={widgetCls.detailInsightLabel}>时长</div>
-                  <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{detailCourse.durationMinutes} 分钟</div>
-                </div>
-                <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatOrange}`}>
-                  <div className={widgetCls.detailInsightLabel}>容量</div>
-                  <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{detailCourse.capacity} 人</div>
-                </div>
-              </div>
-            </div>
+            <CourseDetailOverviewCard
+              eyebrow={detailCourse.courseCode || 'COURSE'}
+              name={detailCourse.name}
+              summaryText={detailCourse.isActive
+                ? `当前已排 ${detailCourse._count?.sessions || 0} 节，可继续维护课程设置与排期关系。`
+                : `课程当前已停用，保留 ${detailCourse._count?.sessions || 0} 节关联排期记录。`}
+              typeLabel={detailCourse.type}
+              levelLabel={detailCourse.level}
+              statusLabel={detailCourse.isActive ? '正常开课' : '已停用'}
+              statusTone={detailCourse.isActive ? 'active' : 'inactive'}
+              coachName={detailCourse.coach?.name || '未安排教练'}
+              durationText={`${detailCourse.durationMinutes} 分钟`}
+              capacityText={`${detailCourse.capacity} 人`}
+              sessionCountText={`已排 ${detailCourse._count?.sessions || 0} 节`}
+            />
 
-            <Descriptions column={1} size="small" bordered>
-              <Descriptions.Item label="课程名称">{detailCourse.name}</Descriptions.Item>
-              <Descriptions.Item label="课程类型">{detailCourse.type}</Descriptions.Item>
-              <Descriptions.Item label="课程难度">{detailCourse.level}</Descriptions.Item>
-              <Descriptions.Item label="授课教练">{detailCourse.coach?.name || '-'}</Descriptions.Item>
-              <Descriptions.Item label="课程时长">{detailCourse.durationMinutes} 分钟</Descriptions.Item>
-              <Descriptions.Item label="课程容量">{detailCourse.capacity} 人</Descriptions.Item>
-              <Descriptions.Item label="课程状态">{detailCourse.isActive ? '正常' : '已停用'}</Descriptions.Item>
-            </Descriptions>
+            <SectionCard
+              title="课程档案"
+              subtitle="保留后台管理所需的核心字段，便于核对课程基础配置与当前启用状态。"
+            >
+              <Descriptions column={1} size="small" bordered>
+                <Descriptions.Item label="课程编号">{detailCourse.courseCode || '-'}</Descriptions.Item>
+                <Descriptions.Item label="课程名称">{detailCourse.name}</Descriptions.Item>
+                <Descriptions.Item label="课程类型">{detailCourse.type}</Descriptions.Item>
+                <Descriptions.Item label="课程难度">{detailCourse.level}</Descriptions.Item>
+                <Descriptions.Item label="授课教练">{detailCourse.coach?.name || '-'}</Descriptions.Item>
+                <Descriptions.Item label="课程时长">{detailCourse.durationMinutes} 分钟</Descriptions.Item>
+                <Descriptions.Item label="课程容量">{detailCourse.capacity} 人</Descriptions.Item>
+                <Descriptions.Item label="已排课时">{detailCourse._count?.sessions || 0} 节</Descriptions.Item>
+                <Descriptions.Item label="课程状态">{detailCourse.isActive ? '正常' : '已停用'}</Descriptions.Item>
+              </Descriptions>
+            </SectionCard>
           </div>
         ) : null}
       </Drawer>
