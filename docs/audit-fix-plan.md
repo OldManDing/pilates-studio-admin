@@ -65,6 +65,7 @@
 - **P2：完成**（高价值收敛项与可验证尾项已全部关闭，剩余仅属于后续增强而非当前缺陷）
 - **P3：完成**（已完成共享 modal/drawer 尺寸常量、详情统计字号样式、full-width 控件、筛选弹窗 footer 模板统一，以及 dashboard loading 模板统一）
 - **P4：完成**（仓库卫生与展示层低风险尾项已收口：根目录临时截图清理、脚本归位、finance/settings inline style 收敛、StatusTag 静态样式提取）
+- **P5：完成**（已建立并跑通前后端验证基线：前端 lint/format/typecheck/build、10 页 smoke tests、backend 16 个 spec / 97 tests、auth-member-booking e2e、coverage 命令）
 
 ## P3 / 细化收尾轮（本轮完成项）
 
@@ -99,15 +100,71 @@
 - 对 `StatusTag` 而言，保留动态 `color/background` inline style 是合理实现，不建议为了“零 inline style”而过度工程化
 - `test-api.ps1` 已归位到 `scripts/test-api.ps1`，根目录开发期脚本边界已进一步收敛
 
+## P5 / 验证与规范强化轮（本轮完成项）
+
+### 已完成
+
+- 建立前端最小质量基线：`lint`、`format`、`typecheck`、`build`
+- 建立前端 smoke 测试基础：`vitest.config.ts` + `smoke-tests/setup.ts`
+- 新增并跑通 10 个前端 smoke 页面：
+  - `login`
+  - `dashboard`
+  - `members`
+  - `courses`
+  - `bookings`
+  - `coaches`
+  - `finance`
+  - `analytics`
+  - `roles`
+  - `settings`
+- 建立 backend lint / test / build 可运行基线
+- 新增 backend `test:cov`
+- 新增并跑通 backend service/controller/e2e 测试，当前已覆盖：
+  - `auth.service`
+  - `auth.controller`
+  - `admins.service`
+  - `members.service`
+  - `members.controller`
+  - `bookings.service`
+  - `bookings.controller`
+  - `coaches.service`
+  - `courses.service`
+  - `course-sessions.service`
+  - `transactions.service`
+  - `reports.service`
+  - `roles.service`
+  - `settings.service`
+  - `attendance.service`
+  - `membership-plans.service`
+- 新增并跑通 backend 集成链：`auth-member-booking.e2e-spec.ts`
+
+### 当前验证基线
+
+- frontend smoke tests：通过
+- frontend lint：可运行
+- frontend format：通过
+- frontend typecheck：通过
+- frontend build：通过
+- backend lint：可运行
+- backend unit tests：通过
+- backend e2e：通过
+- backend build：通过
+
+### 说明
+
+- Oracle 复核结论认为：当前 P5 已达到“**完成**”状态
+- `mini-users` 当前只有空模块，没有 service/controller/DTO 或业务逻辑，因此属于**未来功能范围**，不构成 P5 阶段未完成项
+- 后续若继续推进，应进入新的功能/质量阶段，而不是继续把 P5 当作未收口任务
+
 ## 建议下一步
 
-如果继续推进，建议进入 **P5 / 验证与规范强化轮**，优先级如下：
+如果继续推进，建议进入 **P6 / 功能扩展与更高质量门禁轮**，优先级如下：
 
-1. 为核心前端链路补最小 smoke / e2e 验证
-2. 继续统一 modal / drawer / filter 交互模板
-3. 系统性整理 token 与页面视觉规范
-4. 为前端引入最小 lint / format 约束或等价检查
-5. 继续清理仓库目录卫生与开发期脚本边界
+1. 真正实现 `mini-users` 模块（service / controller / DTO / member linking）
+2. 真正实现 `analytics` 模块的 backend 聚合接口
+3. 真正实现 `notifications` 模块能力
+4. 继续提高 backend 覆盖率，特别是 `auth`、`course-sessions` 更深分支
+5. 引入更强的质量门禁，例如 CI、覆盖率门槛、更多 integration / contract tests
 
 ## 建议分工（更新后）
 
