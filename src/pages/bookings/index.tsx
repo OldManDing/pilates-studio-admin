@@ -3,6 +3,7 @@ import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Pagination, Popc
 import { useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
+import FilterModalFooter from '@/components/FilterModalFooter';
 import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
@@ -10,7 +11,7 @@ import StatusTag from '@/components/StatusTag';
 import { CRUD_MODAL_WIDTH, DETAIL_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
-import type { BookingStatus } from '@/types';
+import { bookingStatusLabels, type BookingStatus } from '@/types';
 import { bookingsApi, type Booking } from '@/services/bookings';
 import { membersApi, type Member } from '@/services/members';
 import { courseSessionsApi, type CourseSession } from '@/services/courseSessions';
@@ -35,7 +36,7 @@ type BookingFilterDraft = {
   status: BookingStatus | '全部';
 };
 
-const bookingStatusOptions: BookingStatus[] = ['待确认', '已确认', '已完成', '已取消'];
+const bookingStatusOptions: BookingStatus[] = ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'];
 const bookingPeriods: BookingPeriod[] = ['今天', '明天', '本周'];
 
 const formatDateTime = (dateStr: string) => {
@@ -76,16 +77,16 @@ const getPeriodFromDate = (dateStr: string): BookingPeriod => {
 };
 
 const getStatusActionLabel = (status: BookingStatus) => {
-  if (status === '待确认') return '确认';
-  if (status === '已确认') return '签到';
-  if (status === '已完成') return '重新预约';
+  if (status === 'PENDING') return '确认';
+  if (status === 'CONFIRMED') return '签到';
+  if (status === 'COMPLETED') return '重新预约';
   return '恢复预约';
 };
 
 const getNextBookingStatus = (status: BookingStatus): BookingStatus => {
-  if (status === '待确认') return '已确认';
-  if (status === '已确认') return '已完成';
-  return '待确认';
+  if (status === 'PENDING') return 'CONFIRMED';
+  if (status === 'CONFIRMED') return 'COMPLETED';
+  return 'PENDING';
 };
 
 export default function BookingsPage() {
@@ -138,7 +139,7 @@ export default function BookingsPage() {
         setStats({
           todayBookings: bookingsRes.data.filter(b => getPeriodFromDate(b.session?.startsAt || b.bookedAt) === '今天').length,
           weeklyBookings: bookingsRes.meta.total,
-          pendingConfirm: bookingsRes.data.filter(b => b.status === '待确认').length,
+           pendingConfirm: bookingsRes.data.filter(b => b.status === 'PENDING').length,
           checkInRate: '94%',
         });
       } catch (err) {
@@ -195,7 +196,7 @@ export default function BookingsPage() {
     form.setFieldsValue({
       memberId: undefined,
       sessionId: undefined,
-      status: '待确认',
+      status: 'PENDING',
     });
     setIsFormOpen(true);
   };
@@ -367,7 +368,7 @@ export default function BookingsPage() {
                   <div>
                     <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
                       {item.member?.name || '未知会员'}
-                      <StatusTag status={item.status} />
+                      <StatusTag status={bookingStatusLabels[item.status]} />
                     </div>
                     <div className={widgetCls.recordSub}>{item.bookingCode}</div>
                     <div className={widgetCls.recordSub}>{item.session?.course?.name || '未知课程'} · {formatDateTime(item.session?.startsAt || item.bookedAt)}</div>
@@ -464,11 +465,7 @@ export default function BookingsPage() {
         okText="应用筛选"
         cancelText="取消"
         destroyOnHidden
-        footer={[
-          <Button key="reset" onClick={resetFilters}>重置</Button>,
-          <Button key="cancel" onClick={() => setIsFilterOpen(false)}>取消</Button>,
-          <Button key="submit" type="primary" onClick={applyFilters}>应用筛选</Button>
-        ]}
+        footer={<FilterModalFooter onReset={resetFilters} onCancel={() => setIsFilterOpen(false)} onApply={applyFilters} />}
       >
         <div className={pageCls.filterModalBody}>
           <div>
@@ -506,7 +503,7 @@ export default function BookingsPage() {
                   <div>
                     <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
                       {detailBooking.member?.name || '未知会员'}
-                      <StatusTag status={bookingStatusLabels[detailBooking.status] || detailBooking.status} />
+                      <StatusTag status={bookingStatusLabels[detailBooking.status]} />
                     </div>
                   <div className={widgetCls.recordSub}>{detailBooking.bookingCode}</div>
                   <div className={widgetCls.recordSub}>{detailBooking.session?.course?.name || '未知课程'} · {formatDateTime(detailBooking.session?.startsAt || detailBooking.bookedAt)}</div>
@@ -536,7 +533,7 @@ export default function BookingsPage() {
               <Descriptions.Item label="授课教练">{detailBooking.session?.coach?.name || '-'}</Descriptions.Item>
               <Descriptions.Item label="上课时间">{formatDateTime(detailBooking.session?.startsAt || detailBooking.bookedAt)}</Descriptions.Item>
               <Descriptions.Item label="预约时间">{formatDateTime(detailBooking.bookedAt)}</Descriptions.Item>
-              <Descriptions.Item label="状态">{bookingStatusLabels[detailBooking.status] || detailBooking.status}</Descriptions.Item>
+              <Descriptions.Item label="状态">{bookingStatusLabels[detailBooking.status]}</Descriptions.Item>
             </Descriptions>
           </div>
         ) : null}

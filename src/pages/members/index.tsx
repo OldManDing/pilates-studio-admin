@@ -3,6 +3,7 @@ import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Pag
 import { useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
+import FilterModalFooter from '@/components/FilterModalFooter';
 import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
@@ -10,7 +11,7 @@ import StatusTag from '@/components/StatusTag';
 import { CRUD_MODAL_WIDTH, NARROW_DETAIL_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
-import type { MemberStatus } from '@/types';
+import { memberStatusLabels, type MemberStatus } from '@/types';
 import { membersApi, type Member } from '@/services/members';
 import { membershipPlansApi, type MembershipPlan } from '@/services/membershipPlans';
 import { reportsApi } from '@/services/reports';
@@ -38,7 +39,7 @@ type MemberFilterDraft = {
   planId: string;
 };
 
-const memberStatusOptions: MemberStatus[] = ['正常', '待激活', '已过期'];
+const memberStatusOptions: MemberStatus[] = ['ACTIVE', 'PENDING', 'EXPIRED'];
 
 export default function MembersPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -152,7 +153,7 @@ export default function MembersPage() {
       phone: '',
       email: '',
       planId: undefined,
-      status: '正常',
+      status: 'ACTIVE',
       remainingCredits: 0,
     });
     setIsFormOpen(true);
@@ -335,7 +336,7 @@ export default function MembersPage() {
                   <div className={pageCls.memberRecordHead}>
                     <div className={pageCls.memberRecordNameRow}>
                       <span className={pageCls.membersName}>{member.name}</span>
-                      <StatusTag status={member.status} />
+                      <StatusTag status={memberStatusLabels[member.status]} />
                     </div>
                     <div className={widgetCls.recordSub}>{member.phone}</div>
                     <div className={pageCls.membersSubtext}>{member.email || '-'}</div>
@@ -421,10 +422,10 @@ export default function MembersPage() {
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="status" label="会籍状态" rules={[{ required: true, message: '请选择会籍状态' }]}>
-                <Select
-                  className={pageCls.settingsInput}
-                  options={memberStatusOptions.map((item) => ({ label: item, value: item }))}
-                />
+                 <Select
+                   className={pageCls.settingsInput}
+                   options={memberStatusOptions.map((item) => ({ label: memberStatusLabels[item], value: item }))}
+                 />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
@@ -444,11 +445,7 @@ export default function MembersPage() {
         okText="应用筛选"
         cancelText="取消"
         destroyOnHidden
-        footer={[
-          <Button key="reset" onClick={resetFilters}>重置</Button>,
-          <Button key="cancel" onClick={() => setIsFilterOpen(false)}>取消</Button>,
-          <Button key="submit" type="primary" onClick={applyFilters}>应用筛选</Button>
-        ]}
+        footer={<FilterModalFooter onReset={resetFilters} onCancel={() => setIsFilterOpen(false)} onApply={applyFilters} />}
       >
         <div className={pageCls.filterModalBody}>
           <div>
@@ -494,7 +491,7 @@ export default function MembersPage() {
                 <div>
                   <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
                     {detailMember.name}
-                    <StatusTag status={detailMember.status} />
+                     <StatusTag status={memberStatusLabels[detailMember.status]} />
                   </div>
                   <div className={widgetCls.recordSub}>{detailMember.phone}</div>
                   <div className={widgetCls.recordSub}>{detailMember.email || '-'}</div>
@@ -521,7 +518,7 @@ export default function MembersPage() {
               <Descriptions.Item label="手机号">{detailMember.phone}</Descriptions.Item>
               <Descriptions.Item label="邮箱">{detailMember.email || '-'}</Descriptions.Item>
               <Descriptions.Item label="会籍类型">{detailMember.plan?.name || '-'}</Descriptions.Item>
-              <Descriptions.Item label="会籍状态">{detailMember.status}</Descriptions.Item>
+               <Descriptions.Item label="会籍状态">{memberStatusLabels[detailMember.status]}</Descriptions.Item>
               <Descriptions.Item label="剩余课时">{detailMember.remainingCredits} 节</Descriptions.Item>
               <Descriptions.Item label="加入日期">{formatDate(detailMember.joinedAt)}</Descriptions.Item>
             </Descriptions>

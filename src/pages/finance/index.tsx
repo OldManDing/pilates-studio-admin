@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import ActionButton from '@/components/ActionButton';
 import { createChartTooltip } from '@/components/ChartTooltip';
+import FilterModalFooter from '@/components/FilterModalFooter';
 import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
@@ -560,7 +561,7 @@ export default function FinancePage() {
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="amount" label="交易金额（元）" rules={[{ required: true, message: '请输入交易金额' }]}>
-                <InputNumber className={pageCls.settingsInput} style={{ width: '100%' }} min={0} precision={2} />
+                <InputNumber className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`} min={0} precision={2} />
               </Form.Item>
             </Col>
             <Col xs={24}>
@@ -580,19 +581,14 @@ export default function FinancePage() {
         okText="应用筛选"
         cancelText="取消"
         destroyOnHidden
-        footer={[
-          <Button key="reset" onClick={resetFilters}>重置</Button>,
-          <Button key="cancel" onClick={() => setIsFilterOpen(false)}>取消</Button>,
-          <Button key="submit" type="primary" onClick={applyFilters}>应用筛选</Button>
-        ]}
+        footer={<FilterModalFooter onReset={resetFilters} onCancel={() => setIsFilterOpen(false)} onApply={applyFilters} />}
       >
         <div className={pageCls.filterModalBody}>
           <div>
             <div className={`${widgetCls.smallText} ${pageCls.filterFieldLabel}`}>交易状态</div>
             <Select
               value={filterDraft.status}
-              className={pageCls.settingsInput}
-              style={{ width: '100%' }}
+              className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`}
               options={[{ label: '全部状态', value: '全部' }, ...transactionStatusOptions]}
               onChange={(value: string) => setFilterDraft((current) => ({ ...current, status: value }))}
             />
@@ -601,8 +597,7 @@ export default function FinancePage() {
             <div className={`${widgetCls.smallText} ${pageCls.filterFieldLabel}`}>交易类型</div>
             <Select
               value={filterDraft.kind}
-              className={pageCls.settingsInput}
-              style={{ width: '100%' }}
+              className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`}
               options={[{ label: '全部类型', value: '全部' }, ...transactionKindOptions]}
               onChange={(value: string) => setFilterDraft((current) => ({ ...current, kind: value }))}
             />
