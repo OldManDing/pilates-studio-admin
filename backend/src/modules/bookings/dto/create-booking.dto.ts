@@ -1,15 +1,15 @@
-import { IsString, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BookingSource } from '../../../common/enums/domain.enums';
 
 export class CreateBookingDto {
   @ApiPropertyOptional({ description: 'Member ID (optional for mini-program self booking)' })
   @IsOptional()
-  @IsString()
+  @IsUUID()
   memberId?: string;
 
   @ApiProperty({ description: 'Course Session ID' })
-  @IsString()
+  @IsUUID()
   sessionId: string;
 
   @ApiPropertyOptional({ enum: BookingSource, default: BookingSource.ADMIN })

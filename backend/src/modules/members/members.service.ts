@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   ConflictException,
@@ -150,11 +151,16 @@ export class MembersService {
 
   async adjustCredits(id: string, amount: number) {
     const member = await this.findOne(id);
+    const nextCredits = member.remainingCredits + amount;
+
+    if (nextCredits < 0) {
+      throw new BadRequestException('Remaining credits cannot be negative');
+    }
 
     return this.prisma.member.update({
       where: { id },
       data: {
-        remainingCredits: member.remainingCredits + amount,
+        remainingCredits: nextCredits,
       },
       include: {
         plan: true,

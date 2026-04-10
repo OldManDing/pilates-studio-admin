@@ -1,16 +1,16 @@
-import { IsString, IsOptional, IsEnum, IsInt, Min } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsInt, Min, Max, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TransactionKind } from '../../../common/enums/domain.enums';
 
 export class CreateTransactionDto {
   @ApiPropertyOptional({ description: 'Member ID' })
   @IsOptional()
-  @IsString()
+  @IsUUID()
   memberId?: string;
 
   @ApiPropertyOptional({ description: 'Membership Plan ID' })
   @IsOptional()
-  @IsString()
+  @IsUUID()
   planId?: string;
 
   @ApiProperty({ enum: TransactionKind })
@@ -20,6 +20,7 @@ export class CreateTransactionDto {
   @ApiProperty({ description: 'Amount in cents', example: 198000 })
   @IsInt()
   @Min(0)
+  @Max(100000000)
   amountCents: number;
 
   @ApiPropertyOptional()
