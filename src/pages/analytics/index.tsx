@@ -8,10 +8,9 @@ import StatCard from '@/components/StatCard';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import { reportsApi } from '@/services/reports';
+import { getErrorMessage } from '@/utils/errors';
+import { axisTick, chartGrid } from '@/utils/chartTheme';
 import { useIsMobile } from '@/utils/useResponsive';
-
-const chartGrid = 'rgba(148, 163, 184, 0.14)';
-const axisTick = { fill: '#6f8198', fontSize: 12, fontWeight: 600 };
 
 const iconMap = {
   target: <RiseOutlined />,
@@ -33,8 +32,6 @@ export default function AnalyticsPage() {
     satisfaction: '-',
   });
   const [coursePopularity, setCoursePopularity] = useState<ChartPoint[]>([]);
-  const [bookingDistribution, setBookingDistribution] = useState<ChartPoint[]>([]);
-  const [retentionTrend, setRetentionTrend] = useState<Array<{ month: string; retained: number; newUsers: number; churn: number }>>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -71,29 +68,8 @@ export default function AnalyticsPage() {
           value: item._count?.id || 0,
         }));
         setCoursePopularity(popularity.length ? popularity : [{ label: '暂无', value: 0 }]);
-
-        const distribution = [
-          { label: '上午', value: Math.round(totalBookings * 0.32) },
-          { label: '中午', value: Math.round(totalBookings * 0.18) },
-          { label: '下午', value: Math.round(totalBookings * 0.24) },
-          { label: '晚间', value: Math.max(0, totalBookings - Math.round(totalBookings * 0.32) - Math.round(totalBookings * 0.18) - Math.round(totalBookings * 0.24)) },
-        ];
-        setBookingDistribution(distribution);
-
-        const trend = Array.from({ length: 6 }).map((_, idx) => {
-          const monthDate = new Date(new Date().getFullYear(), new Date().getMonth() - (5 - idx), 1);
-          const base = Math.max(1, Math.round(activeMembers * ((idx + 1) / 6)));
-          const add = Math.max(0, Math.round(membersReport.newMembersThisMonth * ((idx + 1) / 6)));
-          return {
-            month: `${monthDate.getMonth() + 1}月`,
-            retained: base,
-            newUsers: add,
-            churn: Math.max(0, Math.round(add * 0.22)),
-          };
-        });
-        setRetentionTrend(trend);
-      } catch (err: any) {
-        messageApi.error(err.message || '加载数据失败，请稍后重试');
+      } catch (err) {
+        messageApi.error(getErrorMessage(err, '加载数据失败，请稍后重试'));
       } finally {
         setLoading(false);
       }
@@ -107,7 +83,7 @@ export default function AnalyticsPage() {
       { title: '目标达成率', value: stats.goalAchievement, hint: '基于活跃会员占比', tone: 'mint' as const, icon: 'target' as const },
       { title: '会员留存率', value: stats.retentionRate, hint: '活跃/总会员', tone: 'violet' as const, icon: 'retention' as const },
       { title: '平均上座率', value: stats.avgOccupancy, hint: '确认预约占比', tone: 'orange' as const, icon: 'seat' as const },
-      { title: '整体满意度', value: stats.satisfaction, hint: '暂以问卷基线展示', tone: 'pink' as const, icon: 'smile' as const },
+      { title: '整体满意度', value: stats.satisfaction, hint: '待接入问卷或评价数据', tone: 'pink' as const, icon: 'smile' as const },
     ],
     [stats]
   );
@@ -147,49 +123,18 @@ export default function AnalyticsPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="预约时段分布" subtitle="按日内时段聚合预约分布">
-          <div className={pageCls.chartPanel}>
-            <ResponsiveContainer>
-              <LineChart data={bookingDistribution}>
-                <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
-                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={axisTick} />
-                <YAxis axisLine={false} tickLine={false} tick={axisTick} />
-                <Tooltip />
-                <Line type="monotone" dataKey="value" stroke="#ffb760" strokeWidth={3.2} dot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} />
-              </LineChart>
-            </ResponsiveContainer>
+        <SectionCard title="预约时段分布" subtitle="待接入真实时段聚合接口后展示">
+          <div className={pageCls.chartPanelEmpty}>
+            <div className={widgetCls.detailOverviewLead}>暂无真实预约时段分布数据</div>
+            <div className={widgetCls.detailOverviewText}>当前版本不再展示按比例估算的上午 / 中午 / 下午 / 晚间分布，避免误导运营判断。</div>
           </div>
         </SectionCard>
       </div>
 
-      <SectionCard title="会员留存趋势" subtitle="新增、留存与流失趋势（估算）">
-        <div className={pageCls.chartPanel}>
-          <ResponsiveContainer>
-            <LineChart data={retentionTrend}>
-              <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={axisTick} />
-              <YAxis axisLine={false} tickLine={false} tick={axisTick} />
-              <Tooltip />
-              <Line type="monotone" dataKey="retained" stroke="#8b7cff" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 5 }} />
-              <Line type="monotone" dataKey="newUsers" stroke="#43c7ab" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 5 }} />
-              <Line type="monotone" dataKey="churn" stroke="#ff8da8" strokeWidth={2.5} strokeDasharray="6 6" dot={{ r: 0 }} activeDot={{ r: 5 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className={pageCls.fourCol}>
-          {retentionTrend.map((item) => {
-            const total = item.retained + item.newUsers;
-            const retainRatio = total > 0 ? Number(((item.retained / total) * 100).toFixed(1)) : 0;
-            return (
-              <div key={item.month} className={widgetCls.metricCard}>
-                <div className={widgetCls.metricLabel}>{item.month}</div>
-                <div className={widgetCls.smallText}>留存 {item.retained} / 新增 {item.newUsers}</div>
-                <div className={widgetCls.metricValue}>{retainRatio}%</div>
-                <Progress percent={retainRatio} showInfo={false} strokeColor="#43c7ab" />
-              </div>
-            );
-          })}
+      <SectionCard title="会员留存趋势" subtitle="待接入真实历史留存、流失与新增指标后展示">
+        <div className={pageCls.chartPanelEmpty}>
+          <div className={widgetCls.detailOverviewLead}>暂无真实会员留存趋势数据</div>
+          <div className={widgetCls.detailOverviewText}>原先基于当前活跃会员和本月新增会员按比例推导的趋势已移除，避免把估算值展示成真实经营指标。</div>
         </div>
       </SectionCard>
     </div>

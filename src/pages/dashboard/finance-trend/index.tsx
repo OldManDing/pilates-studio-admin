@@ -1,6 +1,6 @@
 import { LineChartOutlined, PieChartOutlined, WalletOutlined } from '@ant-design/icons';
 import { Button, Spin, message } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
@@ -14,8 +14,10 @@ import { reportsApi } from '@/services/reports';
 import { transactionsApi, type Transaction } from '@/services/transactions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
+import { getErrorMessage } from '@/utils/errors';
 import { formatCurrency, formatPercent } from '@/utils/format';
 import { useIsMobile } from '@/utils/useResponsive';
+import { chartGrid } from '@/utils/chartTheme';
 
 const iconMap = {
   wallet: <WalletOutlined />,
@@ -25,16 +27,17 @@ const iconMap = {
 };
 
 const kindLabelMap: Record<string, string> = {
-  PLAN_PURCHASE: '会籍购买',
-  PLAN_RENEWAL: '会籍续费',
-  PRIVATE_SESSION: '私教课程',
-  MERCHANDISE: '课程套餐',
-  OTHER: '其他',
+  MEMBERSHIP_PURCHASE: '会籍购买',
+  MEMBERSHIP_RENEWAL: '会籍续费',
+  CLASS_PACKAGE_PURCHASE: '课程套餐',
+  PRIVATE_CLASS_PURCHASE: '私教课程',
+  REFUND: '退款',
+  ADJUSTMENT: '调整',
 };
 
 const DashboardFinanceTrendTooltip = createChartTooltip({
-  labelMap: { revenue: '营收', profit: '利润' },
-  valueFormatter: (value) => (typeof value === 'number' ? formatCurrency(value * 100) : value),
+  labelMap: { revenue: '营收' },
+  valueFormatter: (value) => (typeof value === 'number' ? formatCurrency(value) : value),
 });
 
 const DashboardFinanceStructureTooltip = createChartTooltip({
@@ -51,7 +54,7 @@ export default function DashboardFinanceTrendPage() {
 
   const [loading, setLoading] = useState(true);
   const [financeStats, setFinanceStats] = useState<Array<{ title: string; value: string; hint: string; tone: 'mint' | 'violet' | 'orange' | 'pink'; icon: 'wallet' | 'pay' | 'line' | 'pie' }>>([]);
-  const [financeBar, setFinanceBar] = useState<Array<{ month: string; revenue: number; profit: number }>>([]);
+  const [financeBar, setFinanceBar] = useState<Array<{ month: string; revenue: number }>>([]);
   const [revenueStructure, setRevenueStructure] = useState<Array<{ name: string; value: number; fill: string }>>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
@@ -80,34 +83,33 @@ export default function DashboardFinanceTrendPage() {
           { title: '退款占比', value: totalRevenue ? `${((refunded / totalRevenue) * 100).toFixed(1)}%` : '0%', hint: '退款监控', tone: 'pink', icon: 'pie' },
         ]);
 
-        const monthlyMap: Record<string, { revenue: number; profit: number }> = {};
+        const monthlyMap: Record<string, { revenue: number }> = {};
         for (let i = 6; i >= 0; i--) {
           const d = new Date();
           d.setMonth(d.getMonth() - i);
-          monthlyMap[`${d.getMonth() + 1}月`] = { revenue: 0, profit: 0 };
+          monthlyMap[`${d.getMonth() + 1}月`] = { revenue: 0 };
         }
         (txList.data || []).forEach((tx) => {
           const key = `${new Date(tx.happenedAt).getMonth() + 1}月`;
           if (monthlyMap[key]) {
             const amount = (tx.amountCents || 0) / 100;
             monthlyMap[key].revenue += amount;
-            monthlyMap[key].profit += amount * 0.62;
           }
         });
         setFinanceBar(
           Object.entries(monthlyMap).map(([month, values]) => ({
             month,
             revenue: Math.round(values.revenue),
-            profit: Math.round(values.profit),
           }))
         );
 
         const colorMap: Record<string, string> = {
-          PLAN_PURCHASE: '#43c7ab',
-          PLAN_RENEWAL: '#8b7cff',
-          PRIVATE_SESSION: '#ffb760',
-          MERCHANDISE: '#ff8da8',
-          OTHER: '#73a7ff',
+          MEMBERSHIP_PURCHASE: '#43c7ab',
+          MEMBERSHIP_RENEWAL: '#8b7cff',
+          CLASS_PACKAGE_PURCHASE: '#ff8da8',
+          PRIVATE_CLASS_PURCHASE: '#ffb760',
+          REFUND: '#73a7ff',
+          ADJUSTMENT: '#73a7ff',
         };
         const totalKindRevenue = (report.transactionsByKind || []).reduce((sum, item) => sum + Number(item._sum?.amountCents || 0), 0);
         const structure = (report.transactionsByKind || []).map((item) => {
@@ -122,8 +124,8 @@ export default function DashboardFinanceTrendPage() {
         });
         setRevenueStructure(structure);
         setTransactions(txList.data || []);
-      } catch (err: any) {
-        messageApi.error(err.message || '加载财务数据失败，请稍后重试');
+      } catch (err) {
+        messageApi.error(getErrorMessage(err, '加载财务数据失败，请稍后重试'));
       } finally {
         setLoading(false);
       }
@@ -151,7 +153,7 @@ export default function DashboardFinanceTrendPage() {
       </div>
 
       <div className={pageCls.financeTwoCol}>
-        <SectionCard title="营收与利润趋势" subtitle="近 7 个月走势">
+        <SectionCard title="营收趋势" subtitle="近 7 个月真实营收走势">
           <div className={pageCls.chartPanelTall}>
             <ResponsiveContainer>
               <BarChart data={financeBar}>
@@ -160,20 +162,16 @@ export default function DashboardFinanceTrendPage() {
                     <stop offset="0%" stopColor="#43c7ab" stopOpacity={0.96} />
                     <stop offset="100%" stopColor="#6be0c8" stopOpacity={0.78} />
                   </linearGradient>
-                  <linearGradient id="dashboardFinanceProfit" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#8b7cff" stopOpacity={0.96} />
-                    <stop offset="100%" stopColor="#b2a8ff" stopOpacity={0.76} />
-                  </linearGradient>
                 </defs>
-                <CartesianGrid vertical={false} stroke="rgba(148, 163, 184, 0.14)" strokeDasharray="3 5" />
+                <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} />
                 <YAxis axisLine={false} tickLine={false} />
                 <Tooltip content={<DashboardFinanceTrendTooltip />} />
                 <Bar dataKey="revenue" fill="url(#dashboardFinanceRevenue)" radius={[10, 10, 0, 0]} barSize={isMobile ? 16 : 26} />
-                <Bar dataKey="profit" fill="url(#dashboardFinanceProfit)" radius={[10, 10, 0, 0]} barSize={isMobile ? 16 : 26} />
               </BarChart>
             </ResponsiveContainer>
           </div>
+          <div className={widgetCls.smallText}>利润趋势待接入真实支出或成本数据后展示，当前不再使用固定利润率估算。</div>
         </SectionCard>
 
         <SectionCard title="营收构成占比" subtitle="会员与课程收入结构">
