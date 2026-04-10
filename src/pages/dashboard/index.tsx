@@ -14,6 +14,7 @@ import { coursesApi, type Course } from '@/services/courses';
 import { coachesApi, type Coach } from '@/services/coaches';
 import { reportsApi } from '@/services/reports';
 import { transactionsApi } from '@/services/transactions';
+import { getErrorMessage } from '@/utils/errors';
 
 type DashboardCourse = {
   time: string;
@@ -48,19 +49,12 @@ const iconMap = {
   rise: <RiseOutlined />,
 };
 
-const toTime = (iso?: string) => {
-  if (!iso) return '--:--';
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-};
-
-const toDateLabel = (iso?: string) => {
-  if (!iso) return '-';
-  return new Date(iso).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
-};
-
 const bookingStatusToLabel = (status: string) => {
-  if (status === '待确认' || status === '已确认' || status === '已取消' || status === '已完成') return status;
+  if (status === 'PENDING') return '待确认';
+  if (status === 'CONFIRMED') return '已确认';
+  if (status === 'COMPLETED') return '已完成';
+  if (status === 'CANCELLED') return '已取消';
+  if (status === 'NO_SHOW') return '未到场';
   return '待确认';
 };
 
@@ -103,10 +97,10 @@ export default function DashboardPage() {
         });
 
         const mappedCourses: DashboardCourse[] = (coursesData || []).slice(0, 8).map((course: Course) => ({
-          time: '--:--',
+          time: '待接入排课时间',
           title: course.name,
           booking: `${course._count?.sessions || 0}/${course.capacity}`,
-          status: course.isActive ? '已确认' : '已取消',
+          status: course.isActive ? '已开放' : '已停用',
           type: course.type,
           coach: course.coach?.name || '待分配',
         }));
@@ -123,16 +117,15 @@ export default function DashboardPage() {
 
         const coachMap: ScheduleCoach[] = (coachesData || []).slice(0, 4).map((coach: Coach, idx: number) => ({
           name: coach.name,
-          sessions: String(Math.max(0, Math.round((coach.rating || 4) * 3))),
+          sessions: '待接入',
           slots: [
-            // 使用教练的经验信息，或显示"待排班"
-            { day: '排班信息', time: coach.experience || '暂无排班', count: '-' },
+            { day: '排班信息', time: '待接入真实排班', count: '-' },
           ],
           tone: tones[idx % tones.length],
         }));
         setScheduleCards(coachMap);
-      } catch (err: any) {
-        messageApi.error(err.message || '加载仪表盘数据失败，请稍后重试');
+      } catch (err) {
+        messageApi.error(getErrorMessage(err, '加载仪表盘数据失败，请稍后重试'));
       } finally {
         setLoading(false);
       }
@@ -171,7 +164,7 @@ export default function DashboardPage() {
       </div>
 
       <div className={pageCls.dashboardSectionGrid}>
-        <SectionCard title="今日课程" subtitle={`${new Date().toLocaleDateString('zh-CN')} · 共 ${courses.length} 节课程`} extra={<Button type="text" className={widgetCls.dashboardCardAction} onClick={() => go('/courses')}>查看全部</Button>}>
+          <SectionCard title="今日课程" subtitle={`${new Date().toLocaleDateString('zh-CN')} · 当前仅展示课程基础资料，排课时间待接入`} extra={<Button type="text" className={widgetCls.dashboardCardAction} onClick={() => go('/courses')}>查看全部</Button>}>
           <div className={widgetCls.recordListDense}>
             {courses.map((course, idx) => (
               <div key={`${course.title}-${idx}`} className={widgetCls.recordItem}>
@@ -213,7 +206,7 @@ export default function DashboardPage() {
         </SectionCard>
       </div>
 
-      <SectionCard title="教练排班摘要" subtitle="按教练查看本周排班节奏" extra={<Button type="text" className={widgetCls.dashboardCardAction} onClick={() => go('/coaches')}>查看教练</Button>}>
+          <SectionCard title="教练排班摘要" subtitle="待接入真实排班后展示课节强度和时段分布" extra={<Button type="text" className={widgetCls.dashboardCardAction} onClick={() => go('/coaches')}>查看教练</Button>}>
         <div className={widgetCls.courseGrid}>
           {scheduleCards.map((coach) => (
             <div key={coach.name} className={widgetCls.detailCard}>

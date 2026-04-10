@@ -6,6 +6,7 @@ import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import StatusTag from '@/components/StatusTag';
 import { coursesApi, type Course } from '@/services/courses';
+import { getErrorMessage } from '@/utils/errors';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 
@@ -22,8 +23,8 @@ export default function DashboardCoursesPage() {
         setLoading(true);
         const data = await coursesApi.getAll();
         setCourses(data || []);
-      } catch (err: any) {
-        messageApi.error(err.message || '加载课程数据失败，请稍后重试');
+      } catch (err) {
+        messageApi.error(getErrorMessage(err, '加载课程数据失败，请稍后重试'));
       } finally {
         setLoading(false);
       }

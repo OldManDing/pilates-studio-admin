@@ -6,6 +6,7 @@ import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import { coachesApi, type Coach } from '@/services/coaches';
+import { getErrorMessage } from '@/utils/errors';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import type { AccentTone } from '@/types';
@@ -33,17 +34,15 @@ export default function DashboardSchedulePage() {
         const coaches = await coachesApi.getAll();
         const cards = (coaches || []).slice(0, 6).map((coach: Coach, idx: number) => ({
           name: coach.name,
-          sessions: String(Math.max(1, Math.round((coach.rating || 4) * 3))),
+          sessions: '待接入',
           slots: [
-            { day: '周一', time: '09:00-12:00', count: '3 节' },
-            { day: '周三', time: '14:00-17:00', count: '3 节' },
-            { day: '周五', time: '18:00-20:00', count: '2 节' },
+            { day: '排班状态', time: '待接入真实排班接口', count: '-' },
           ],
           tone: tones[idx % tones.length],
         }));
         setScheduleCards(cards);
-      } catch (err: any) {
-        messageApi.error(err.message || '加载教练排班数据失败，请稍后重试');
+      } catch (err) {
+        messageApi.error(getErrorMessage(err, '加载教练排班数据失败，请稍后重试'));
       } finally {
         setLoading(false);
       }
@@ -51,7 +50,7 @@ export default function DashboardSchedulePage() {
     fetchData();
   }, []);
 
-  const totalSessions = useMemo(() => scheduleCards.reduce((sum, coach) => sum + Number.parseInt(coach.sessions, 10), 0), [scheduleCards]);
+  const totalSessions = useMemo(() => scheduleCards.filter((coach) => /^\d+$/.test(coach.sessions)).reduce((sum, coach) => sum + Number.parseInt(coach.sessions, 10), 0), [scheduleCards]);
   const totalScheduleDays = useMemo(() => scheduleCards.reduce((sum, coach) => sum + coach.slots.length, 0), [scheduleCards]);
   const busiestCoach = useMemo(() => scheduleCards.reduce((current, coach) => {
     if (!current) return coach;
@@ -77,15 +76,15 @@ export default function DashboardSchedulePage() {
             <div className={widgetCls.detailOverviewPanel}>
               <div className={widgetCls.detailOverviewSummary}>
                 <div className={widgetCls.detailInsightLabel}>排班概览</div>
-                <div className={widgetCls.detailOverviewLead}>本周共安排 {totalSessions} 节课程，覆盖 {scheduleCards.length} 位教练与 {totalScheduleDays} 个排班日。</div>
-                <div className={widgetCls.detailOverviewText}>先稳定高负载教练的关键时段，再进行错峰补位调整。</div>
+                <div className={widgetCls.detailOverviewLead}>当前已覆盖 {scheduleCards.length} 位教练，排班总课节与时段分布待真实接口接入后展示。</div>
+                <div className={widgetCls.detailOverviewText}>目前不再展示静态周一/周三/周五示例排班，避免误导门店做实际排班决策。</div>
               </div>
             </div>
             <div className={widgetCls.detailOverviewAside}>
               <div className={widgetCls.detailOverviewStatGrid}>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatMint}`}>
                   <div className={widgetCls.metricLabel}>本周总课节</div>
-                  <div className={widgetCls.detailOverviewStatValue}>{totalSessions}</div>
+                  <div className={widgetCls.detailOverviewStatValue}>{totalSessions > 0 ? totalSessions : '待接入'}</div>
                 </div>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatViolet}`}>
                   <div className={widgetCls.metricLabel}>覆盖教练</div>
@@ -96,7 +95,7 @@ export default function DashboardSchedulePage() {
                   <div className={widgetCls.detailOverviewStatValue}>{totalScheduleDays}</div>
                 </div>
               </div>
-              {busiestCoach ? (
+              {busiestCoach && /^\d+$/.test(busiestCoach.sessions) ? (
                 <div className={widgetCls.detailInsightCard}>
                   <div className={widgetCls.detailInsightLabel}>高负载教练</div>
                   <div className={widgetCls.detailOverviewLead}>{busiestCoach.name}</div>
@@ -107,7 +106,7 @@ export default function DashboardSchedulePage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="动作建议" subtitle="排班调整建议">
+        <SectionCard title="动作建议" subtitle="基于当前已接入数据的保守建议">
           <div className={widgetCls.infoStack}>
             <div>• 优先保证高峰时段教练供给稳定。</div>
             <div>• 识别低负载时段，优化课程结构。</div>
