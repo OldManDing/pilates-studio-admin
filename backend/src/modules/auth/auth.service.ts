@@ -3,9 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import { generateSecret, verify } from 'otplib';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { VerifyLoginTwoFactorDto } from './dto/verify-login-2fa.dto';
 
 @Injectable()
 export class AuthService {
@@ -44,39 +46,68 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload = { sub: admin.id, email: admin.email };
-    const accessToken = this.jwtService.sign(payload);
-    const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: this.configService.get('auth.refreshExpiresIn'),
-    });
+    if (admin.twoFactorEnabled) {
+      if (!admin.twoFactorSecret) {
+        throw new UnauthorizedException('Two-factor authentication is not configured correctly');
+      }
 
-    // Store refresh token hash
-    await this.prisma.refreshToken.create({
-      data: {
-        adminUserId: admin.id,
-        tokenHash: await bcrypt.hash(refreshToken, 10),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      },
-    });
+      const mfaToken = this.jwtService.sign(
+        { sub: admin.id, email: admin.email, purpose: '2fa-login' },
+        { expiresIn: '5m' },
+      );
 
-    return {
-      accessToken,
-      refreshToken,
-      expiresIn: 900, // 15 minutes
-      user: {
-        id: admin.id,
-        email: admin.email,
-        displayName: admin.displayName,
+      return {
+        requiresTwoFactor: true as const,
+        mfaToken,
+        message: 'Two-factor verification required',
+      };
+    }
+
+    return this.createAuthSession(admin);
+  }
+
+  async verifyLoginTwoFactor(dto: VerifyLoginTwoFactorDto) {
+    let payload: { sub: string; email: string; purpose?: string };
+
+    try {
+      payload = this.jwtService.verify(dto.mfaToken);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired two-factor login token');
+    }
+
+    if (payload.purpose !== '2fa-login') {
+      throw new UnauthorizedException('Invalid two-factor login token');
+    }
+
+    const admin = await this.prisma.adminUser.findUnique({
+      where: { id: payload.sub },
+      include: {
         role: {
-          id: admin.role.id,
-          code: admin.role.code,
-          name: admin.role.name,
-          permissions: admin.role.permissions.map(
-            (rp) => `${rp.permission.action}:${rp.permission.module}`,
-          ),
+          include: {
+            permissions: {
+              include: {
+                permission: true,
+              },
+            },
+          },
         },
       },
-    };
+    });
+
+    if (!admin || !admin.twoFactorEnabled || !admin.twoFactorSecret) {
+      throw new UnauthorizedException('Two-factor login is not available for this account');
+    }
+
+    const verificationResult = await verify({
+      token: dto.code,
+      secret: admin.twoFactorSecret,
+    });
+
+    if (!verificationResult.valid) {
+      throw new UnauthorizedException('Invalid verification code');
+    }
+
+    return this.createAuthSession(admin);
   }
 
   async refresh(refreshToken: string) {
@@ -250,8 +281,8 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    // Generate a random secret
-    const secret = crypto.randomBytes(20).toString('hex');
+    // Generate a TOTP-compatible secret
+    const secret = generateSecret();
     const backupCode = crypto.randomBytes(4).toString('hex').toUpperCase();
 
     // Store the secret (but don't enable 2FA yet)
@@ -280,10 +311,17 @@ export class AuthService {
       throw new BadRequestException('Two-factor authentication not set up');
     }
 
-    // Simple code verification (in production, use TOTP)
-    // For now, we'll accept any 6-digit code
     if (!/^\d{6}$/.test(code)) {
       throw new BadRequestException('Invalid code format');
+    }
+
+    const verificationResult = await verify({
+      token: code,
+      secret: admin.twoFactorSecret,
+    });
+
+    if (!verificationResult.valid) {
+      throw new BadRequestException('Invalid verification code');
     }
 
     // Enable 2FA
@@ -320,5 +358,55 @@ export class AuthService {
     });
 
     return { success: true, message: 'Two-factor authentication disabled' };
+  }
+
+  private async createAuthSession(admin: {
+    id: string;
+    email: string;
+    displayName: string;
+    role: {
+      id: string;
+      code: string;
+      name: string;
+      permissions: Array<{
+        permission: {
+          action: string;
+          module: string;
+        };
+      }>;
+    };
+  }) {
+    const payload = { sub: admin.id, email: admin.email };
+    const accessToken = this.jwtService.sign(payload);
+    const refreshToken = this.jwtService.sign(payload, {
+      expiresIn: this.configService.get('auth.refreshExpiresIn'),
+    });
+
+    await this.prisma.refreshToken.create({
+      data: {
+        adminUserId: admin.id,
+        tokenHash: await bcrypt.hash(refreshToken, 10),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    return {
+      accessToken,
+      refreshToken,
+      expiresIn: 900,
+      user: {
+        id: admin.id,
+        email: admin.email,
+        displayName: admin.displayName,
+        role: {
+          id: admin.role.id,
+          code: admin.role.code,
+          name: admin.role.name,
+          permissions: admin.role.permissions.map(
+            (rp) => `${rp.permission.action}:${rp.permission.module}`,
+          ),
+        },
+      },
+    };
   }
 }

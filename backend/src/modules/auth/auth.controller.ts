@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SkipAuth } from '../../common/decorators/skip-auth.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -13,6 +14,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { VerifyLoginTwoFactorDto } from './dto/verify-login-2fa.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -21,14 +23,25 @@ export class AuthController {
 
   @Post('login')
   @SkipAuth()
+  @Throttle({ default: { limit: 10, ttl: 5 * 60 * 1000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email and password' })
   async login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
 
+  @Post('2fa/verify-login')
+  @SkipAuth()
+  @Throttle({ default: { limit: 10, ttl: 5 * 60 * 1000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify two-factor code during login and issue tokens' })
+  async verifyLoginTwoFactor(@Body() dto: VerifyLoginTwoFactorDto) {
+    return this.authService.verifyLoginTwoFactor(dto);
+  }
+
   @Post('refresh')
   @SkipAuth()
+  @Throttle({ default: { limit: 20, ttl: 5 * 60 * 1000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token' })
   async refresh(@Body() dto: RefreshTokenDto) {
