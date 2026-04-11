@@ -160,28 +160,51 @@ export default function BookingsPage() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
+  const [total, setTotal] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
 
-  const loadBookingsData = async () => {
-    const today = new Date().toISOString().split('T')[0];
-    const weekLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const loadBookingsData = async (page = 1) => {
+    const now = new Date();
+    const startDate = new Date(now);
+    const endDate = new Date(now);
+
+    if (periodFilter === '今天') {
+      endDate.setDate(endDate.getDate() + 1);
+    } else if (periodFilter === '明天') {
+      startDate.setDate(startDate.getDate() + 1);
+      endDate.setDate(endDate.getDate() + 2);
+    } else {
+      endDate.setDate(endDate.getDate() + 7);
+    }
+
+    const from = startDate.toISOString().split('T')[0];
+    const to = endDate.toISOString().split('T')[0];
 
     const [bookingsRes, membersRes, sessionsRes] = await Promise.all([
-      bookingsApi.getAll({ page: 1, pageSize: BOOKING_QUERY_PAGE_SIZE, from: today, to: weekLater }),
+      bookingsApi.getAll({
+        page,
+        pageSize,
+        from,
+        to,
+        status: statusFilter === '全部' ? undefined : statusFilter,
+        search: searchValue.trim() || undefined,
+      }),
       membersApi.getAll(1, 100),
       courseSessionsApi.getUpcoming().catch(() => []),
     ]);
 
     setBookings(bookingsRes.data);
+    setCurrentPage(bookingsRes.meta.page);
     setMembers(membersRes.data);
     setSessions(sessionsRes);
+    setTotal(bookingsRes.meta.total);
   };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        await loadBookingsData();
+        await loadBookingsData(currentPage);
       } catch (err) {
         messageApi.error('获取预约数据失败');
       } finally {
@@ -189,40 +212,11 @@ export default function BookingsPage() {
       }
     };
     fetchData();
-  }, []);
-
-  const filteredBookings = useMemo(() => {
-    const keyword = searchValue.trim().toLowerCase();
-
-    return bookings.filter((booking) => {
-      const period = getPeriodFromDate(booking.session?.startsAt || booking.bookedAt);
-      const matchesPeriod = period === periodFilter;
-      const matchesKeyword =
-        keyword.length === 0 ||
-        booking.member?.name?.toLowerCase().includes(keyword) ||
-        booking.session?.course?.name?.toLowerCase().includes(keyword) ||
-        booking.bookingCode?.toLowerCase().includes(keyword);
-      const matchesStatus = statusFilter === '全部' || booking.status === statusFilter;
-
-      return matchesPeriod && matchesKeyword && matchesStatus;
-    });
-  }, [bookings, periodFilter, searchValue, statusFilter]);
-
-  const paginatedBookings = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredBookings.slice(start, start + pageSize);
-  }, [filteredBookings, currentPage, pageSize]);
+  }, [currentPage, periodFilter, searchValue, statusFilter]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [periodFilter, searchValue, statusFilter]);
-
-  useEffect(() => {
-    const maxPage = Math.max(1, Math.ceil(filteredBookings.length / pageSize));
-    if (currentPage > maxPage) {
-      setCurrentPage(maxPage);
-    }
-  }, [filteredBookings.length, currentPage, pageSize]);
 
   const bookingStats = useMemo(() => [
     {
@@ -412,7 +406,7 @@ export default function BookingsPage() {
         eyebrow="BOOKING SELECTOR"
         title="预约日程"
         subtitle={bookingSelectorSubtitle}
-        resultCountText={`共 ${filteredBookings.length} 条`}
+        resultCountText={`共 ${total} 条`}
         periods={bookingPeriodItems}
         searchValue={searchValue}
         searchPlaceholder="按会员、课程、编号搜索预约"
@@ -421,10 +415,10 @@ export default function BookingsPage() {
         onOpenFilter={openFilterModal}
       />
 
-      {filteredBookings.length ? (
+      {bookings.length ? (
         <>
           <div className={`${widgetCls.recordList} ${pageCls.workSection}`}>
-            {paginatedBookings.map((item) => (
+            {bookings.map((item) => (
               <BookingListCard
                 key={item.id}
                 memberName={item.member?.name || '未知会员'}
@@ -447,7 +441,7 @@ export default function BookingsPage() {
             <Pagination
               current={currentPage}
               pageSize={pageSize}
-               total={filteredBookings.length}
+                total={total}
               onChange={handlePageChange}
               showSizeChanger={false}
             />

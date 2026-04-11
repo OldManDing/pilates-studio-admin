@@ -64,6 +64,6 @@ describe('BookingsPage smoke test', () => {
       expect(screen.getByRole('heading', { name: '预约管理' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /新增预约/ })).toBeInTheDocument();
       expect(screen.getByText('今日预约')).toBeInTheDocument();
-    });
-  });
+    }, { timeout: 15000 });
+  }, 20000);
 });

@@ -131,7 +131,11 @@ export default function MembersPage() {
   const fetchMembers = async (page = 1) => {
     try {
       setLoading(true);
-      const response = await membersApi.getAll(page, pageSize);
+      const response = await membersApi.getAll(page, pageSize, {
+        search: searchValue.trim() || undefined,
+        status: statusFilter === '全部' ? undefined : statusFilter,
+        planId: planFilter === '全部' ? undefined : planFilter,
+      });
       setMembers(response.data);
       setTotal(response.meta.total);
       setCurrentPage(response.meta.page);
@@ -144,7 +148,7 @@ export default function MembersPage() {
 
   useEffect(() => {
     fetchMembers(1);
-  }, []);
+  }, [searchValue, statusFilter, planFilter]);
 
   useEffect(() => {
     if (!detailMember) {
@@ -185,22 +189,6 @@ export default function MembersPage() {
       cancelled = true;
     };
   }, [detailMember]);
-
-  const filteredMembers = useMemo(() => {
-    const keyword = searchValue.trim().toLowerCase();
-
-    return members.filter((member) => {
-      const matchesKeyword =
-        keyword.length === 0 ||
-        member.name.toLowerCase().includes(keyword) ||
-        member.phone.toLowerCase().includes(keyword) ||
-        (member.email?.toLowerCase().includes(keyword) ?? false);
-      const matchesStatus = statusFilter === '全部' || member.status === statusFilter;
-      const matchesPlan = planFilter === '全部' || member.plan?.id === planFilter;
-
-      return matchesKeyword && matchesStatus && matchesPlan;
-    });
-  }, [members, planFilter, searchValue, statusFilter]);
 
   const membersStats = useMemo(() => [
     { title: '总会员数', value: String(stats.totalMembers), hint: '↑ 7.2% 环比增长', tone: 'mint' as const, icon: 'team' as const },
@@ -275,14 +263,14 @@ export default function MembersPage() {
   };
 
   const handleExportMembers = () => {
-    if (filteredMembers.length === 0) {
+    if (members.length === 0) {
       messageApi.warning('当前没有可导出的会员记录');
       return;
     }
 
     const rows = [
       ['姓名', '手机号', '邮箱', '会籍类型', '会籍状态', '剩余课时', '加入日期'],
-      ...filteredMembers.map((member) => [
+      ...members.map((member) => [
         member.name,
         member.phone,
         member.email || '',
@@ -437,10 +425,10 @@ export default function MembersPage() {
         </div>
       </div>
 
-      {filteredMembers.length ? (
+      {members.length ? (
         <>
           <div className={`${widgetCls.recordList} ${pageCls.workSection}`}>
-            {filteredMembers.map((member) => (
+            {members.map((member) => (
               <MemberRecordCard
                 key={member.id}
                 id={member.id}
