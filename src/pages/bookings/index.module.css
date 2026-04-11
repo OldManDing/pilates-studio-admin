@@ -11,7 +11,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
@@ -26,9 +26,9 @@
 .bookingSelectorTitleRow {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   flex-wrap: wrap;
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .bookingSelectorTitle {
@@ -68,13 +68,13 @@
 .bookingPeriodGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .bookingPeriodButton {
   min-height: auto !important;
   height: auto !important;
-  padding: 14px 16px !important;
+  padding: 16px !important;
   border-radius: var(--radius-md) !important;
   border-color: var(--border-soft) !important;
   background: rgba(248, 250, 251, 0.92) !important;
@@ -130,7 +130,7 @@
 .bookingSelectorSearchRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  gap: var(--space-3);
   align-items: center;
 }
 

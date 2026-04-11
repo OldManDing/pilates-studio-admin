@@ -1,8 +1,8 @@
 .profileHeroCard {
   display: grid;
-  gap: 18px;
+  gap: var(--space-5);
   padding: 20px;
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
   background: linear-gradient(180deg, var(--bg-surface-strong) 0%, var(--bg-surface) 100%);
   border: 1px solid var(--border-soft);
   box-shadow: var(--shadow-lg);
@@ -12,13 +12,13 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .profileHeroIdentity {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: var(--space-3);
   min-width: 0;
 }
 
@@ -59,7 +59,7 @@
 .profileHeroMeta {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: var(--space-3);
 }
 
 .profileMetaLabel {
@@ -113,10 +113,11 @@
 }
 
 .profileStatCard {
-  padding: 16px;
-  border-radius: 18px;
+  padding: 20px;
+  border-radius: var(--radius-md);
   background: var(--control-surface);
   border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-sm);
 }
 
 .profileStatValue {

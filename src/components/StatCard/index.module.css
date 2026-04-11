@@ -1,6 +1,6 @@
 .card {
   border-radius: var(--radius-md);
-  padding: 18px 20px;
+  padding: 20px;
   background: var(--bg-surface);
   box-shadow: var(--shadow-soft);
   border: 1px solid var(--border-soft);
@@ -19,7 +19,7 @@
 .top {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   align-items: center;
 }
 
@@ -30,7 +30,7 @@
 }
 
 .value {
-  margin-top: 12px;
+  margin-top: var(--space-3);
   font-size: var(--font-size-xl);
   font-weight: var(--font-black);
   line-height: var(--leading-tight);
@@ -39,7 +39,7 @@
 }
 
 .hint {
-  margin-top: 10px;
+  margin-top: var(--space-2);
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
 }

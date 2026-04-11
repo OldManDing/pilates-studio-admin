@@ -1,6 +1,6 @@
 .card {
   padding: 20px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   background: var(--bg-surface);
   border: 1px solid var(--border-soft);
   box-shadow: var(--shadow-soft);
@@ -18,9 +18,9 @@
 .header {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: var(--space-4);
 }
 
 .title {
