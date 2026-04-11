@@ -38,6 +38,9 @@ const createSession = (overrides: Partial<Record<string, unknown>> = {}) => ({
 
 describe('BookingsService', () => {
   let service: BookingsService;
+  let notificationsService: {
+    createFromSetting: jest.Mock;
+  };
   let prisma: {
     booking: {
       findMany: jest.Mock;
@@ -59,6 +62,10 @@ describe('BookingsService', () => {
   };
 
   beforeEach(() => {
+    notificationsService = {
+      createFromSetting: jest.fn().mockResolvedValue(null),
+    };
+
     prisma = {
       booking: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -81,7 +88,7 @@ describe('BookingsService', () => {
 
     prisma.$transaction.mockImplementation(async (callback: (tx: typeof prisma) => unknown) => callback(prisma));
 
-    service = new BookingsService(prisma as unknown as never);
+    service = new BookingsService(prisma as unknown as never, notificationsService as never);
   });
 
   describe('date range filtering', () => {
@@ -159,6 +166,13 @@ describe('BookingsService', () => {
         where: { id: 'session-1' },
         data: { bookedCount: { increment: 1 } },
       });
+      expect(notificationsService.createFromSetting).toHaveBeenCalledWith(
+        'booking_confirmation',
+        expect.objectContaining({
+          type: 'BOOKING_CONFIRMATION',
+          memberId: 'member-1',
+        }),
+      );
       expect(result.status).toBe(BookingStatus.CONFIRMED);
     });
 
@@ -194,7 +208,7 @@ describe('BookingsService', () => {
     });
 
     it('cancels a booking and decrements bookedCount', async () => {
-      prisma.booking.findUnique.mockResolvedValue(createBooking({ status: BookingStatus.CONFIRMED }));
+      prisma.booking.findUnique.mockResolvedValue(createBooking({ status: BookingStatus.CONFIRMED, member: { id: 'member-1', name: 'Alice', miniUserId: 'mini-user-1' } }));
       prisma.booking.update.mockResolvedValue(createBooking({ status: BookingStatus.CANCELLED }));
 
       const result = await service.updateStatus('booking-1', { status: BookingStatus.CANCELLED });
@@ -209,6 +223,14 @@ describe('BookingsService', () => {
         where: { id: 'session-1' },
         data: { bookedCount: { decrement: 1 } },
       });
+      expect(notificationsService.createFromSetting).toHaveBeenCalledWith(
+        'booking_cancelled',
+        expect.objectContaining({
+          type: 'BOOKING_CANCELLED',
+          memberId: 'member-1',
+          miniUserId: 'mini-user-1',
+        }),
+      );
       expect(result.status).toBe(BookingStatus.CANCELLED);
     });
 

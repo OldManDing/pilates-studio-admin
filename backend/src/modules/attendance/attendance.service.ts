@@ -4,10 +4,14 @@ import { CheckInDto } from './dto/check-in.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 import { AttendanceStatus, BookingStatus } from '../../common/enums/domain.enums';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AttendanceService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   async checkIn(dto: CheckInDto) {
     const booking = await this.prisma.booking.findUnique({
@@ -35,7 +39,7 @@ export class AttendanceService {
     }
 
     if (existingAttendance) {
-      return this.prisma.attendance.update({
+      const updatedAttendance = await this.prisma.attendance.update({
         where: { id: existingAttendance.id },
         data: {
           status: AttendanceStatus.CHECKED_IN,
@@ -51,9 +55,24 @@ export class AttendanceService {
           },
         },
       });
+
+      await this.notificationsService.createFromSetting('attendance_checked_in', {
+        type: 'ATTENDANCE_CHECKED_IN',
+        title: '签到成功',
+        content: `会员 ${booking.member.name} 已完成签到。`,
+        memberId: booking.memberId,
+        miniUserId: booking.member?.miniUserId ?? undefined,
+        payload: {
+          attendanceId: updatedAttendance.id,
+          bookingId: booking.id,
+          sessionId: booking.sessionId,
+        },
+      });
+
+      return updatedAttendance;
     }
 
-    return this.prisma.attendance.create({
+    const attendance = await this.prisma.attendance.create({
       data: {
         bookingId: dto.bookingId,
         memberId: booking.memberId,
@@ -71,6 +90,21 @@ export class AttendanceService {
         },
       },
     });
+
+    await this.notificationsService.createFromSetting('attendance_checked_in', {
+      type: 'ATTENDANCE_CHECKED_IN',
+      title: '签到成功',
+      content: `会员 ${booking.member.name} 已完成签到。`,
+      memberId: booking.memberId,
+      miniUserId: booking.member?.miniUserId ?? undefined,
+      payload: {
+        attendanceId: attendance.id,
+        bookingId: booking.id,
+        sessionId: booking.sessionId,
+      },
+    });
+
+    return attendance;
   }
 
   async completeSession(id: string, notes?: string) {

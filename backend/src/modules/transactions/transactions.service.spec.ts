@@ -18,9 +18,16 @@ const createTransaction = (overrides: Partial<Record<string, unknown>> = {}) => 
 
 describe('TransactionsService', () => {
   let service: TransactionsService;
+  let notificationsService: {
+    createFromSetting: jest.Mock;
+  };
   let prisma: any;
 
   beforeEach(() => {
+    notificationsService = {
+      createFromSetting: jest.fn().mockResolvedValue(null),
+    };
+
     prisma = {
       transaction: {
         count: jest.fn().mockResolvedValue(0),
@@ -32,7 +39,7 @@ describe('TransactionsService', () => {
       },
     };
 
-    service = new TransactionsService(prisma);
+    service = new TransactionsService(prisma, notificationsService as never);
   });
 
   it('creates a transaction with generated code and pending status', async () => {
@@ -51,6 +58,13 @@ describe('TransactionsService', () => {
           transactionCode: 'T00000001',
           status: TransactionStatus.PENDING,
         }),
+      }),
+    );
+    expect(notificationsService.createFromSetting).toHaveBeenCalledWith(
+      'payment_receipt',
+      expect.objectContaining({
+        type: 'PAYMENT_RECEIPT',
+        memberId: 'member-1',
       }),
     );
     expect(result.transactionCode).toBe('T00000001');
