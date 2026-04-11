@@ -1,5 +1,5 @@
 import { AppstoreOutlined, CalendarOutlined, DeleteOutlined, EditOutlined, PlusOutlined, StarOutlined } from '@ant-design/icons';
-import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Spin, message } from 'antd';
+import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Pagination, Popconfirm, Row, Select, Spin, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import PageHeader from '@/components/PageHeader';
@@ -48,6 +48,9 @@ export default function CoursesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [total, setTotal] = useState(0);
   const [stats, setStats] = useState({
     totalCourses: 0,
     weeklySessions: 0,
@@ -55,19 +58,27 @@ export default function CoursesPage() {
     popularCourse: '-',
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [coursesData, coachesData, reportsData] = await Promise.all([
-          coursesApi.getAll(),
+  const fetchCourses = async (page = 1) => {
+    try {
+      setLoading(true);
+      const [coursesResponse, coachesData, reportsData] = await Promise.all([
+          coursesApi.getPaged({
+            page,
+            pageSize,
+            search: searchValue.trim() || undefined,
+            type: typeFilter === '全部' ? undefined : typeFilter,
+            level: levelFilter === '全部' ? undefined : levelFilter,
+          }),
           coachesApi.getAll(),
           reportsApi.getBookings(
             new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             new Date().toISOString().split('T')[0]
           ).catch(() => null),
         ]);
+        const coursesData = coursesResponse.data;
         setCourseList(coursesData);
+        setCurrentPage(coursesResponse.meta.page);
+        setTotal(coursesResponse.meta.total);
         setCoaches(coachesData);
 
         const totalCourses = coursesData.length;
@@ -84,7 +95,7 @@ export default function CoursesPage() {
         }
 
         setStats({
-          totalCourses,
+          totalCourses: coursesResponse.meta.total,
           weeklySessions,
           avgOccupancy,
           popularCourse,
@@ -94,9 +105,15 @@ export default function CoursesPage() {
       } finally {
         setLoading(false);
       }
-    };
-    fetchData();
-  }, []);
+  };
+
+  useEffect(() => {
+    fetchCourses(currentPage);
+  }, [currentPage, searchValue, typeFilter, levelFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchValue, typeFilter, levelFilter]);
 
   const refreshCourses = async (silent = false) => {
     try {
@@ -139,21 +156,6 @@ export default function CoursesPage() {
     setLevelFilter('全部');
   };
 
-  const filteredCourses = useMemo(() => {
-    const keyword = searchValue.trim().toLowerCase();
-
-    return courseList.filter((course) => {
-      const matchesKeyword =
-        keyword.length === 0 ||
-        course.name.toLowerCase().includes(keyword) ||
-        (course.coach?.name || '').toLowerCase().includes(keyword);
-      const matchesType = typeFilter === '全部' || course.type === typeFilter;
-      const matchesLevel = levelFilter === '全部' || course.level === levelFilter;
-
-      return matchesKeyword && matchesType && matchesLevel;
-    });
-  }, [courseList, levelFilter, searchValue, typeFilter]);
-
   const courseStats = useMemo(() => [
     { title: '课程总数', value: String(stats.totalCourses), hint: '覆盖常规课程', tone: 'mint' as const, icon: 'calendar' as const },
     { title: '本周课程', value: String(stats.weeklySessions), hint: '已排期课时', tone: 'violet' as const, icon: 'app' as const },
@@ -166,7 +168,7 @@ export default function CoursesPage() {
       ? '已根据关键词、课程类型与难度缩小范围，保留全部课程维护与详情操作。'
       : '按课程名称、课程类型与难度快速浏览课程，保持后台配置与查看路径清晰统一。';
 
-  const courseCardItems: CourseListCardProps[] = filteredCourses.map((course) => ({
+  const courseCardItems: CourseListCardProps[] = courseList.map((course) => ({
     id: course.id,
     codeText: course.courseCode || 'COURSE',
     name: course.name,
@@ -238,13 +240,20 @@ export default function CoursesPage() {
         messageApi.success('课程已创建');
       }
 
-      const refreshed = await coursesApi.getAll();
-      setCourseList(refreshed);
+      const refreshed = await coursesApi.getPaged({
+        page: currentPage,
+        pageSize,
+        search: searchValue.trim() || undefined,
+        type: typeFilter === '全部' ? undefined : typeFilter,
+        level: levelFilter === '全部' ? undefined : levelFilter,
+      });
+      setCourseList(refreshed.data);
+      setTotal(refreshed.meta.total);
 
-      const totalCourses = refreshed.length;
-      const weeklySessions = refreshed.reduce((sum, c) => sum + (c._count?.sessions || 0), 0);
+      const totalCourses = refreshed.meta.total;
+      const weeklySessions = refreshed.data.reduce((sum, c) => sum + (c._count?.sessions || 0), 0);
       const popularCourse = totalCourses > 0
-        ? refreshed.reduce((max, c) => ((c._count?.sessions || 0) > (max._count?.sessions || 0) ? c : max), refreshed[0])?.name || '-'
+        ? refreshed.data.reduce((max, c) => ((c._count?.sessions || 0) > (max._count?.sessions || 0) ? c : max), refreshed.data[0])?.name || '-'
         : '-';
 
       setStats((current) => ({
@@ -255,7 +264,7 @@ export default function CoursesPage() {
       }));
 
       if (detailCourse && editingCourse) {
-        const updated = refreshed.find((c) => c.id === detailCourse.id) || null;
+        const updated = refreshed.data.find((c) => c.id === detailCourse.id) || null;
         setDetailCourse(updated);
       }
 
@@ -270,13 +279,20 @@ export default function CoursesPage() {
   const handleDeleteCourse = async (course: Course) => {
     try {
       await coursesApi.delete(course.id);
-      const refreshed = await coursesApi.getAll();
-      setCourseList(refreshed);
+      const refreshed = await coursesApi.getPaged({
+        page: currentPage,
+        pageSize,
+        search: searchValue.trim() || undefined,
+        type: typeFilter === '全部' ? undefined : typeFilter,
+        level: levelFilter === '全部' ? undefined : levelFilter,
+      });
+      setCourseList(refreshed.data);
+      setTotal(refreshed.meta.total);
 
-      const totalCourses = refreshed.length;
-      const weeklySessions = refreshed.reduce((sum, c) => sum + (c._count?.sessions || 0), 0);
+      const totalCourses = refreshed.meta.total;
+      const weeklySessions = refreshed.data.reduce((sum, c) => sum + (c._count?.sessions || 0), 0);
       const popularCourse = totalCourses > 0
-        ? refreshed.reduce((max, c) => ((c._count?.sessions || 0) > (max._count?.sessions || 0) ? c : max), refreshed[0])?.name || '-'
+        ? refreshed.data.reduce((max, c) => ((c._count?.sessions || 0) > (max._count?.sessions || 0) ? c : max), refreshed.data[0])?.name || '-'
         : '-';
 
       setStats((current) => ({
@@ -331,7 +347,7 @@ export default function CoursesPage() {
         eyebrow="COURSE BROWSE"
         title="课程浏览"
         subtitle={courseBrowseSubtitle}
-        resultCountText={`共 ${filteredCourses.length} 门`}
+        resultCountText={`共 ${total} 门`}
         searchValue={searchValue}
         searchPlaceholder="按课程名称或教练搜索"
         typeValue={typeFilter}
@@ -347,6 +363,17 @@ export default function CoursesPage() {
         onLevelChange={setLevelFilter}
         onReset={resetFilters}
       />
+      {courseList.length ? (
+        <div className={pageCls.centerPagination}>
+          <Pagination
+            current={currentPage}
+            pageSize={pageSize}
+            total={total}
+            onChange={setCurrentPage}
+            showSizeChanger={false}
+          />
+        </div>
+      ) : null}
 
       <Modal
         className={pageCls.crudModal}
