@@ -36,4 +36,7 @@ export default () => ({
     password: process.env.SMTP_PASSWORD ?? '',
     from: process.env.SMTP_FROM ?? '',
   },
+  analytics: {
+    monthlyRevenueGoalCents: Number(process.env.ANALYTICS_MONTHLY_REVENUE_GOAL_CENTS ?? 5000000),
+  },
 });

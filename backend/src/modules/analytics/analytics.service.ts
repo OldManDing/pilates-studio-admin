@@ -1,11 +1,15 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { BookingStatus, MemberStatus, TransactionStatus } from '../../common/enums/domain.enums';
 import { buildDateRange } from '../../common/utils/date-range';
 
 @Injectable()
 export class AnalyticsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private configService: ConfigService,
+  ) {}
 
   async getDashboardOverview(from?: string, to?: string) {
     const bookingRange = buildDateRange(from, to, 'analytics.bookings');
@@ -16,6 +20,7 @@ export class AnalyticsService {
       activeMembers,
       totalBookings,
       confirmedBookings,
+      completedRevenue,
     ] = await Promise.all([
       this.prisma.member.count(),
       this.prisma.member.count({ where: { status: MemberStatus.ACTIVE } }),
@@ -26,10 +31,31 @@ export class AnalyticsService {
           status: BookingStatus.CONFIRMED,
         },
       }),
+      this.prisma.transaction.aggregate({
+        where: {
+          ...(transactionRange ? { happenedAt: transactionRange } : {}),
+          status: TransactionStatus.COMPLETED,
+        },
+        _sum: {
+          amountCents: true,
+        },
+      }),
     ]);
 
-    const goalAchievement = totalMembers > 0 ? Math.min(150, Math.round((activeMembers / Math.max(1, totalMembers * 0.8)) * 100)) : 0;
-    const retentionRate = totalMembers > 0 ? Number(((activeMembers / totalMembers) * 100).toFixed(1)) : 0;
+    const revenueGoal = this.configService.get<number>('analytics.monthlyRevenueGoalCents') ?? 5_000_000;
+    const totalRevenueCents = completedRevenue._sum.amountCents ?? 0;
+    const goalAchievement = revenueGoal > 0 ? Number(((totalRevenueCents / revenueGoal) * 100).toFixed(1)) : 0;
+
+    const expiringMembers = await this.getExpiringMemberCount(transactionRange);
+    const renewals = await this.prisma.transaction.count({
+      where: {
+        ...(transactionRange ? { happenedAt: transactionRange } : {}),
+        kind: 'MEMBERSHIP_RENEWAL',
+        status: TransactionStatus.COMPLETED,
+      },
+    });
+
+    const retentionRate = expiringMembers > 0 ? Number(((renewals / expiringMembers) * 100).toFixed(1)) : 0;
     const avgOccupancy = totalBookings > 0 ? Number(((confirmedBookings / totalBookings) * 100).toFixed(1)) : 0;
 
     const popularity = await this.prisma.transaction.groupBy({
@@ -46,6 +72,7 @@ export class AnalyticsService {
         goalAchievement,
         retentionRate,
         avgOccupancy,
+        // Satisfaction is intentionally left null until a course-review data model exists.
         satisfaction: null,
       },
       transactionPopularity: popularity.map((item) => ({
@@ -53,6 +80,31 @@ export class AnalyticsService {
         value: item._count.id,
       })),
     };
+  }
+
+  private async getExpiringMemberCount(range?: { gte?: Date; lte?: Date }) {
+    const now = range?.gte ?? new Date();
+    const upperBound = range?.lte ?? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    const members = await this.prisma.member.findMany({
+      where: {
+        status: MemberStatus.ACTIVE,
+        plan: {
+          durationDays: { not: null },
+        },
+      },
+      include: {
+        plan: {
+          select: { durationDays: true },
+        },
+      },
+    });
+
+    return members.filter((member) => {
+      if (!member.plan?.durationDays) return false;
+      const expiry = new Date(member.joinedAt.getTime() + member.plan.durationDays * 24 * 60 * 60 * 1000);
+      return expiry >= now && expiry <= upperBound;
+    }).length;
   }
 
   async getBookingDistribution(from?: string, to?: string) {

@@ -71,10 +71,10 @@ export default function AnalyticsPage() {
 
   const analyticsStats = useMemo(
     () => [
-      { title: '目标达成率', value: stats.goalAchievement, hint: '基于活跃会员占比', tone: 'mint' as const, icon: 'target' as const },
-      { title: '会员留存率', value: stats.retentionRate, hint: '活跃/总会员', tone: 'violet' as const, icon: 'retention' as const },
+      { title: '目标达成率', value: stats.goalAchievement, hint: '基于营收目标达成率', tone: 'mint' as const, icon: 'target' as const },
+      { title: '会员留存率', value: stats.retentionRate, hint: '续费会员 / 到期会员', tone: 'violet' as const, icon: 'retention' as const },
       { title: '平均上座率', value: stats.avgOccupancy, hint: '确认预约占比', tone: 'orange' as const, icon: 'seat' as const },
-      { title: '整体满意度', value: stats.satisfaction, hint: '待接入问卷或评价数据', tone: 'pink' as const, icon: 'smile' as const },
+      { title: '整体满意度', value: stats.satisfaction, hint: '待接入课程评价数据', tone: 'pink' as const, icon: 'smile' as const },
     ],
     [stats]
   );

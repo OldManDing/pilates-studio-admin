@@ -4,33 +4,56 @@ import { AnalyticsService } from './analytics.service';
 describe('AnalyticsService', () => {
   let service: AnalyticsService;
   let prisma: any;
+  let configService: any;
 
   beforeEach(() => {
     prisma = {
       member: {
         count: jest.fn(),
+        findMany: jest.fn(),
       },
       booking: {
         count: jest.fn(),
       },
       transaction: {
         groupBy: jest.fn(),
+        aggregate: jest.fn(),
+        count: jest.fn(),
       },
       courseSession: {
         findMany: jest.fn(),
       },
     };
 
-    service = new AnalyticsService(prisma);
+    configService = {
+      get: jest.fn((key: string) => {
+        if (key === 'analytics.monthlyRevenueGoalCents') return 1_000_000;
+        return undefined;
+      }),
+    };
+
+    service = new AnalyticsService(prisma, configService);
   });
 
   it('builds dashboard overview metrics and transaction popularity', async () => {
     prisma.member.count
       .mockResolvedValueOnce(20)
       .mockResolvedValueOnce(10);
+    prisma.member.findMany.mockResolvedValue([
+      {
+        joinedAt: new Date('2026-03-15T00:00:00.000Z'),
+        plan: { durationDays: 30 },
+      },
+      {
+        joinedAt: new Date('2026-01-01T00:00:00.000Z'),
+        plan: { durationDays: 365 },
+      },
+    ]);
     prisma.booking.count
       .mockResolvedValueOnce(10)
       .mockResolvedValueOnce(8);
+    prisma.transaction.aggregate.mockResolvedValue({ _sum: { amountCents: 500000 } });
+    prisma.transaction.count.mockResolvedValue(1);
     prisma.transaction.groupBy.mockResolvedValue([
       { kind: 'MEMBERSHIP_PURCHASE', _count: { id: 6 } },
     ]);
@@ -49,8 +72,8 @@ describe('AnalyticsService', () => {
     );
     expect(result).toEqual({
       stats: {
-        goalAchievement: 63,
-        retentionRate: 50,
+        goalAchievement: 50,
+        retentionRate: 100,
         avgOccupancy: 80,
         satisfaction: null,
       },

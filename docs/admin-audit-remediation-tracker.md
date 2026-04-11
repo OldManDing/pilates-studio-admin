@@ -67,7 +67,7 @@
 | FN-07 | Roles | Role lifecycle | No delete flow exists for roles | Try to fully manage a role lifecycle | Role management should have explicit deletion rules or constrained omission | Delete is absent | P2 | done | Added delete flow with reserved-role protection and assigned-admin guard |
 | FN-08 | Settings | Restore/export UX | Restore/export/recovery feedback is still weak and fragile | Trigger invalid restore or export issues | User should get contextual recovery guidance | Current flow relies mainly on toast feedback | P2 | done | Drawer close timing and export guidance were tightened to reduce silent context loss |
 | FN-09 | Dashboard | Partial failure | Dashboard does not surface partial API failure clearly | Fail one dashboard API while others succeed | Page should degrade locally with clear explanation | Current pattern is mainly toast + silent empty values | P2 | done | Dashboard now records and surfaces partial failures instead of silently zeroing every panel |
-| FN-10 | Analytics | Metric semantics | Some advanced analytics values still lack product-defined semantics | Review retention / satisfaction / goal metrics | Metrics should be product-defined and explainable | Current implementation is minimum-credible but not final business definition | P2 | blocked | Needs product definition |
+| FN-10 | Analytics | Metric semantics | Some advanced analytics values still lack product-defined semantics | Review retention / satisfaction / goal metrics | Metrics should be product-defined and explainable | Current implementation is minimum-credible but not final business definition | P2 | in_progress | Confirmed: revenue goal achievement, renewal/expiry retention, satisfaction from course reviews |
 
 ## 3. API / Data Issues
 
@@ -82,7 +82,7 @@
 | API-07 | Reports / expiring members | Frontend pagination walk | Expiring-soon logic still depends on frontend aggregation workaround | Slow, fragile, and easy to desync from backend | P1 | done | Added backend `GET /reports/members/expiring-soon` and removed frontend pagination walk |
 | API-08 | Notifications | `/notifications` + local recipient option loading | Recipient search still loads all entities client-side | Slow or incomplete at scale | P2 | done | Recipient lookup now uses backend search on members / mini-users / admins |
 | API-09 | Finance | `/transactions` | Member-binding contract incomplete | Financial records can become semantically wrong | P0 | done | Added full transaction update contract and persisted member binding on create/edit |
-| API-10 | Analytics | `/analytics/*` | Higher-level analytics semantics still not finalized | Product may over-trust provisional metrics | P2 | blocked | Needs product rule |
+| API-10 | Analytics | `/analytics/*` | Higher-level analytics semantics still not finalized | Product may over-trust provisional metrics | P2 | in_progress | Goal/retention formulas confirmed; satisfaction still depends on review data source |
 
 ---
 
@@ -161,8 +161,4 @@
 - First-pass UI/token consistency cleanup
 
 ## Requires Human / Product Confirmation
-- Analytics advanced metric definitions
-- Finance transaction/member business rules
-- Role deletion policy
-- Notification sending policy and allowed recipient scope
-- Dashboard final product positioning
+- Analytics satisfaction data source implementation details (confirmed source = course review, but model still absent)
