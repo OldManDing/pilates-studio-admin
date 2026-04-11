@@ -28,9 +28,16 @@ const createAttendance = (overrides: Partial<Record<string, unknown>> = {}) => (
 
 describe('AttendanceService', () => {
   let service: AttendanceService;
+  let notificationsService: {
+    createFromSetting: jest.Mock;
+  };
   let prisma: any;
 
   beforeEach(() => {
+    notificationsService = {
+      createFromSetting: jest.fn().mockResolvedValue(null),
+    };
+
     prisma = {
       booking: {
         findUnique: jest.fn(),
@@ -43,7 +50,7 @@ describe('AttendanceService', () => {
         count: jest.fn(),
       },
     };
-    service = new AttendanceService(prisma);
+    service = new AttendanceService(prisma, notificationsService as never);
   });
 
   it('creates a new attendance check-in when none exists', async () => {
@@ -59,6 +66,13 @@ describe('AttendanceService', () => {
           status: AttendanceStatus.CHECKED_IN,
           notes: 'Arrived early',
         }),
+      }),
+    );
+    expect(notificationsService.createFromSetting).toHaveBeenCalledWith(
+      'attendance_checked_in',
+      expect.objectContaining({
+        type: 'ATTENDANCE_CHECKED_IN',
+        memberId: 'member-1',
       }),
     );
     expect(result.status).toBe(AttendanceStatus.CHECKED_IN);

@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { NotificationChannel } from '../../../common/enums/domain.enums';
 
@@ -8,6 +8,7 @@ export class UpdateNotificationDto {
   key: string;
 
   @ApiProperty({ enum: NotificationChannel, required: false })
+  @IsOptional()
   @IsEnum(NotificationChannel)
   channel?: NotificationChannel;
 
