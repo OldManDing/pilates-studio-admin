@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import nodemailer from 'nodemailer';
 import { NotificationChannel, NotificationStatus } from '../../common/enums/domain.enums';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -28,9 +29,59 @@ export class NotificationDeliveryService {
       case NotificationChannel.MINI_PROGRAM:
         return this.deliverMiniProgram(notification);
       case NotificationChannel.EMAIL:
+        return this.deliverEmail(notification);
       case NotificationChannel.SMS:
       default:
         return this.markAsFailed(notification.id, `No delivery adapter configured for channel ${notification.channel}`);
+    }
+  }
+
+  private async deliverEmail(notification: {
+    id: string;
+    title?: string;
+    content?: string;
+  }) {
+    const host = this.configService.get<string>('email.host');
+    const port = this.configService.get<number>('email.port');
+    const user = this.configService.get<string>('email.user');
+    const password = this.configService.get<string>('email.password');
+    const from = this.configService.get<string>('email.from');
+
+    const fullNotification = await this.prisma.notification.findUnique({
+      where: { id: notification.id },
+      include: {
+        member: true,
+      },
+    });
+
+    const recipientEmail = fullNotification?.member?.email ?? null;
+
+    if (!host || !port || !user || !password || !from || !recipientEmail) {
+      return this.markAsFailed(notification.id, 'Missing SMTP configuration or recipient email');
+    }
+
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: {
+        user,
+        pass: password,
+      },
+    });
+
+    try {
+      await transporter.sendMail({
+        from,
+        to: recipientEmail,
+        subject: notification.title ?? '支付凭证',
+        text: notification.content ?? '',
+      });
+
+      return this.markAsSent(notification.id);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'Unknown email delivery error';
+      return this.markAsFailed(notification.id, reason);
     }
   }
 
@@ -97,6 +148,8 @@ export class NotificationDeliveryService {
         return templates.bookingConfirmation;
       case 'BOOKING_CANCELLED':
         return templates.bookingCancelled;
+      case 'BOOKING_REMINDER':
+        return templates.bookingReminder;
       case 'ATTENDANCE_CHECKED_IN':
         return templates.attendanceCheckedIn;
       case 'MEMBERSHIP_EXPIRY':

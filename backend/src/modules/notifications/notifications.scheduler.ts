@@ -85,6 +85,77 @@ export class NotificationsScheduler {
   }
 
   @Cron(CronExpression.EVERY_10_MINUTES)
+  async scheduleBookingReminders() {
+    const reminderMinutes = this.configService.get<number>('notifications.bookingReminderMinutes') ?? 60;
+    const now = new Date();
+    const reminderUpperBound = new Date(now.getTime() + reminderMinutes * 60 * 1000);
+
+    const bookings = await this.prisma.booking.findMany({
+      where: {
+        status: 'CONFIRMED',
+        session: {
+          startsAt: {
+            gt: now,
+            lte: reminderUpperBound,
+          },
+        },
+      },
+      include: {
+        member: {
+          include: {
+            miniUser: true,
+          },
+        },
+        session: {
+          include: {
+            course: true,
+          },
+        },
+      },
+    });
+
+    const created = [] as Array<{ bookingId: string; notificationId: string }>;
+
+    for (const booking of bookings) {
+      const existing = await this.prisma.notification.findFirst({
+        where: {
+          type: 'BOOKING_REMINDER',
+          memberId: booking.memberId,
+          createdAt: {
+            gte: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0),
+            lte: reminderUpperBound,
+          },
+        },
+      });
+
+      if (existing) {
+        continue;
+      }
+
+      const notification = await this.notificationsService.createFromSetting('booking_reminder', {
+        type: 'BOOKING_REMINDER',
+        title: '课程即将开始',
+        content: `${booking.session.course.name} 将在 ${reminderMinutes} 分钟内开始。`,
+        memberId: booking.memberId,
+        miniUserId: booking.member.miniUserId ?? undefined,
+        payload: {
+          bookingId: booking.id,
+          sessionId: booking.sessionId,
+          courseName: booking.session.course.name,
+          startsAt: booking.session.startsAt.toISOString(),
+          page: 'pages/bookings/index',
+        },
+      });
+
+      if (notification) {
+        created.push({ bookingId: booking.id, notificationId: notification.id });
+      }
+    }
+
+    return created;
+  }
+
+  @Cron(CronExpression.EVERY_10_MINUTES)
   async processPendingNotifications() {
     const limit = this.configService.get<number>('notifications.processingBatchSize') ?? 50;
     const notifications = await this.prisma.notification.findMany({
