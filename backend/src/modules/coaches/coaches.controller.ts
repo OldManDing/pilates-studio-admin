@@ -14,6 +14,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger'
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { CoachesService } from './coaches.service';
 import { CreateCoachDto } from './dto/create-coach.dto';
+import { QueryCoachesDto } from './dto/query-coaches.dto';
 import { UpdateCoachDto } from './dto/update-coach.dto';
 
 @ApiTags('Coaches')
@@ -32,8 +33,8 @@ export class CoachesController {
   @Get()
   @RequirePermissions('READ:COACHES')
   @ApiOperation({ summary: 'Get all coaches' })
-  async findAll() {
-    return this.coachesService.findAll();
+  async findAll(@Query() query: QueryCoachesDto) {
+    return this.coachesService.findAll(query);
   }
 
   @Get('active')

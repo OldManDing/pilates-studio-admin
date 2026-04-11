@@ -5,8 +5,10 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCoachDto } from './dto/create-coach.dto';
+import { QueryCoachesDto } from './dto/query-coaches.dto';
 import { UpdateCoachDto } from './dto/update-coach.dto';
 import { CoachStatus } from '../../common/enums/domain.enums';
+import { PaginatedResponse } from '../../common/dto/pagination.dto';
 
 @Injectable()
 export class CoachesService {
@@ -50,14 +52,49 @@ export class CoachesService {
     return coach;
   }
 
-  async findAll() {
-    return this.prisma.coach.findMany({
-      include: {
-        specialties: true,
-        certificates: true,
+  async findAll(query: QueryCoachesDto): Promise<PaginatedResponse<any>> {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 10;
+    const skip = (page - 1) * pageSize;
+    const search = query.search?.trim();
+
+    const where = {
+      ...(query.status ? { status: query.status } : {}),
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search } },
+              { phone: { contains: search } },
+              { email: { contains: search } },
+              { coachCode: { contains: search } },
+            ],
+          }
+        : {}),
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.coach.findMany({
+        where,
+        skip,
+        take: pageSize,
+        include: {
+          specialties: true,
+          certificates: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.coach.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
       },
-      orderBy: { createdAt: 'desc' },
-    });
+    };
   }
 
   async findActive() {
