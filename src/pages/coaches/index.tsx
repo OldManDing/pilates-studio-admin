@@ -218,9 +218,10 @@ export default function CoachesPage() {
   };
 
   const handleDeleteCoach = async (coach: Coach) => {
+    const previousList = coachList;
     try {
-      await coachesApi.delete(coach.id);
       setCoachList((current) => current.filter((item) => item.id !== coach.id));
+      await coachesApi.delete(coach.id);
 
       if (detailCoach?.id === coach.id) {
         setDetailCoach(null);
@@ -228,6 +229,7 @@ export default function CoachesPage() {
 
       messageApi.success(`已删除教练 ${coach.name}`);
     } catch (err) {
+      setCoachList(previousList);
       messageApi.error(getErrorMessage(err, '删除失败'));
     }
   };

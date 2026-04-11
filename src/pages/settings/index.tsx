@@ -2,6 +2,7 @@ import { SaveOutlined } from '@ant-design/icons';
 import { App, Button, Cascader, Col, Descriptions, Drawer, Form, Input, Row, Select, Spin, Switch, TimePicker, message as antdMessage } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
+import { useNavigate } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
@@ -208,6 +209,7 @@ const provinceCityDistrictData = [
 ];
 
 export default function SettingsPage() {
+  const navigate = useNavigate();
   const [storeForm] = Form.useForm<StoreInfoValues>();
   const { message } = App.useApp();
   const [loading, setLoading] = useState(true);
@@ -469,6 +471,10 @@ export default function SettingsPage() {
     }
   };
 
+  const handleGoToNotifications = () => {
+    navigate('/notifications');
+  };
+
   const handleCheckUpdate = () => {
     setSystemStatus('检查中');
     setTimeout(() => {
@@ -585,7 +591,6 @@ export default function SettingsPage() {
         导出数据: { ...current.导出数据, status: '正常', detail: `最近导出：${now}` }
       }));
       message.success('数据已导出');
-      setOpenDataDrawer(null);
     } catch (err) {
       message.error(getErrorMessage(err, '导出失败'));
     }
@@ -610,10 +615,10 @@ export default function SettingsPage() {
               数据恢复: { ...current.数据恢复, status: '正常', detail: `最近恢复于 ${timestamp}` }
             }));
             message.success('数据恢复成功');
+            setOpenDataDrawer(null);
           } else {
             message.error(res.message || '恢复失败');
           }
-          setOpenDataDrawer(null);
         } catch (err) {
           message.error(getErrorMessage(err, '恢复失败'));
         }
@@ -712,10 +717,16 @@ export default function SettingsPage() {
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>通知设置</h3>
-              <div className={widgetCls.smallText}>配置系统通知和提醒 · 开关变更后自动保存 · 最近保存 {notificationSavedAt}</div>
+              <div className={widgetCls.smallText}>通知策略归档于系统设置内，可在此快速调整开关，并进入通知管理查看记录或手动发送。</div>
             </div>
           </div>
           <div className={pageCls.settingsSectionList}>
+            <SettingsActionRow
+              title="通知管理"
+              description="查看发送记录、筛选状态，并向会员、管理员或小程序用户手动发送通知。"
+              statusLabel="正常"
+              onClick={handleGoToNotifications}
+            />
             {notifications.map((item) => (
               <div key={item.key} className={widgetCls.settingRow}>
                 <div>
@@ -915,7 +926,8 @@ export default function SettingsPage() {
                       options={['近 7 天', '近 30 天', '本季度'].map((item) => ({ label: item, value: item }))}
                       onChange={setExportRange}
                     />
-                </div>
+                    <div className={`${widgetCls.smallText} ${pageCls.topSpaceSm}`}>当前导出范围仅作为前端选择项展示，后端暂未区分范围导出。</div>
+                  </div>
                 <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleExportData}>记录导出</Button>
               </div>
             ) : null}

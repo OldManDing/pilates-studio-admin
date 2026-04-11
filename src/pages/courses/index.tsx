@@ -263,8 +263,8 @@ export default function CoursesPage() {
         popularCourse,
       }));
 
-      if (detailCourse && editingCourse) {
-        const updated = refreshed.data.find((c) => c.id === detailCourse.id) || null;
+      if (editingCourse && detailCourse?.id === editingCourse.id) {
+        const updated = refreshed.data.find((c) => c.id === editingCourse.id) || null;
         setDetailCourse(updated);
       }
 

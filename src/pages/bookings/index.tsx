@@ -341,14 +341,14 @@ export default function BookingsPage() {
   const handleStatusAdvance = async (booking: Booking) => {
     try {
       const nextStatus = getNextBookingStatus(booking.status);
-      await bookingsApi.updateStatus(booking.id, nextStatus);
-      await loadBookingsData();
+      const updatedBooking = await bookingsApi.updateStatus(booking.id, nextStatus);
+      await loadBookingsData(currentPage);
 
       if (detailBooking?.id === booking.id) {
-        setDetailBooking({ ...detailBooking, status: nextStatus });
+        setDetailBooking(updatedBooking);
       }
 
-        messageApi.success(`预约 ${booking.bookingCode} 已更新为${bookingStatusLabels[nextStatus]}`);
+      messageApi.success(`预约 ${booking.bookingCode} 已更新为${bookingStatusLabels[nextStatus]}`);
     } catch (err) {
       messageApi.error(getErrorMessage(err, '更新失败'));
     }
