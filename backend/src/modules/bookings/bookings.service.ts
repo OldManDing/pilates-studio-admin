@@ -5,10 +5,14 @@ import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { BookingStatus } from '../../common/enums/domain.enums';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
 import { buildDateRange } from '../../common/utils/date-range';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class BookingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   async create(dto: CreateBookingDto, requesterUserId?: string) {
     let targetMemberId = dto.memberId;
@@ -98,6 +102,18 @@ export class BookingsService {
       return booking;
     });
 
+    await this.notificationsService.createFromSetting('booking_confirmation', {
+      type: 'BOOKING_CONFIRMATION',
+      content: `您已成功预约 ${session.course.name}`,
+      memberId: member.id,
+      miniUserId: member.miniUserId ?? undefined,
+      payload: {
+        bookingId: result.id,
+        sessionId: dto.sessionId,
+        courseName: session.course.name,
+      },
+    });
+
     return result;
   }
 
@@ -152,7 +168,7 @@ export class BookingsService {
       where: { id },
       include: {
         member: {
-          select: { id: true, name: true, phone: true, remainingCredits: true },
+          select: { id: true, name: true, phone: true, remainingCredits: true, miniUserId: true },
         },
         session: {
           include: {
@@ -198,6 +214,21 @@ export class BookingsService {
 
       return updated;
     });
+
+    if (dto.status === BookingStatus.CANCELLED) {
+      await this.notificationsService.createFromSetting('booking_cancelled', {
+        type: 'BOOKING_CANCELLED',
+        title: '预约已取消',
+        content: `您的预约 ${booking.bookingCode} 已取消。`,
+        memberId: booking.memberId,
+        miniUserId: booking.member?.miniUserId ?? undefined,
+        payload: {
+          bookingId: booking.id,
+          sessionId: booking.sessionId,
+          bookingCode: booking.bookingCode,
+        },
+      });
+    }
 
     return result;
   }

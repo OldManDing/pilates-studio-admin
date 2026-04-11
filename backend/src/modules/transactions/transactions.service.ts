@@ -5,15 +5,19 @@ import { UpdateTransactionStatusDto } from './dto/update-transaction-status.dto'
 import { TransactionStatus } from '../../common/enums/domain.enums';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
 import { buildDateRange } from '../../common/utils/date-range';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class TransactionsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+  ) {}
 
   async create(dto: CreateTransactionDto) {
     const transactionCode = await this.generateTransactionCode();
 
-    return this.prisma.transaction.create({
+    const transaction = await this.prisma.transaction.create({
       data: {
         transactionCode,
         memberId: dto.memberId,
@@ -31,6 +35,20 @@ export class TransactionsService {
         plan: true,
       },
     });
+
+    await this.notificationsService.createFromSetting('payment_receipt', {
+      type: 'PAYMENT_RECEIPT',
+      title: '支付凭证',
+      content: `已记录一笔金额为 ${(dto.amountCents / 100).toFixed(2)} 元的交易。`,
+      memberId: dto.memberId,
+      payload: {
+        transactionId: transaction.id,
+        amountCents: dto.amountCents,
+        kind: dto.kind,
+      },
+    });
+
+    return transaction;
   }
 
   async findAll(query: PaginationDto & { memberId?: string; kind?: string; from?: string; to?: string }): Promise<PaginatedResponse<any>> {
