@@ -37,6 +37,8 @@ export interface CreateTransactionData {
   notes?: string;
 }
 
+export interface UpdateTransactionData extends Partial<CreateTransactionData> {}
+
 export const transactionsApi = {
   getAll: async (params?: { page?: number; pageSize?: number; memberId?: string; kind?: string; from?: string; to?: string }) => {
     const res = await api.get<PaginatedResponse<any>>('/transactions', { params: params || {} });
@@ -53,6 +55,11 @@ export const transactionsApi = {
 
   create: async (data: CreateTransactionData) => {
     const res = await api.post<any>('/transactions', data);
+    return mapTransaction(res);
+  },
+
+  update: async (id: string, data: UpdateTransactionData) => {
+    const res = await api.patch<any>(`/transactions/${id}`, data);
     return mapTransaction(res);
   },
 

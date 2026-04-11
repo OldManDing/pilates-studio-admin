@@ -23,6 +23,7 @@ import StatusTag from '@/components/StatusTag';
 import { CRUD_MODAL_WIDTH, NARROW_DETAIL_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
+import { membersApi, type Member } from '@/services/members';
 import { transactionsApi, type Transaction } from '@/services/transactions';
 import { reportsApi } from '@/services/reports';
 import type { TransactionStatus, TransactionKind } from '@/types';
@@ -65,7 +66,7 @@ const reverseStatusMap: Record<string, TransactionStatus> = {
 };
 
 type TransactionFormValues = {
-  memberName: string;
+  memberId?: string;
   kind: TransactionKind;
   status: TransactionStatus;
   amount: number;
@@ -106,6 +107,7 @@ export default function FinancePage() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
   const [showAllTransactions, setShowAllTransactions] = useState(false);
+  const [members, setMembers] = useState<Member[]>([]);
   const [revenueStructure, setRevenueStructure] = useState<Array<{ name: string; value: number; fill: string }>>([]);
   const [financeBar, setFinanceBar] = useState<Array<{ month: string; revenue: number }>>([]);
   const [stats, setStats] = useState({
@@ -176,6 +178,19 @@ export default function FinancePage() {
   useEffect(() => {
     setLoading(true);
     fetchTransactions();
+  }, []);
+
+  useEffect(() => {
+    const fetchMembers = async () => {
+      try {
+        const firstPage = await membersApi.getAll(1, 100);
+        setMembers(firstPage.data || []);
+      } catch {
+        // keep transaction UI usable even if member lookup fails
+      }
+    };
+
+    fetchMembers();
   }, []);
 
   const filteredTransactions = useMemo(() => {
@@ -253,7 +268,7 @@ export default function FinancePage() {
   const openCreateModal = () => {
     setEditingTransaction(null);
     form.setFieldsValue({
-      memberName: '',
+      memberId: undefined,
       kind: 'MEMBERSHIP_PURCHASE',
       status: 'COMPLETED',
       amount: 0,
@@ -265,7 +280,7 @@ export default function FinancePage() {
   const openEditModal = (transaction: Transaction) => {
     setEditingTransaction(transaction);
     form.setFieldsValue({
-      memberName: transaction.member?.name || '',
+      memberId: transaction.memberId,
       kind: transaction.kind,
       status: transaction.status,
       amount: transaction.amountCents / 100,
@@ -284,6 +299,7 @@ export default function FinancePage() {
     try {
       const values = await form.validateFields();
       const data = {
+        memberId: values.memberId,
         kind: values.kind,
         status: values.status,
         amountCents: Math.round(values.amount * 100),
@@ -291,7 +307,7 @@ export default function FinancePage() {
       };
 
       if (editingTransaction) {
-        await transactionsApi.updateStatus(editingTransaction.id, values.status);
+        await transactionsApi.update(editingTransaction.id, data);
         messageApi.success('交易记录已更新');
       } else {
         await transactionsApi.create(data);
@@ -545,8 +561,18 @@ export default function FinancePage() {
         <Form form={form} className={pageCls.crudModalForm} layout="vertical">
           <Row gutter={18}>
             <Col xs={24} md={12}>
-              <Form.Item name="memberName" label="会员姓名">
-                <Input className={pageCls.settingsInput} placeholder="例如：林若溪" disabled={!!editingTransaction} />
+              <Form.Item name="memberId" label="关联会员">
+                <Select
+                  className={pageCls.settingsInput}
+                  allowClear
+                  showSearch
+                  placeholder="可选：选择关联会员"
+                  optionFilterProp="label"
+                  options={members.map((member) => ({
+                    value: member.id,
+                    label: `${member.name} · ${member.memberCode || member.phone}`,
+                  }))}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
