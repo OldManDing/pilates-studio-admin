@@ -46,7 +46,7 @@ export interface CreateBookingData {
 }
 
 export const bookingsApi = {
-  getAll: async (params?: { page?: number; pageSize?: number; status?: BookingStatus; from?: string; to?: string }) => {
+  getAll: async (params?: { page?: number; pageSize?: number; status?: BookingStatus; from?: string; to?: string; search?: string }) => {
     const res = await api.get<PaginatedResponse<any>>('/bookings', { params: params || {} });
     return {
       ...res,

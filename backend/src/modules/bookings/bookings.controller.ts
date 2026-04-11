@@ -16,6 +16,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { QueryBookingsDto } from './dto/query-bookings.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { BookingStatus } from '../../common/enums/domain.enums';
 
@@ -38,7 +39,7 @@ export class BookingsController {
   @Get()
   @RequirePermissions('READ:BOOKINGS')
   @ApiOperation({ summary: 'Get all bookings with pagination' })
-  async findAll(@Query() query: PaginationDto & { status?: BookingStatus; from?: string; to?: string }) {
+  async findAll(@Query() query: QueryBookingsDto) {
     return this.bookingsService.findAll(query);
   }
 

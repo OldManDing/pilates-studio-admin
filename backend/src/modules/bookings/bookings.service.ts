@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
+import { QueryBookingsDto } from './dto/query-bookings.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { BookingStatus } from '../../common/enums/domain.enums';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
@@ -117,17 +118,26 @@ export class BookingsService {
     return result;
   }
 
-  async findAll(query: PaginationDto & { status?: BookingStatus; from?: string; to?: string }): Promise<PaginatedResponse<any>> {
+  async findAll(query: QueryBookingsDto): Promise<PaginatedResponse<any>> {
     const page = Number(query.page) || 1;
     const pageSize = Number(query.pageSize) || 10;
     const { status, from, to } = query;
     const skip = (page - 1) * pageSize;
+    const keyword = query.search?.trim();
 
     const where: any = {};
     if (status) where.status = status;
     const bookedAtRange = buildDateRange(from, to, 'bookings.bookedAt');
     if (bookedAtRange) {
       where.bookedAt = bookedAtRange;
+    }
+    if (keyword) {
+      where.OR = [
+        { bookingCode: { contains: keyword } },
+        { member: { name: { contains: keyword } } },
+        { session: { course: { name: { contains: keyword } } } },
+        { session: { coach: { name: { contains: keyword } } } },
+      ];
     }
 
     const [data, total] = await Promise.all([
