@@ -44,6 +44,33 @@ export class ReportsService {
     };
   }
 
+  async getExpiringSoonCount(days = 30) {
+    const now = Date.now();
+    const threshold = now + days * 24 * 60 * 60 * 1000;
+
+    const members = await this.prisma.member.findMany({
+      where: {
+        status: 'ACTIVE',
+        plan: {
+          durationDays: { not: null },
+        },
+      },
+      include: {
+        plan: {
+          select: {
+            durationDays: true,
+          },
+        },
+      },
+    });
+
+    return members.filter((member) => {
+      if (!member.plan?.durationDays) return false;
+      const end = new Date(member.joinedAt).getTime() + Number(member.plan.durationDays) * 24 * 60 * 60 * 1000;
+      return end >= now && end <= threshold;
+    }).length;
+  }
+
   async getBookingsReport(from: string, to: string) {
     const where = {
       bookedAt: buildDateRange(from, to, 'reports.bookings'),

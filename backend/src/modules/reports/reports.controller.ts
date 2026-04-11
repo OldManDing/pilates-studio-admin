@@ -16,6 +16,14 @@ export class ReportsController {
     return this.reportsService.getMembersReport();
   }
 
+  @Get('members/expiring-soon')
+  @RequirePermissions('READ:REPORTS')
+  @ApiOperation({ summary: 'Get expiring-soon member count' })
+  @ApiQuery({ name: 'days', required: false, example: 30 })
+  async getExpiringSoonCount(@Query('days') days?: string) {
+    return this.reportsService.getExpiringSoonCount(days ? Number(days) : 30);
+  }
+
   @Get('bookings')
   @RequirePermissions('READ:REPORTS')
   @ApiOperation({ summary: 'Get bookings report' })
