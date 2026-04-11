@@ -1,4 +1,4 @@
-import { EditOutlined, EyeOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons';
 import {
   App,
   Button,
@@ -8,6 +8,7 @@ import {
   Form,
   Input,
   Modal,
+  Popconfirm,
   Row,
   Select,
   Spin,
@@ -272,6 +273,33 @@ export default function RolesPage() {
                     >
                       编辑权限
                     </ActionButton>
+                    <Popconfirm
+                      title="删除角色"
+                      description="删除后该角色将无法恢复，且不会删除保留角色或已分配角色。"
+                      okText="确认删除"
+                      cancelText="取消"
+                      onConfirm={async () => {
+                        try {
+                          await rolesApi.remove(item.id);
+                          message.success('角色已删除');
+                          if (detailRole?.id === item.id) {
+                            setDetailRole(null);
+                          }
+                          await fetchData();
+                        } catch (err) {
+                          message.error(getErrorMessage(err, '删除角色失败'));
+                        }
+                      }}
+                    >
+                      <ActionButton
+                        size="large"
+                        ghost
+                        className={roleCss.roleActionButton}
+                        icon={<DeleteOutlined />}
+                      >
+                        删除角色
+                      </ActionButton>
+                    </Popconfirm>
                   </div>
                 </div>
               );

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Delete, Get, Post, Body, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { RolesService } from './roles.service';
@@ -48,6 +48,14 @@ export class RolesController {
     @Body('permissionIds') permissionIds: string[],
   ) {
     return this.rolesService.assignPermissions(id, permissionIds);
+  }
+
+  @Delete(':id')
+  @RequirePermissions('MANAGE:ROLES')
+  @ApiOperation({ summary: 'Delete role by ID' })
+  @ApiParam({ name: 'id', description: 'Role ID' })
+  async remove(@Param('id') id: string) {
+    return this.rolesService.remove(id);
   }
 
   @Post('init')

@@ -2,6 +2,8 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 
+const RESERVED_ROLE_CODES = ['OWNER', 'FRONTDESK', 'COACH', 'FINANCE'] as const;
+
 @Injectable()
 export class RolesService {
   constructor(private prisma: PrismaService) {}
@@ -102,6 +104,23 @@ export class RolesService {
         },
       },
     });
+  }
+
+  async remove(id: string) {
+    const role = await this.findOne(id);
+
+    if (RESERVED_ROLE_CODES.includes(role.code as (typeof RESERVED_ROLE_CODES)[number])) {
+      throw new ConflictException('Reserved roles cannot be deleted');
+    }
+
+    if ((role.admins?.length ?? 0) > 0) {
+      throw new ConflictException('Role cannot be deleted while assigned to admins');
+    }
+
+    await this.prisma.rolePermission.deleteMany({ where: { roleId: id } });
+    await this.prisma.role.delete({ where: { id } });
+
+    return { success: true };
   }
 
   async findAllPermissions() {

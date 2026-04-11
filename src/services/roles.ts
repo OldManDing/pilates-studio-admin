@@ -32,6 +32,7 @@ export const rolesApi = {
   getById: (id: string) => api.get<Role>(`/roles/${id}`),
   getPermissions: () => api.get<Permission[]>('/roles/permissions'),
   create: (data: CreateRoleData) => api.post<Role>('/roles', data),
+  remove: (id: string) => api.delete<{ success: boolean }>(`/roles/${id}`),
   assignPermissions: (id: string, permissionIds: string[]) =>
     api.post<Role>(`/roles/${id}/permissions`, { permissionIds }),
   initializeDefaults: () => api.post<{ success: boolean }>('/roles/init', {}),

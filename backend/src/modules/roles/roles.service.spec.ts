@@ -23,6 +23,7 @@ describe('RolesService', () => {
         findUnique: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+        delete: jest.fn(),
       },
       rolePermission: {
         deleteMany: jest.fn(),
@@ -85,5 +86,28 @@ describe('RolesService', () => {
         },
       }),
     );
+  });
+
+  it('prevents deleting reserved roles', async () => {
+    prisma.role.findUnique.mockResolvedValue(createRole({ admins: [] }));
+
+    await expect(service.remove('role-1')).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('prevents deleting roles that are still assigned to admins', async () => {
+    prisma.role.findUnique.mockResolvedValue(createRole({ code: 'OPERATIONS', admins: [{ id: 'admin-1' }] }));
+
+    await expect(service.remove('role-1')).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('deletes non-reserved roles with no assigned admins', async () => {
+    prisma.role.findUnique.mockResolvedValue(createRole({ code: 'OPERATIONS', admins: [] }));
+    prisma.role.delete.mockResolvedValue(createRole({ code: 'OPERATIONS', admins: [] }));
+
+    const result = await service.remove('role-1');
+
+    expect(prisma.rolePermission.deleteMany).toHaveBeenCalledWith({ where: { roleId: 'role-1' } });
+    expect(prisma.role.delete).toHaveBeenCalledWith({ where: { id: 'role-1' } });
+    expect(result).toEqual({ success: true });
   });
 });
