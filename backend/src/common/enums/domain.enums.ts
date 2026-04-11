@@ -73,3 +73,10 @@ export enum NotificationChannel {
   MINI_PROGRAM = 'MINI_PROGRAM',
   INTERNAL = 'INTERNAL',
 }
+
+export enum NotificationStatus {
+  PENDING = 'PENDING',
+  SENT = 'SENT',
+  READ = 'READ',
+  FAILED = 'FAILED',
+}
