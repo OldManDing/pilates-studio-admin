@@ -20,6 +20,9 @@ describe('AnalyticsService', () => {
         aggregate: jest.fn(),
         count: jest.fn(),
       },
+      courseReview: {
+        aggregate: jest.fn(),
+      },
       courseSession: {
         findMany: jest.fn(),
       },
@@ -54,6 +57,7 @@ describe('AnalyticsService', () => {
       .mockResolvedValueOnce(8);
     prisma.transaction.aggregate.mockResolvedValue({ _sum: { amountCents: 500000 } });
     prisma.transaction.count.mockResolvedValue(1);
+    prisma.courseReview.aggregate.mockResolvedValue({ _avg: { rating: 4.2 } });
     prisma.transaction.groupBy.mockResolvedValue([
       { kind: 'MEMBERSHIP_PURCHASE', _count: { id: 6 } },
     ]);
@@ -75,7 +79,7 @@ describe('AnalyticsService', () => {
         goalAchievement: 50,
         retentionRate: 100,
         avgOccupancy: 80,
-        satisfaction: null,
+        satisfaction: 84,
       },
       transactionPopularity: [{ label: 'MEMBERSHIP_PURCHASE', value: 6 }],
     });

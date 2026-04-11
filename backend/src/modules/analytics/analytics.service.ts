@@ -21,6 +21,7 @@ export class AnalyticsService {
       totalBookings,
       confirmedBookings,
       completedRevenue,
+      reviewAggregate,
     ] = await Promise.all([
       this.prisma.member.count(),
       this.prisma.member.count({ where: { status: MemberStatus.ACTIVE } }),
@@ -40,6 +41,11 @@ export class AnalyticsService {
           amountCents: true,
         },
       }),
+      this.prisma.courseReview.aggregate({
+        _avg: {
+          rating: true,
+        },
+      }),
     ]);
 
     const revenueGoal = this.configService.get<number>('analytics.monthlyRevenueGoalCents') ?? 5_000_000;
@@ -57,6 +63,9 @@ export class AnalyticsService {
 
     const retentionRate = expiringMembers > 0 ? Number(((renewals / expiringMembers) * 100).toFixed(1)) : 0;
     const avgOccupancy = totalBookings > 0 ? Number(((confirmedBookings / totalBookings) * 100).toFixed(1)) : 0;
+    const satisfaction = reviewAggregate._avg.rating
+      ? Number(((Number(reviewAggregate._avg.rating) / 5) * 100).toFixed(1))
+      : null;
 
     const popularity = await this.prisma.transaction.groupBy({
       by: ['kind'],
@@ -72,8 +81,7 @@ export class AnalyticsService {
         goalAchievement,
         retentionRate,
         avgOccupancy,
-        // Satisfaction is intentionally left null until a course-review data model exists.
-        satisfaction: null,
+        satisfaction,
       },
       transactionPopularity: popularity.map((item) => ({
         label: item.kind,

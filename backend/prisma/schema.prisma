@@ -189,6 +189,7 @@ model Member {
   miniUser         MiniUser?         @relation(fields: [miniUserId], references: [id])
   bookings         Booking[]
   attendance       Attendance[]
+  courseReviews    CourseReview[]
   transactions     Transaction[]
   notifications    Notification[]
   createdAt        DateTime          @default(now())
@@ -257,6 +258,7 @@ model CourseSession {
   location    String?
   bookings    Booking[]
   attendance  Attendance[]
+  reviews     CourseReview[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 }
@@ -288,8 +290,23 @@ model Attendance {
   checkedInAt DateTime?
   completedAt DateTime?
   notes       String?
+  review      CourseReview?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+}
+
+model CourseReview {
+  id           String       @id @default(cuid())
+  attendanceId String       @unique
+  attendance   Attendance   @relation(fields: [attendanceId], references: [id])
+  memberId     String
+  member       Member       @relation(fields: [memberId], references: [id])
+  sessionId    String
+  session      CourseSession @relation(fields: [sessionId], references: [id])
+  rating       Int
+  comment      String?      @db.Text
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 }
 
 model Transaction {

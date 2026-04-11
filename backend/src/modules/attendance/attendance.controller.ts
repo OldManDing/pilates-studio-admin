@@ -12,6 +12,7 @@ import { RequirePermissions } from '../../common/decorators/require-permissions.
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { AttendanceService } from './attendance.service';
 import { CheckInDto } from './dto/check-in.dto';
+import { SubmitCourseReviewDto } from './dto/submit-course-review.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 
 @ApiTags('Attendance')
@@ -36,6 +37,14 @@ export class AttendanceController {
     @Body('notes') notes?: string,
   ) {
     return this.attendanceService.completeSession(id, notes);
+  }
+
+  @Post(':id/review')
+  @RequirePermissions('WRITE:ATTENDANCE')
+  @ApiOperation({ summary: 'Submit course review for attendance record' })
+  @ApiParam({ name: 'id', description: 'Attendance ID' })
+  async submitReview(@Param('id') id: string, @Body() dto: SubmitCourseReviewDto) {
+    return this.attendanceService.submitReview(id, dto);
   }
 
   @Get()

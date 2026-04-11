@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CheckInDto } from './dto/check-in.dto';
+import { SubmitCourseReviewDto } from './dto/submit-course-review.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 import { AttendanceStatus, BookingStatus } from '../../common/enums/domain.enums';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
@@ -132,6 +133,38 @@ export class AttendanceService {
     });
   }
 
+  async submitReview(id: string, dto: SubmitCourseReviewDto) {
+    const attendance = await this.findOne(id);
+
+    if (attendance.status !== AttendanceStatus.COMPLETED) {
+      throw new ConflictException('Course review requires a completed attendance record');
+    }
+
+    const existingReview = await this.prisma.courseReview.findUnique({
+      where: { attendanceId: id },
+    });
+
+    if (existingReview) {
+      return this.prisma.courseReview.update({
+        where: { attendanceId: id },
+        data: {
+          rating: dto.rating,
+          comment: dto.comment,
+        },
+      });
+    }
+
+    return this.prisma.courseReview.create({
+      data: {
+        attendanceId: id,
+        memberId: attendance.memberId,
+        sessionId: attendance.sessionId,
+        rating: dto.rating,
+        comment: dto.comment,
+      },
+    });
+  }
+
   async findAll(query: PaginationDto & { sessionId?: string; memberId?: string }): Promise<PaginatedResponse<any>> {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 10;
@@ -147,10 +180,10 @@ export class AttendanceService {
         where,
         skip,
         take: pageSize,
-        include: {
-          member: {
-            select: { id: true, name: true, phone: true },
-          },
+      include: {
+        member: {
+          select: { id: true, name: true, phone: true },
+        },
           session: {
             include: {
               course: { select: { id: true, name: true } },
@@ -159,6 +192,7 @@ export class AttendanceService {
           booking: {
             select: { id: true, bookingCode: true },
           },
+          review: true,
         },
         orderBy: { createdAt: 'desc' },
       }),
@@ -188,6 +222,7 @@ export class AttendanceService {
           },
         },
         booking: true,
+        review: true,
       },
     });
 

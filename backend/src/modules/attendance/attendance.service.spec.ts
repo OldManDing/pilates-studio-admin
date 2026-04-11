@@ -49,6 +49,11 @@ describe('AttendanceService', () => {
         findMany: jest.fn(),
         count: jest.fn(),
       },
+      courseReview: {
+        findUnique: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
     };
     service = new AttendanceService(prisma, notificationsService as never);
   });
@@ -103,5 +108,45 @@ describe('AttendanceService', () => {
     prisma.attendance.findUnique.mockResolvedValue(null);
 
     await expect(service.findOne('missing')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('creates a course review for completed attendance', async () => {
+    prisma.attendance.findUnique.mockResolvedValue(createAttendance({ status: AttendanceStatus.COMPLETED }));
+    prisma.courseReview.findUnique.mockResolvedValue(null);
+    prisma.courseReview.create.mockResolvedValue({ id: 'review-1', attendanceId: 'attendance-1', rating: 5, comment: '很棒' });
+
+    const result = await service.submitReview('attendance-1', { rating: 5, comment: '很棒' } as never);
+
+    expect(prisma.courseReview.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          attendanceId: 'attendance-1',
+          memberId: 'member-1',
+          sessionId: 'session-1',
+          rating: 5,
+        }),
+      }),
+    );
+    expect(result.id).toBe('review-1');
+  });
+
+  it('updates an existing course review if one already exists', async () => {
+    prisma.attendance.findUnique.mockResolvedValue(createAttendance({ status: AttendanceStatus.COMPLETED }));
+    prisma.courseReview.findUnique.mockResolvedValue({ id: 'review-1', attendanceId: 'attendance-1' });
+    prisma.courseReview.update.mockResolvedValue({ id: 'review-1', attendanceId: 'attendance-1', rating: 4, comment: '更新评价' });
+
+    const result = await service.submitReview('attendance-1', { rating: 4, comment: '更新评价' } as never);
+
+    expect(prisma.courseReview.update).toHaveBeenCalledWith({
+      where: { attendanceId: 'attendance-1' },
+      data: { rating: 4, comment: '更新评价' },
+    });
+    expect(result.rating).toBe(4);
+  });
+
+  it('rejects course review submission before session completion', async () => {
+    prisma.attendance.findUnique.mockResolvedValue(createAttendance({ status: AttendanceStatus.CHECKED_IN }));
+
+    await expect(service.submitReview('attendance-1', { rating: 5 } as never)).rejects.toBeInstanceOf(ConflictException);
   });
 });
