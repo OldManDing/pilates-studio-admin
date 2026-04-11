@@ -43,7 +43,7 @@
 
 | ID | Page/Module | Problem | Cause | Suggested Fix | Priority | Status | Notes |
 |---|---|---|---|---|---|---|---|
-| UI-01 | Global page container | Page padding collapses too aggressively on medium screens | Breakpoint rule in `page.module.css` compresses horizontal spacing too far | Normalize page container spacing across breakpoints | P1 | pending | |
+| UI-01 | Global page container | Page padding collapses too aggressively on medium screens | Breakpoint rule in `page.module.css` compresses horizontal spacing too far | Normalize page container spacing across breakpoints | P1 | done | Medium-screen page padding restored to keep consistent horizontal breathing room |
 | UI-02 | Dashboard | Dashboard cards feel stitched from different component families | Different internal spacing, heading rhythm, and action treatment across dashboard cards | Unify dashboard card shell and section rhythm | P1 | done | Dashboard local hardcoded accent styling reduced and card rhythm pulled closer to shared token system |
 | UI-03 | Finance | Finance page visual language drifts from other CRUD pages | Stats, chart blocks, and records use a different density and card rhythm | Align finance layout and card density with other operational pages | P1 | done | Shared action/button hierarchy and visual rhythm now align more closely with dashboard/roles/bookings |
 | UI-04 | Roles | Roles page uses a separate color and button system | Local CSS variables and gradients bypass shared tokens | Re-anchor roles page to global token/button system | P1 | done | Roles page now uses shared ActionButton hierarchy and token-driven card styling |
@@ -51,8 +51,8 @@
 | UI-06 | Typography | Hardcoded font sizes bypass type scale | Several modules still use raw `11px/12px/18px` values | Replace hardcoded sizes with typography tokens | P1 | pending | |
 | UI-07 | Color system | Multiple hardcoded colors and gradients break brand consistency | Page-level CSS and inline maps skip CSS variables | Map visual accents back to shared tokens | P1 | pending | |
 | UI-08 | Card spacing | Card padding/gap/hover patterns differ too much | StatCard, SectionCard, list cards, and settings shells all use different spacing rules | Normalize card spacing and hover rhythm | P2 | pending | |
-| UI-09 | Settings | Settings shells still feel like their own product area | Settings overview/section shell pattern diverges from the main admin structure | Bring settings shells closer to main page patterns | P2 | pending | |
-| UI-10 | Bookings | Hero stats / period selector still form an isolated visual island | Bespoke visual patterns not reused elsewhere | Pull bookings control layer closer to shared toolbar/stat patterns | P2 | pending | |
+| UI-09 | Settings | Settings shells still feel like their own product area | Settings overview/section shell pattern diverges from the main admin structure | Bring settings shells closer to main page patterns | P2 | done | Overview cards and shell surfaces moved closer to shared surface/card rhythm |
+| UI-10 | Bookings | Hero stats / period selector still form an isolated visual island | Bespoke visual patterns not reused elsewhere | Pull bookings control layer closer to shared toolbar/stat patterns | P2 | done | Selector title, badge, spacing, and card shell were brought closer to shared toolbar/card patterns |
 
 ## 2. Functional Issues
 
