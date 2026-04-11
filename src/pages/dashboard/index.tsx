@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
 import pageCls from '@/styles/page.module.css';
+import widgetCls from '@/styles/widgets.module.css';
 import { bookingsApi, type Booking } from '@/services/bookings';
 import { coursesApi, type Course } from '@/services/courses';
 import { coachesApi, type Coach } from '@/services/coaches';
@@ -192,26 +193,48 @@ export default function DashboardPage() {
   const [courseList, setCourseList] = useState<Course[]>([]);
   const [coachList, setCoachList] = useState<Coach[]>([]);
   const [bookingList, setBookingList] = useState<Booking[]>([]);
+  const [partialFailures, setPartialFailures] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        const [memberReport, coursesData, coachesData, bookingsRes, txSummary] = await Promise.all([
+        const [memberReportResult, coursesResult, coachesResult, bookingsResult, txSummaryResult] = await Promise.allSettled([
           reportsApi.getMembers(),
           coursesApi.getAll(),
           coachesApi.getAll(),
           bookingsApi.getAll({ page: 1, pageSize: 12 }),
-          transactionsApi
-            .getSummary()
-            .catch(() => ({ totalRevenueCents: 0, pendingAmountCents: 0, refundedAmountCents: 0, todayRevenueCents: 0 })),
+          transactionsApi.getSummary(),
         ]);
 
+        const failures: string[] = [];
+
+        const memberReport = memberReportResult.status === 'fulfilled' ? memberReportResult.value : null;
+        if (!memberReport) failures.push('会员统计');
+
+        const coursesData = coursesResult.status === 'fulfilled' ? coursesResult.value : [];
+        if (coursesResult.status !== 'fulfilled') failures.push('课程列表');
+
+        const coachesData = coachesResult.status === 'fulfilled' ? coachesResult.value : [];
+        if (coachesResult.status !== 'fulfilled') failures.push('教练列表');
+
+        const bookingsRes = bookingsResult.status === 'fulfilled'
+          ? bookingsResult.value
+          : { data: [], meta: { page: 1, pageSize: 12, total: 0, totalPages: 0 } };
+        if (bookingsResult.status !== 'fulfilled') failures.push('预约列表');
+
+        const txSummary = txSummaryResult.status === 'fulfilled'
+          ? txSummaryResult.value
+          : { totalRevenueCents: 0, pendingAmountCents: 0, refundedAmountCents: 0, todayRevenueCents: 0 };
+        if (txSummaryResult.status !== 'fulfilled') failures.push('交易汇总');
+
+        setPartialFailures(failures);
+
         setStats({
-          totalMembers: memberReport.totalMembers,
-          activeMembers: memberReport.activeMembers,
-          newMembersThisMonth: memberReport.newMembersThisMonth,
+          totalMembers: memberReport?.totalMembers ?? 0,
+          activeMembers: memberReport?.activeMembers ?? 0,
+          newMembersThisMonth: memberReport?.newMembersThisMonth ?? 0,
           monthlyRevenue: Math.round((txSummary.totalRevenueCents || 0) / 100),
         });
         setCourseList(coursesData || []);
@@ -295,6 +318,13 @@ export default function DashboardPage() {
         title="仪表盘"
         subtitle={`欢迎回来，当前有 ${todayCourses.length} 个课程概览、${bookingList.length} 条预约记录，${stats.activeMembers} 位活跃会员。`}
       />
+
+      {partialFailures.length ? (
+        <div className={`${pageCls.surface} ${pageCls.surfaceTopSpace} ${pageCls.centeredStateTop}`}>
+          <div className={widgetCls.detailTitle}>部分数据加载失败</div>
+          <div className={widgetCls.smallText}>当前未成功加载：{partialFailures.join('、')}。其余模块数据已正常展示。</div>
+        </div>
+      ) : null}
 
       <div className={pageCls.dashboardHeroGrid}>
         {dashboardStats.map((item) => (
