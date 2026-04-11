@@ -17,6 +17,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { MembersService } from './members.service';
 import { CreateMemberDto } from './dto/create-member.dto';
+import { QueryMembersDto } from './dto/query-members.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 
 @ApiTags('Members')
@@ -35,8 +36,8 @@ export class MembersController {
   @Get()
   @RequirePermissions('READ:MEMBERS')
   @ApiOperation({ summary: 'Get all members with pagination' })
-  async findAll(@Query() pagination: PaginationDto) {
-    return this.membersService.findAll(pagination);
+  async findAll(@Query() query: QueryMembersDto) {
+    return this.membersService.findAll(query);
   }
 
   // Mini-program endpoints (member-facing) - must be before :id routes

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMemberDto } from './dto/create-member.dto';
+import { QueryMembersDto } from './dto/query-members.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
 import { MemberStatus } from '../../common/enums/domain.enums';
@@ -43,13 +44,30 @@ export class MembersService {
     });
   }
 
-  async findAll(pagination: PaginationDto): Promise<PaginatedResponse<any>> {
-    const page = pagination.page ?? 1;
-    const pageSize = pagination.pageSize ?? 10;
+  async findAll(query: QueryMembersDto): Promise<PaginatedResponse<any>> {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 10;
     const skip = (page - 1) * pageSize;
+
+    const search = query.search?.trim();
+    const where = {
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.planId ? { planId: query.planId } : {}),
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search } },
+              { phone: { contains: search } },
+              { email: { contains: search } },
+              { memberCode: { contains: search } },
+            ],
+          }
+        : {}),
+    };
 
     const [data, total] = await Promise.all([
       this.prisma.member.findMany({
+        where,
         skip,
         take: pageSize,
         include: {
@@ -58,7 +76,7 @@ export class MembersService {
         },
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.member.count(),
+      this.prisma.member.count({ where }),
     ]);
 
     return {

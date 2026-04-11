@@ -48,9 +48,25 @@ export interface PaginatedResponse<T> {
   };
 }
 
+export type MembersQueryParams = {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: MemberStatus;
+  planId?: string;
+};
+
 export const membersApi = {
-  getAll: async (page = 1, pageSize = 10) => {
-    const res = await api.get<PaginatedResponse<any>>('/members', { params: { page, pageSize } });
+  getAll: async (page = 1, pageSize = 10, filters: Omit<MembersQueryParams, 'page' | 'pageSize'> = {}) => {
+    const res = await api.get<PaginatedResponse<any>>('/members', {
+      params: {
+        page,
+        pageSize,
+        search: filters.search,
+        status: filters.status,
+        planId: filters.planId,
+      },
+    });
     return {
       ...res,
       data: (res.data || []).map(mapMember),
