@@ -15,10 +15,12 @@ export default () => ({
   },
   notifications: {
     expiryReminderDays: Number(process.env.NOTIFICATION_EXPIRY_REMINDER_DAYS ?? 3),
+    bookingReminderMinutes: Number(process.env.NOTIFICATION_BOOKING_REMINDER_MINUTES ?? 60),
     processingBatchSize: Number(process.env.NOTIFICATION_PROCESSING_BATCH_SIZE ?? 50),
     templateIds: {
       bookingConfirmation: process.env.WECHAT_TEMPLATE_ID_BOOKING_CONFIRMATION ?? '',
       bookingCancelled: process.env.WECHAT_TEMPLATE_ID_BOOKING_CANCELLED ?? '',
+      bookingReminder: process.env.WECHAT_TEMPLATE_ID_BOOKING_REMINDER ?? '',
       attendanceCheckedIn: process.env.WECHAT_TEMPLATE_ID_ATTENDANCE_CHECKED_IN ?? '',
       membershipExpiry: process.env.WECHAT_TEMPLATE_ID_MEMBERSHIP_EXPIRY ?? '',
     },
@@ -26,5 +28,12 @@ export default () => ({
   wechat: {
     appId: process.env.WECHAT_APPID ?? '',
     secret: process.env.WECHAT_SECRET ?? '',
+  },
+  email: {
+    host: process.env.SMTP_HOST ?? '',
+    port: Number(process.env.SMTP_PORT ?? 587),
+    user: process.env.SMTP_USER ?? '',
+    password: process.env.SMTP_PASSWORD ?? '',
+    from: process.env.SMTP_FROM ?? '',
   },
 });
