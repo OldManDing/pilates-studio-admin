@@ -13,6 +13,9 @@ describe('NotificationsScheduler', () => {
       member: {
         findMany: jest.fn(),
       },
+      booking: {
+        findMany: jest.fn(),
+      },
       notification: {
         findFirst: jest.fn(),
         findMany: jest.fn(),
@@ -22,6 +25,7 @@ describe('NotificationsScheduler', () => {
     configService = {
       get: jest.fn((key: string) => {
         if (key === 'notifications.expiryReminderDays') return 3;
+        if (key === 'notifications.bookingReminderMinutes') return 60;
         if (key === 'notifications.processingBatchSize') return 50;
         return undefined;
       }),
@@ -71,6 +75,38 @@ describe('NotificationsScheduler', () => {
       }),
     );
     expect(result).toEqual([{ memberId: 'member-1', notificationId: 'notification-1' }]);
+  });
+
+  it('creates booking reminders for confirmed bookings within the reminder window', async () => {
+    const startsAt = new Date(Date.now() + 30 * 60 * 1000);
+    prisma.booking.findMany.mockResolvedValue([
+      {
+        id: 'booking-1',
+        memberId: 'member-1',
+        sessionId: 'session-1',
+        member: {
+          miniUserId: 'mini-user-1',
+        },
+        session: {
+          startsAt,
+          course: { name: 'Morning Flow' },
+        },
+      },
+    ]);
+    prisma.notification.findFirst.mockResolvedValue(null);
+    notificationsService.createFromSetting.mockResolvedValue({ id: 'notification-2' });
+
+    const result = await scheduler.scheduleBookingReminders();
+
+    expect(notificationsService.createFromSetting).toHaveBeenCalledWith(
+      'booking_reminder',
+      expect.objectContaining({
+        type: 'BOOKING_REMINDER',
+        memberId: 'member-1',
+        miniUserId: 'mini-user-1',
+      }),
+    );
+    expect(result).toEqual([{ bookingId: 'booking-1', notificationId: 'notification-2' }]);
   });
 
   it('processes pending notifications through the delivery service', async () => {

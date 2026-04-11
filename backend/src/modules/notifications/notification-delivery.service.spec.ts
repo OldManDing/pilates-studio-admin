@@ -1,6 +1,15 @@
 import { NotificationChannel, NotificationStatus } from '../../common/enums/domain.enums';
 import { NotificationDeliveryService } from './notification-delivery.service';
 
+jest.mock('nodemailer', () => ({
+  __esModule: true,
+  default: {
+    createTransport: jest.fn(),
+  },
+}));
+
+const nodemailer = require('nodemailer').default;
+
 describe('NotificationDeliveryService', () => {
   let prisma: any;
   let configService: any;
@@ -10,6 +19,7 @@ describe('NotificationDeliveryService', () => {
     prisma = {
       notification: {
         update: jest.fn().mockResolvedValue({ id: 'notification-1' }),
+        findUnique: jest.fn(),
       },
     };
     configService = {
@@ -17,6 +27,7 @@ describe('NotificationDeliveryService', () => {
     };
     service = new NotificationDeliveryService(prisma, configService);
     jest.restoreAllMocks();
+    nodemailer.createTransport.mockReset();
   });
 
   it('marks MINI_PROGRAM notifications as sent', async () => {
@@ -123,6 +134,67 @@ describe('NotificationDeliveryService', () => {
         data: expect.objectContaining({
           status: NotificationStatus.FAILED,
           failureReason: 'Missing WeChat credentials, template id, or recipient openId',
+        }),
+      }),
+    );
+    expect(result).toEqual({ id: 'notification-1', status: NotificationStatus.FAILED });
+  });
+
+  it('sends EMAIL notifications through nodemailer when config and recipient are present', async () => {
+    const sendMail = jest.fn().mockResolvedValue({ messageId: 'message-1' });
+    nodemailer.createTransport.mockReturnValue({ sendMail });
+    prisma.notification.findUnique.mockResolvedValue({
+      id: 'notification-1',
+      member: { email: 'lin@example.com' },
+    });
+    configService.get.mockImplementation((key: string) => {
+      if (key === 'email.host') return 'smtp.example.com';
+      if (key === 'email.port') return 587;
+      if (key === 'email.user') return 'mailer';
+      if (key === 'email.password') return 'secret';
+      if (key === 'email.from') return 'no-reply@example.com';
+      return '';
+    });
+
+    const result = await service.deliver({
+      id: 'notification-1',
+      channel: NotificationChannel.EMAIL,
+      title: '支付凭证',
+      content: '已记录一笔金额为 1000.00 元的交易。',
+    });
+
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'lin@example.com',
+        subject: '支付凭证',
+      }),
+    );
+    expect(result).toEqual({ id: 'notification-1', status: NotificationStatus.SENT });
+  });
+
+  it('marks EMAIL notifications as failed when recipient email is missing', async () => {
+    prisma.notification.findUnique.mockResolvedValue({ id: 'notification-1', member: { email: null } });
+    configService.get.mockImplementation((key: string) => {
+      if (key === 'email.host') return 'smtp.example.com';
+      if (key === 'email.port') return 587;
+      if (key === 'email.user') return 'mailer';
+      if (key === 'email.password') return 'secret';
+      if (key === 'email.from') return 'no-reply@example.com';
+      return '';
+    });
+
+    const result = await service.deliver({
+      id: 'notification-1',
+      channel: NotificationChannel.EMAIL,
+      title: '支付凭证',
+      content: '已记录一笔金额为 1000.00 元的交易。',
+    });
+
+    expect(prisma.notification.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: NotificationStatus.FAILED,
+          failureReason: 'Missing SMTP configuration or recipient email',
         }),
       }),
     );
