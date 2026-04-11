@@ -4,6 +4,7 @@
   padding: var(--space-5);
   border: 1px solid var(--control-border);
   box-shadow: var(--shadow-sm);
+  background: var(--bg-surface);
 }
 
 .bookingSelectorHeader {
@@ -61,7 +62,7 @@
 
 .bookingSelectorBody {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
 .bookingPeriodGrid {
@@ -232,7 +233,7 @@
 .bookingMetaCard {
   padding: 12px 14px;
   border-radius: var(--radius-md);
-  background: rgba(248, 250, 251, 0.84);
+  background: var(--control-surface);
   border: 1px solid var(--border-soft);
 }
 

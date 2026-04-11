@@ -49,7 +49,7 @@
 }
 
 .membershipEyebrow {
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   text-transform: uppercase;
   letter-spacing: 0.16em;
   color: var(--text-tertiary);
@@ -73,7 +73,7 @@
   border: 1px solid color-mix(in srgb, var(--orange) 20%, transparent);
   background: color-mix(in srgb, var(--orange) 10%, transparent);
   color: var(--orange);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: var(--font-bold);
 }
 
@@ -109,7 +109,7 @@
   padding: 16px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-soft);
-  background: rgba(248, 250, 251, 0.86);
+  background: var(--control-surface);
 }
 
 .membershipPrimaryValue {
@@ -140,7 +140,7 @@
 .membershipProgressText {
   white-space: nowrap;
   color: var(--orange);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: var(--font-medium);
 }
 
@@ -167,7 +167,7 @@
   padding: 16px;
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
-  background: rgba(248, 250, 251, 0.86);
+  background: var(--control-surface);
   cursor: pointer;
   text-align: left;
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
@@ -188,7 +188,7 @@
   border-radius: var(--radius-sm);
   background: var(--mint-soft);
   color: var(--mint);
-  font-size: 18px;
+  font-size: var(--font-size-md);
   flex-shrink: 0;
 }
 
@@ -205,7 +205,7 @@
 
 .quickActionSubLabel {
   color: var(--text-tertiary);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -284,7 +284,7 @@
 }
 
 .upcomingDay {
-  font-size: 32px;
+  font-size: var(--font-size-xl);
   line-height: 1;
   letter-spacing: -0.03em;
   color: var(--text-heading);
