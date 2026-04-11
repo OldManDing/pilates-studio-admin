@@ -66,6 +66,7 @@
 - **P3：完成**（已完成共享 modal/drawer 尺寸常量、详情统计字号样式、full-width 控件、筛选弹窗 footer 模板统一，以及 dashboard loading 模板统一）
 - **P4：完成**（仓库卫生与展示层低风险尾项已收口：根目录临时截图清理、脚本归位、finance/settings inline style 收敛、StatusTag 静态样式提取）
 - **P5：完成**（已建立并跑通前后端验证基线：前端 lint/format/typecheck/build、10 页 smoke tests、backend 16 个 spec / 97 tests、auth-member-booking e2e、coverage 命令）
+- **P6：当前已完成 Phase 1-5.4**（mini-users、analytics、notifications 最小系统、事件驱动通知、scheduler、WeChat MINI_PROGRAM delivery 及 hardening 已落地）
 
 ## P3 / 细化收尾轮（本轮完成项）
 
@@ -156,15 +157,113 @@
 - `mini-users` 当前只有空模块，没有 service/controller/DTO 或业务逻辑，因此属于**未来功能范围**，不构成 P5 阶段未完成项
 - 后续若继续推进，应进入新的功能/质量阶段，而不是继续把 P5 当作未收口任务
 
+## P6 / 功能扩展与通知链路落地（当前完成项）
+
+### Phase 1：mini-users 模块落地 — 已完成
+
+- 新增 `mini-users.service.ts`
+- 新增 `mini-users.controller.ts`
+- 新增 mini-users DTO：create / update / query
+- `MiniUsersModule` 已接入 `AppModule`
+- 会员绑定链路已打通，支持按 OpenID 查询、更新、启停、关联 member
+- 已补：
+  - `mini-users.service.spec.ts`
+  - `mini-users.controller.spec.ts`
+  - `mini-user-member-link.e2e-spec.ts`
+
+### Phase 2：analytics backend 聚合 — 已完成
+
+- 新增 `analytics.service.ts`
+- 新增 `analytics.controller.ts`
+- 新增 `query-analytics-range.dto.ts`
+- `AnalyticsModule` 已接回 `AppModule`
+- `src/pages/analytics/index.tsx` 已切到 `analyticsApi`
+- 已补：
+  - `analytics.service.spec.ts`
+  - `analytics.controller.spec.ts`
+
+### Phase 3：notifications 最小系统 — 已完成
+
+- Prisma schema 已新增：
+  - `NotificationStatus`
+  - `Notification`
+- 新增 `notifications.service.ts`
+- 新增 `notifications.controller.ts`
+- 新增 notifications DTO：create / query
+- 已补权限种子：
+  - `NOTIFICATIONS:READ`
+  - `NOTIFICATIONS:WRITE`
+- 已补：
+  - `notifications.service.spec.ts`
+  - `notifications.controller.spec.ts`
+
+### Phase 4：事件驱动通知生成 — 已完成
+
+- `BookingsService.create()` 会自动写入 `booking_confirmation`
+- `TransactionsService.create()` 会自动写入 `payment_receipt`
+- `NotificationsService.createFromSetting()` 已成为统一事件通知入口
+
+### Phase 5.1：事件扩展与最小状态流转 — 已完成
+
+- `BookingsService.updateStatus()` 取消预约后写入 `booking_cancelled`
+- `AttendanceService.checkIn()` 写入 `attendance_checked_in`
+- `NotificationsService` 已具备：
+  - `markAsSent()`
+  - `processPendingNotifications()`
+
+### Phase 5.2：scheduler 与定时提醒 — 已完成
+
+- 接入 `@nestjs/schedule`
+- 已实现 `membership_expiry` 定时通知生成
+- 已实现待发送通知定时处理
+- 已新增通知相关配置：
+  - `NOTIFICATION_EXPIRY_REMINDER_DAYS`
+  - `NOTIFICATION_PROCESSING_BATCH_SIZE`
+
+### Phase 5.3：WeChat MINI_PROGRAM 真实投递路径 — 已完成
+
+- `NotificationDeliveryService` 已接入微信 token 获取与订阅消息发送
+- 已新增配置：
+  - `WECHAT_APPID`
+  - `WECHAT_SECRET`
+  - `WECHAT_TEMPLATE_ID_*`
+- 成功时写 `SENT`
+- 缺凭证 / 缺模板 / 缺 openId 时写 `FAILED`
+
+### Phase 5.4：MINI_PROGRAM delivery hardening — 已完成
+
+- 已补 access token 缓存
+- 已补有限 retry / backoff
+- 已补 `failureReason` 字段并写回失败原因
+- 已补 Prisma migration：
+  - `20260411153000_add_notification_model`
+- 当前已达到“代码 + schema + migration + build”一致状态
+
+### 当前验证基线（P6 截止当前）
+
+- mini-users unit / controller / e2e：通过
+- analytics service / controller：通过
+- notifications service / controller / scheduler / delivery：通过
+- 前端 smoke tests：通过
+- frontend typecheck/build：通过
+- backend build：通过
+
+### 说明
+
+- `mini-users` 已不再是空模块，而是可用 backend 模块
+- `analytics` 已不再依赖 `reportsApi` 拼接主数据，而有自己的 backend 聚合接口
+- `notifications` 已从“通知设置”推进成“记录 + 事件 + 调度 + MINI_PROGRAM 投递”完整链路
+- Oracle 复核结论认为：当前 P6 已至少完成到 **Phase 5.4**
+
 ## 建议下一步
 
-如果继续推进，建议进入 **P6 / 功能扩展与更高质量门禁轮**，优先级如下：
+如果继续推进，建议进入 **P6 下一阶段 / 投递生产化与更多渠道扩展**，优先级如下：
 
-1. 真正实现 `mini-users` 模块（service / controller / DTO / member linking）
-2. 真正实现 `analytics` 模块的 backend 聚合接口
-3. 真正实现 `notifications` 模块能力
-4. 继续提高 backend 覆盖率，特别是 `auth`、`course-sessions` 更深分支
-5. 引入更强的质量门禁，例如 CI、覆盖率门槛、更多 integration / contract tests
+1. 继续打磨 MINI_PROGRAM provider：token cache persistence、delivery metrics、更加细化的失败分类
+2. 扩更多自动事件：`booking_reminder`、更多 attendance / membership 场景
+3. 评估并接入 `EMAIL` / `SMS` provider
+4. 增加通知投递结果查询与运营可视化
+5. 持续提高 backend 覆盖率与 contract/integration tests
 
 ## 建议分工（更新后）
 
