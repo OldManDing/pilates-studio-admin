@@ -114,8 +114,31 @@ async function main() {
       address: '上海市静安区南京西路1000号',
     },
   });
-
+  
   console.log('Created studio settings');
+
+  const notificationSettings = [
+    { key: 'booking_confirmation', title: '预约确认', channel: NotificationChannel.MINI_PROGRAM, description: '会员预约成功后发送确认通知' },
+    { key: 'booking_cancelled', title: '预约取消', channel: NotificationChannel.MINI_PROGRAM, description: '预约取消后发送提醒通知' },
+    { key: 'booking_reminder', title: '开课提醒', channel: NotificationChannel.MINI_PROGRAM, description: '课程开始前发送提醒通知' },
+    { key: 'attendance_checked_in', title: '签到成功', channel: NotificationChannel.INTERNAL, description: '会员完成签到后记录通知' },
+    { key: 'membership_expiry', title: '会籍到期', channel: NotificationChannel.SMS, description: '会员卡即将到期时发送通知' },
+    { key: 'payment_receipt', title: '支付凭证', channel: NotificationChannel.EMAIL, description: '支付成功后发送电子收据' },
+  ];
+
+  for (const setting of notificationSettings) {
+    await prisma.notificationSetting.upsert({
+      where: { key: setting.key },
+      update: {
+        title: setting.title,
+        channel: setting.channel,
+        description: setting.description,
+      },
+      create: setting,
+    });
+  }
+
+  console.log(`Created ${notificationSettings.length} notification settings`);
 
   console.log('Seed completed successfully!');
 }
