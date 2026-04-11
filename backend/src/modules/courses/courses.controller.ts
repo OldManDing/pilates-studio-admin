@@ -15,6 +15,7 @@ import { RequirePermissions } from '../../common/decorators/require-permissions.
 import { CoursesService } from './courses.service';
 import { CourseSessionsService } from '../course-sessions/course-sessions.service';
 import { CreateCourseDto } from './dto/create-course.dto';
+import { QueryCoursesDto } from './dto/query-courses.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 
 @ApiTags('Courses')
@@ -36,8 +37,8 @@ export class CoursesController {
   @Get()
   @RequirePermissions('READ:COURSES')
   @ApiOperation({ summary: 'Get all courses' })
-  async findAll() {
-    return this.coursesService.findAll();
+  async findAll(@Query() query: QueryCoursesDto) {
+    return this.coursesService.findAll(query);
   }
 
   @Get('active')

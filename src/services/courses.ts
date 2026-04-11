@@ -1,4 +1,5 @@
 import { api } from '@/utils/request';
+import type { PaginatedResponse } from './members';
 
 export interface Course {
   id: string;
@@ -28,9 +29,20 @@ export interface CreateCourseData {
   isActive?: boolean;
 }
 
+export type CoursesQueryParams = {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  type?: string;
+  level?: string;
+};
+
 export const coursesApi = {
   getAll: () =>
     api.get<Course[]>('/courses'),
+
+  getPaged: (params?: CoursesQueryParams) =>
+    api.get<PaginatedResponse<Course>>('/courses', { params }),
 
   getActive: () =>
     api.get<Course[]>('/courses/active'),

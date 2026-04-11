@@ -1,7 +1,9 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
+import { QueryCoursesDto } from './dto/query-courses.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
+import { PaginatedResponse } from '../../common/dto/pagination.dto';
 
 @Injectable()
 export class CoursesService {
@@ -35,16 +37,50 @@ export class CoursesService {
     });
   }
 
-  async findAll() {
-    return this.prisma.course.findMany({
-      include: {
-        coach: true,
-        _count: {
-          select: { sessions: true },
+  async findAll(query: QueryCoursesDto): Promise<PaginatedResponse<any>> {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 10;
+    const skip = (page - 1) * pageSize;
+    const search = query.search?.trim();
+
+    const where = {
+      ...(query.type ? { type: query.type } : {}),
+      ...(query.level ? { level: query.level } : {}),
+      ...(search
+        ? {
+            OR: [
+              { name: { contains: search } },
+              { coach: { name: { contains: search } } },
+            ],
+          }
+        : {}),
+    };
+
+    const [data, total] = await Promise.all([
+      this.prisma.course.findMany({
+        where,
+        skip,
+        take: pageSize,
+        include: {
+          coach: true,
+          _count: {
+            select: { sessions: true },
+          },
         },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.course.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
       },
-      orderBy: { createdAt: 'desc' },
-    });
+    };
   }
 
   async findActive() {
@@ -52,6 +88,9 @@ export class CoursesService {
       where: { isActive: true },
       include: {
         coach: true,
+        _count: {
+          select: { sessions: true },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
