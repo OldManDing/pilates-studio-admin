@@ -12,6 +12,7 @@ import { RequirePermissions } from '../../common/decorators/require-permissions.
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { UpdateTransactionStatusDto } from './dto/update-transaction-status.dto';
 
 @ApiTags('Transactions')
@@ -47,6 +48,17 @@ export class TransactionsController {
   @ApiParam({ name: 'id', description: 'Transaction ID' })
   async findOne(@Param('id') id: string) {
     return this.transactionsService.findOne(id);
+  }
+
+  @Patch(':id')
+  @RequirePermissions('WRITE:TRANSACTIONS')
+  @ApiOperation({ summary: 'Update transaction by ID' })
+  @ApiParam({ name: 'id', description: 'Transaction ID' })
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateTransactionDto,
+  ) {
+    return this.transactionsService.update(id, dto);
   }
 
   @Patch(':id/status')

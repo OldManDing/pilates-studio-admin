@@ -96,6 +96,31 @@ describe('TransactionsService', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  it('updates transaction member binding and fields', async () => {
+    prisma.transaction.findUnique.mockResolvedValue(createTransaction());
+    prisma.transaction.update.mockResolvedValue(createTransaction({ memberId: 'member-2', notes: 'updated' }));
+
+    const result = await service.update('transaction-1', {
+      memberId: 'member-2',
+      kind: 'ADJUSTMENT' as never,
+      amountCents: 3000,
+      notes: 'updated',
+    });
+
+    expect(prisma.transaction.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'transaction-1' },
+        data: expect.objectContaining({
+          memberId: 'member-2',
+          kind: 'ADJUSTMENT',
+          amountCents: 3000,
+          notes: 'updated',
+        }),
+      }),
+    );
+    expect(result.memberId).toBe('member-2');
+  });
+
   it('returns summarized transaction totals', async () => {
     prisma.transaction.aggregate
       .mockResolvedValueOnce({ _sum: { amountCents: 100000 } })

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { UpdateTransactionStatusDto } from './dto/update-transaction-status.dto';
 import { TransactionStatus } from '../../common/enums/domain.enums';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
@@ -114,6 +115,25 @@ export class TransactionsService {
     return this.prisma.transaction.update({
       where: { id },
       data: { status: dto.status },
+      include: {
+        member: true,
+        plan: true,
+      },
+    });
+  }
+
+  async update(id: string, dto: UpdateTransactionDto) {
+    await this.findOne(id);
+
+    return this.prisma.transaction.update({
+      where: { id },
+      data: {
+        ...(dto.memberId !== undefined ? { memberId: dto.memberId } : {}),
+        ...(dto.planId !== undefined ? { planId: dto.planId } : {}),
+        ...(dto.kind !== undefined ? { kind: dto.kind } : {}),
+        ...(dto.amountCents !== undefined ? { amountCents: dto.amountCents } : {}),
+        ...(dto.notes !== undefined ? { notes: dto.notes } : {}),
+      },
       include: {
         member: true,
         plan: true,
