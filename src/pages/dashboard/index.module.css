@@ -52,7 +52,7 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.16em;
-  color: #c4a574;
+  color: var(--text-tertiary);
   margin-bottom: 10px;
 }
 
@@ -70,9 +70,9 @@
   min-height: 28px;
   padding: 0 12px;
   border-radius: 999px;
-  border: 1px solid rgba(196, 165, 116, 0.28);
-  background: rgba(196, 165, 116, 0.08);
-  color: #c4a574;
+  border: 1px solid color-mix(in srgb, var(--orange) 20%, transparent);
+  background: color-mix(in srgb, var(--orange) 10%, transparent);
+  color: var(--orange);
   font-size: 12px;
   font-weight: var(--font-bold);
 }
@@ -139,7 +139,7 @@
 
 .membershipProgressText {
   white-space: nowrap;
-  color: #c4a574;
+  color: var(--orange);
   font-size: 12px;
   font-weight: var(--font-medium);
 }
@@ -147,10 +147,10 @@
 .membershipPrimaryAction {
   align-self: stretch;
   min-height: 48px;
-  border: none;
   border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, #25323c 0%, #1f2a33 100%) !important;
-  box-shadow: 0 12px 24px rgba(31, 42, 51, 0.14);
+  border: 1px solid rgba(47, 151, 131, 0.24);
+  background: linear-gradient(135deg, var(--control-primary-start) 0%, var(--control-primary-end) 100%) !important;
+  box-shadow: 0 10px 22px rgba(52, 158, 136, 0.22);
 }
 
 .quickActionGrid {

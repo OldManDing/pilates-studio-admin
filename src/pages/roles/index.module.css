@@ -1,12 +1,3 @@
-/* CSS 变量定义 */
-.roleCard {
-  --role-surface: #ffffff;
-  --role-border: rgba(116, 132, 154, 0.18);
-  --role-text-primary: #1f2a33;
-  --role-text-secondary: #6d7683;
-  --role-mint: #43c7ab;
-}
-
 .roleGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -14,20 +5,22 @@
 }
 
 .roleCard {
-  background: var(--role-surface);
-  border: 1px solid var(--role-border);
+  background: var(--bg-surface);
+  border: 1px solid var(--control-border);
   border-radius: 16px;
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .roleCard:hover {
-  box-shadow: 0 8px 24px rgba(67, 199, 171, 0.12);
-  transform: translateY(-2px);
-  border-color: var(--role-mint);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--mint) 18%, transparent);
+  background: rgba(250, 252, 251, 0.94);
 }
 
 .roleCardHeader {
@@ -79,15 +72,15 @@
 
 .roleName {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--role-text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-bold);
+  color: var(--text-heading);
 }
 
 .roleSub {
   margin-top: 4px;
-  font-size: 14px;
-  color: var(--role-text-secondary);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 
@@ -97,8 +90,9 @@
   justify-content: center;
   gap: 12px;
   padding: 14px 0;
-  background: linear-gradient(180deg, rgba(243, 247, 249, 0.5) 0%, rgba(243, 247, 249, 0) 100%);
-  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(248, 250, 251, 0.92) 0%, rgba(248, 250, 251, 0.4) 100%);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
 }
 
 .roleStatItem {
@@ -108,18 +102,18 @@
 }
 
 .roleStatValue {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--role-text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-black);
+  color: var(--text-heading);
 }
 
 .roleStatLabel {
-  font-size: 13px;
-  color: var(--role-text-secondary);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
 }
 
 .roleStatDivider {
-  color: var(--role-text-secondary);
+  color: var(--text-secondary);
   font-size: 14px;
   opacity: 0.5;
 }
@@ -130,34 +124,8 @@
   gap: 12px;
 }
 
-/* 按钮样式 - 次要按钮 */
-.roleCard :global(.ant-btn-default) {
-  border-color: rgba(116, 132, 154, 0.25);
-  color: #415061;
-  background: #fff;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.roleCard :global(.ant-btn-default):hover {
-  border-color: var(--role-mint);
-  color: var(--role-mint);
-}
-
-/* 按钮样式 - 主要按钮 */
-.roleCard :global(.ant-btn-primary) {
-  background: linear-gradient(135deg, #43c7ab 0%, #6be0c8 100%);
-  border: none;
-  color: #1f2a33;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(67, 199, 171, 0.3);
-  transition: all 0.2s ease;
-}
-
-.roleCard :global(.ant-btn-primary):hover {
-  background: linear-gradient(135deg, #3ab8a0 0%, #5fd4ba 100%);
-  box-shadow: 0 6px 16px rgba(67, 199, 171, 0.4);
-  transform: translateY(-1px);
+.roleActionButton {
+  width: 100%;
 }
 
 @media (max-width: 1024px) {
@@ -179,11 +147,11 @@
   }
 
   .roleName {
-    font-size: 16px;
+    font-size: var(--font-size-md);
   }
 
   .roleStatValue {
-    font-size: 18px;
+    font-size: var(--font-size-md);
   }
 
   .roleActions {

@@ -255,21 +255,23 @@ export default function RolesPage() {
                   </div>
 
                   <div className={roleCss.roleActions}>
-                    <Button
+                    <ActionButton
                       size="large"
+                      ghost
+                      className={roleCss.roleActionButton}
                       icon={<EyeOutlined />}
                       onClick={() => setDetailRole(item)}
                     >
                       详情
-                    </Button>
-                    <Button
+                    </ActionButton>
+                    <ActionButton
                       size="large"
-                      type="primary"
+                      className={roleCss.roleActionButton}
                       icon={<EditOutlined />}
                       onClick={() => openPermissionEditor(item)}
                     >
                       编辑权限
-                    </Button>
+                    </ActionButton>
                   </div>
                 </div>
               );
