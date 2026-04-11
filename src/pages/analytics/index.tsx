@@ -7,7 +7,7 @@ import SectionCard from '@/components/SectionCard';
 import StatCard from '@/components/StatCard';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
-import { reportsApi } from '@/services/reports';
+import { analyticsApi } from '@/services/analytics';
 import { getErrorMessage } from '@/utils/errors';
 import { axisTick, chartGrid } from '@/utils/chartTheme';
 import { useIsMobile } from '@/utils/useResponsive';
@@ -32,6 +32,8 @@ export default function AnalyticsPage() {
     satisfaction: '-',
   });
   const [coursePopularity, setCoursePopularity] = useState<ChartPoint[]>([]);
+  const [bookingDistribution, setBookingDistribution] = useState<ChartPoint[]>([]);
+  const [memberRetentionTrend, setMemberRetentionTrend] = useState<Array<{ month: string; totalMembers: number; activeMembers: number; newMembers: number }>>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -40,34 +42,23 @@ export default function AnalyticsPage() {
         const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
         const to = new Date().toISOString().split('T')[0];
 
-        const [membersReport, bookingsReport, transactionsReport] = await Promise.all([
-          reportsApi.getMembers(),
-          reportsApi.getBookings(from, to),
-          reportsApi.getTransactions(from, to),
+        const [overview, bookingDistributionData, retentionTrend] = await Promise.all([
+          analyticsApi.getDashboardOverview(from, to),
+          analyticsApi.getBookingDistribution(from, to),
+          analyticsApi.getMemberRetentionTrend(),
         ]);
 
-        const totalMembers = membersReport.totalMembers || 0;
-        const activeMembers = membersReport.activeMembers || 0;
-        const retentionRate = totalMembers > 0 ? ((activeMembers / totalMembers) * 100).toFixed(1) : '0';
-
-        const totalBookings = bookingsReport.totalBookings || 0;
-        const confirmedBookings = bookingsReport.confirmedBookings || 0;
-        const occupancyRate = totalBookings > 0 ? ((confirmedBookings / totalBookings) * 100).toFixed(1) : '0';
-
-        const goalAchievement = totalMembers > 0 ? Math.min(150, Math.round((activeMembers / Math.max(1, totalMembers * 0.8)) * 100)) : 0;
-
         setStats({
-          goalAchievement: `${goalAchievement}%`,
-          retentionRate: `${retentionRate}%`,
-          avgOccupancy: `${occupancyRate}%`,
-          satisfaction: '-', // 后端暂无此接口
+          goalAchievement: `${overview.stats.goalAchievement}%`,
+          retentionRate: `${overview.stats.retentionRate}%`,
+          avgOccupancy: `${overview.stats.avgOccupancy}%`,
+          satisfaction: overview.stats.satisfaction === null ? '-' : `${overview.stats.satisfaction}%`,
         });
 
-        const popularity = (transactionsReport.transactionsByKind || []).map((item) => ({
-          label: item.kind,
-          value: item._count?.id || 0,
-        }));
+        const popularity = overview.transactionPopularity || [];
         setCoursePopularity(popularity.length ? popularity : [{ label: '暂无', value: 0 }]);
+        setBookingDistribution(bookingDistributionData.length ? bookingDistributionData : [{ label: '暂无', value: 0 }]);
+        setMemberRetentionTrend(retentionTrend);
       } catch (err) {
         messageApi.error(getErrorMessage(err, '加载数据失败，请稍后重试'));
       } finally {
@@ -123,18 +114,34 @@ export default function AnalyticsPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="预约时段分布" subtitle="待接入真实时段聚合接口后展示">
-          <div className={pageCls.chartPanelEmpty}>
-            <div className={widgetCls.detailOverviewLead}>暂无真实预约时段分布数据</div>
-            <div className={widgetCls.detailOverviewText}>当前版本不再展示按比例估算的上午 / 中午 / 下午 / 晚间分布，避免误导运营判断。</div>
+        <SectionCard title="预约时段分布" subtitle="按真实预约时段聚合最近 30 天热度">
+          <div className={pageCls.chartPanel}>
+            <ResponsiveContainer>
+              <LineChart data={bookingDistribution}>
+                <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
+                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={axisTick} />
+                <YAxis axisLine={false} tickLine={false} tick={axisTick} />
+                <Tooltip />
+                <Line type="monotone" dataKey="value" stroke="#ffb760" strokeWidth={3.2} dot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </SectionCard>
       </div>
 
-      <SectionCard title="会员留存趋势" subtitle="待接入真实历史留存、流失与新增指标后展示">
-        <div className={pageCls.chartPanelEmpty}>
-          <div className={widgetCls.detailOverviewLead}>暂无真实会员留存趋势数据</div>
-          <div className={widgetCls.detailOverviewText}>原先基于当前活跃会员和本月新增会员按比例推导的趋势已移除，避免把估算值展示成真实经营指标。</div>
+      <SectionCard title="会员留存趋势" subtitle="近 6 个月会员总量、活跃量与新增趋势">
+        <div className={pageCls.chartPanel}>
+          <ResponsiveContainer>
+            <LineChart data={memberRetentionTrend}>
+              <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
+              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={axisTick} />
+              <YAxis axisLine={false} tickLine={false} tick={axisTick} />
+              <Tooltip />
+              <Line type="monotone" dataKey="totalMembers" stroke="#43c7ab" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 5 }} />
+              <Line type="monotone" dataKey="activeMembers" stroke="#8b7cff" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 5 }} />
+              <Line type="monotone" dataKey="newMembers" stroke="#ff8da8" strokeWidth={2.5} strokeDasharray="6 6" dot={{ r: 0 }} activeDot={{ r: 5 }} />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </SectionCard>
     </div>

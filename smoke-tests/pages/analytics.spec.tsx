@@ -3,15 +3,27 @@ import { App } from 'antd';
 import { MemoryRouter } from 'react-router-dom';
 import AnalyticsPage from '@/pages/analytics';
 
-vi.mock('@/services/reports', () => ({
-  reportsApi: {
-    getMembers: vi.fn().mockResolvedValue({ totalMembers: 12, activeMembers: 8, newMembersThisMonth: 2 }),
-    getBookings: vi.fn().mockResolvedValue({ totalBookings: 10, confirmedBookings: 8 }),
-    getTransactions: vi.fn().mockResolvedValue({
-      transactionsByKind: [
-        { kind: 'MEMBERSHIP_PURCHASE', _count: { id: 6 } },
-      ],
+vi.mock('@/services/analytics', () => ({
+  analyticsApi: {
+    getDashboardOverview: vi.fn().mockResolvedValue({
+      stats: {
+        goalAchievement: 63,
+        retentionRate: 50,
+        avgOccupancy: 80,
+        satisfaction: null,
+      },
+      transactionPopularity: [{ label: 'MEMBERSHIP_PURCHASE', value: 6 }],
     }),
+    getBookingDistribution: vi.fn().mockResolvedValue([
+      { label: '上午', value: 3 },
+      { label: '中午', value: 2 },
+      { label: '下午', value: 4 },
+      { label: '晚间', value: 5 },
+    ]),
+    getMemberRetentionTrend: vi.fn().mockResolvedValue([
+      { month: '3月', totalMembers: 10, activeMembers: 8, newMembers: 2 },
+      { month: '4月', totalMembers: 12, activeMembers: 9, newMembers: 3 },
+    ]),
   },
 }));
 
