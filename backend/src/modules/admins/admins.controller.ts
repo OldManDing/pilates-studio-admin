@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
@@ -21,8 +22,8 @@ export class AdminsController {
   @Get()
   @RequirePermissions('MANAGE:ADMINS')
   @ApiOperation({ summary: 'Get all admins' })
-  async findAll() {
-    return this.adminsService.findAll();
+  async findAll(@Query('search') search?: string) {
+    return this.adminsService.findAll(search);
   }
 
   @Post()

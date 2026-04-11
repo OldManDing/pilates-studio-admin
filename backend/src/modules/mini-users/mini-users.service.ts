@@ -44,7 +44,21 @@ export class MiniUsersService {
     const pageSize = query.pageSize ?? 10;
     const skip = (page - 1) * pageSize;
 
-    const where = query.status ? { status: query.status } : undefined;
+    const search = query.search?.trim();
+    const where = {
+      ...(query.status ? { status: query.status } : {}),
+      ...(search
+        ? {
+            OR: [
+              { nickname: { contains: search } },
+              { openId: { contains: search } },
+              { phone: { contains: search } },
+              { member: { name: { contains: search } } },
+              { member: { memberCode: { contains: search } } },
+            ],
+          }
+        : {}),
+    };
 
     const [data, total] = await Promise.all([
       this.prisma.miniUser.findMany({

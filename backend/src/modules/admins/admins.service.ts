@@ -7,8 +7,18 @@ import { CreateAdminDto } from './dto/create-admin.dto';
 export class AdminsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll() {
+  async findAll(search?: string) {
     return this.prisma.adminUser.findMany({
+      where: search
+        ? {
+            OR: [
+              { displayName: { contains: search } },
+              { email: { contains: search } },
+              { phone: { contains: search } },
+              { role: { name: { contains: search } } },
+            ],
+          }
+        : undefined,
       select: {
         id: true,
         email: true,
