@@ -78,12 +78,6 @@ export default function CoachesPage() {
   const [editingCoach, setEditingCoach] = useState<Coach | null>(null);
   const [detailCoach, setDetailCoach] = useState<Coach | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [stats, setStats] = useState({
-    totalCoaches: 0,
-    activeCoaches: 0,
-    avgRating: '4.8',
-    totalSessions: 0,
-  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -91,29 +85,6 @@ export default function CoachesPage() {
         setLoading(true);
         const coachesData = await coachesApi.getAll();
         setCoachList(coachesData);
-
-        const activeCoaches = coachesData.filter(c => c.status === 'ACTIVE').length;
-        const avgRating = coachesData.length > 0
-          ? (coachesData.reduce((sum, c) => sum + (c.rating || 0), 0) / coachesData.length).toFixed(1)
-          : '0.0';
-
-        // 尝试获取第一个教练的统计数据作为示例
-        let totalSessions = 0;
-        if (coachesData.length > 0) {
-          try {
-            const firstStats = await coachesApi.getStats(coachesData[0].id);
-            totalSessions = firstStats.stats.totalSessions;
-          } catch {
-            // 后端接口可能不可用
-          }
-        }
-
-        setStats({
-          totalCoaches: coachesData.length,
-          activeCoaches,
-          avgRating,
-          totalSessions,
-        });
       } catch (err) {
         messageApi.error('获取教练数据失败');
       } finally {
@@ -138,12 +109,24 @@ export default function CoachesPage() {
     });
   }, [coachList, searchValue, statusFilter]);
 
-  const coachStats = useMemo(() => [
-    { title: '教练总数', value: String(stats.totalCoaches), hint: `在职 ${stats.activeCoaches} / 休假 ${stats.totalCoaches - stats.activeCoaches}`, tone: 'mint' as const, icon: 'team' as const },
-    { title: '平均评分', value: stats.avgRating, hint: '基于学员评价', tone: 'violet' as const, icon: 'star' as const },
-    { title: '本周课程', value: String(stats.totalSessions), hint: '人均排课', tone: 'orange' as const, icon: 'calendar' as const },
-    { title: '学员满意度', value: '96%', hint: '↑ 1.9% 环比', tone: 'pink' as const, icon: 'heart' as const },
-  ], [stats]);
+  const coachStats = useMemo(() => {
+    const totalCoaches = coachList.length;
+    const activeCoaches = coachList.filter((coach) => coach.status === 'ACTIVE').length;
+    const onLeaveCoaches = coachList.filter((coach) => coach.status === 'ON_LEAVE').length;
+    const ratedCoaches = coachList.filter((coach) => typeof coach.rating === 'number');
+    const avgRating = ratedCoaches.length
+      ? (ratedCoaches.reduce((sum, coach) => sum + (coach.rating || 0), 0) / ratedCoaches.length).toFixed(1)
+      : '0.0';
+    const totalSpecialties = coachList.reduce((sum, coach) => sum + (coach.specialties?.length || 0), 0);
+    const totalCertificates = coachList.reduce((sum, coach) => sum + (coach.certificates?.length || 0), 0);
+
+    return [
+      { title: '教练总数', value: String(totalCoaches), hint: `在职 ${activeCoaches} / 休假 ${onLeaveCoaches}`, tone: 'mint' as const, icon: 'team' as const },
+      { title: '平均评分', value: avgRating, hint: ratedCoaches.length ? '基于已记录学员评价' : '待补充评分数据', tone: 'violet' as const, icon: 'star' as const },
+      { title: '专长标签', value: String(totalSpecialties), hint: '用于排课与教练匹配', tone: 'orange' as const, icon: 'calendar' as const },
+      { title: '资质认证', value: String(totalCertificates), hint: '当前教练档案已录入', tone: 'pink' as const, icon: 'heart' as const },
+    ];
+  }, [coachList]);
 
   const openCreateModal = () => {
     setEditingCoach(null);

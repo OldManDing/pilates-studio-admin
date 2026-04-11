@@ -1,4 +1,4 @@
-import { ArrowRightOutlined, SaveOutlined } from '@ant-design/icons';
+import { SaveOutlined } from '@ant-design/icons';
 import { App, Button, Cascader, Col, Descriptions, Drawer, Form, Input, Row, Select, Spin, Switch, TimePicker, message as antdMessage } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
@@ -9,9 +9,15 @@ import StatusTag from '@/components/StatusTag';
 import { SETTINGS_DETAIL_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
-import { settingsApi, type StudioSetting, type NotificationSetting } from '@/services/settings';
+import { settingsApi, type NotificationSetting } from '@/services/settings';
 import { authApi } from '@/services/auth';
 import { getErrorMessage } from '@/utils/errors';
+import {
+  SettingsActionRow,
+  SettingsOverviewCard,
+  type SettingsOverviewMetaItem,
+  type SettingsOverviewMetric,
+} from './components';
 
 interface StoreInfoValues {
   studioName: string;
@@ -23,6 +29,7 @@ interface StoreInfoValues {
   district: string;
   address: string;
   area?: string[];
+  hours?: [dayjs.Dayjs, dayjs.Dayjs];
 }
 
 type SecurityActionTitle = '修改密码' | '两步验证' | '权限管理';
@@ -45,6 +52,18 @@ interface DataActionState {
 type SecurityDrawerKey = SecurityActionTitle | null;
 type DataDrawerKey = DataActionTitle | null;
 
+const SETTINGS_OVERVIEW_EYEBROW = 'SETTINGS OVERVIEW';
+
+const formatStoreAddress = (info: Pick<StoreInfoValues, 'province' | 'city' | 'district' | 'address'>) => {
+  const prefix = [info.province, info.city, info.district].filter(Boolean).join('');
+
+  if (!info.address) {
+    return prefix || '待补充门店地址';
+  }
+
+  return prefix && info.address.startsWith(prefix) ? info.address : `${prefix}${info.address}`;
+};
+
 const todayText = () => new Date().toLocaleString('zh-CN', {
   hour12: false,
   month: '2-digit',
@@ -52,6 +71,15 @@ const todayText = () => new Date().toLocaleString('zh-CN', {
   hour: '2-digit',
   minute: '2-digit'
 }).replace(/\//g, '-');
+
+function parseHoursToDayjs(hours: string): [dayjs.Dayjs, dayjs.Dayjs] {
+  const [start, end] = hours.split('-');
+  return [dayjs(start, 'HH:mm'), dayjs(end, 'HH:mm')];
+}
+
+function dayjsToHoursString(hours: [dayjs.Dayjs, dayjs.Dayjs]): string {
+  return `${hours[0].format('HH:mm')}-${hours[1].format('HH:mm')}`;
+}
 
 const PLACEHOLDER_STORE_INFO: StoreInfoValues = {
   studioName: 'Pilates Studio',
@@ -187,7 +215,6 @@ export default function SettingsPage() {
   const [savedStoreInfo, setSavedStoreInfo] = useState<StoreInfoValues>(defaultStoreInfo);
   const [storeSavedAt, setStoreSavedAt] = useState('今天 09:20');
   const [notifications, setNotifications] = useState<NotificationSetting[]>([]);
-  const [savedNotifications, setSavedNotifications] = useState<NotificationSetting[]>([]);
   const [notificationSavedAt, setNotificationSavedAt] = useState('今天 09:30');
   const [securityState, setSecurityState] = useState<Record<SecurityActionTitle, SecurityActionState>>({
     修改密码: { title: '修改密码', description: '定期更新管理员账号密码', status: '正常', detail: '可通过此功能修改密码' },
@@ -257,23 +284,21 @@ export default function SettingsPage() {
             province,
             city,
             district,
-            address: remainingAddress || addressStr
+            address: remainingAddress || addressStr,
+            area: [province, city, district].filter(Boolean),
+            hours: parseHoursToDayjs(studioData.businessHours || PLACEHOLDER_STORE_INFO.businessHours),
           };
-          // 设置级联选择器的值
-          const areaValue = [province, city, district].filter(Boolean);
-          storeForm.setFieldsValue({ ...info, area: areaValue });
+          storeForm.setFieldsValue(info);
           setStoreInfo(info);
           setSavedStoreInfo(info);
         }
 
         if (notificationsData.length > 0) {
           setNotifications(notificationsData);
-          setSavedNotifications(notificationsData);
         } else {
           await settingsApi.initialize().catch(() => null);
           const initialized = await settingsApi.getNotifications().catch(() => []);
           setNotifications(initialized);
-          setSavedNotifications(initialized);
         }
 
         setTwoFactorEnabled(twoFactorStatus.enabled);
@@ -298,12 +323,98 @@ export default function SettingsPage() {
     fetchSettings();
   }, [storeForm]);
 
-  const notificationDirtyCount = useMemo(
-    () => notifications.filter((item, index) => item.enabled !== savedNotifications[index]?.enabled).length,
-    [notifications, savedNotifications]
+  const enabledNotificationCount = useMemo(
+    () => notifications.filter((item) => item.enabled).length,
+    [notifications]
   );
 
-  const storeChanged = JSON.stringify(watchedStoreInfo ?? savedStoreInfo) !== JSON.stringify(savedStoreInfo);
+  const securityHealthyCount = useMemo(
+    () => Object.values(securityState).filter((item) => item.status === '正常').length,
+    [securityState]
+  );
+
+  const dataHealthyCount = useMemo(
+    () => Object.values(dataState).filter((item) => item.status === '正常').length,
+    [dataState]
+  );
+
+  const normalizeStoreFormValues = (values?: Partial<StoreInfoValues> | null) => {
+    const area = values?.area || [values?.province, values?.city, values?.district].filter(Boolean) as string[];
+    const hoursValue = values?.hours;
+    const businessHours = hoursValue && hoursValue[0] && hoursValue[1]
+      ? dayjsToHoursString(hoursValue)
+      : values?.businessHours || '';
+
+    return {
+      studioName: values?.studioName || '',
+      phone: values?.phone || '',
+      email: values?.email || '',
+      businessHours,
+      province: area[0] || values?.province || '',
+      city: area[1] || values?.city || '',
+      district: area[2] || values?.district || '',
+      address: values?.address || '',
+    };
+  };
+
+  const storeChanged = JSON.stringify(normalizeStoreFormValues(watchedStoreInfo)) !== JSON.stringify(normalizeStoreFormValues(savedStoreInfo));
+
+  const settingsOverviewMetaItems = useMemo<SettingsOverviewMetaItem[]>(() => [
+    {
+      label: '联系方式',
+      value: storeInfo.phone || '待补充联系电话',
+      hint: storeInfo.email || '待补充邮箱地址',
+    },
+    {
+      label: '营业时间',
+      value: storeInfo.businessHours || '待设置营业时间',
+      hint: `基础信息最近保存于 ${storeSavedAt}`,
+    },
+    {
+      label: '门店地址',
+      value: formatStoreAddress(storeInfo),
+      hint: '用于后台展示与门店基础档案维护',
+    },
+  ], [storeInfo, storeSavedAt]);
+
+  const settingsOverviewMetrics = useMemo<SettingsOverviewMetric[]>(() => [
+    {
+      label: '已启用通知',
+      value: `${enabledNotificationCount}/${notifications.length || 0}`,
+      hint: `最近通知保存于 ${notificationSavedAt}`,
+      tone: 'mint',
+    },
+    {
+      label: '安全策略',
+      value: `${securityHealthyCount}/${securityActionsList.length}`,
+      hint: securityHealthyCount === securityActionsList.length ? '全部安全项目状态正常' : '仍有安全项目待跟进',
+      tone: 'violet',
+    },
+    {
+      label: '数据任务',
+      value: `${dataHealthyCount}/${dataActionsList.length}`,
+      hint: dataHealthyCount === dataActionsList.length ? '备份与恢复入口可用' : '存在待处理的数据任务',
+      tone: 'orange',
+    },
+  ], [dataHealthyCount, enabledNotificationCount, notificationSavedAt, notifications.length, securityHealthyCount]);
+
+  const securityActionRows = useMemo(
+    () => securityActionsList.map((item) => ({
+      title: item.title,
+      description: securityState[item.title].detail,
+      statusLabel: securityState[item.title].status,
+    })),
+    [securityState]
+  );
+
+  const dataActionRows = useMemo(
+    () => dataActionsList.map((item) => ({
+      title: item.title,
+      description: dataState[item.title].detail,
+      statusLabel: dataState[item.title].status,
+    })),
+    [dataState]
+  );
 
   const handleSaveStoreInfo = async () => {
     try {
@@ -322,13 +433,24 @@ export default function SettingsPage() {
         studioName: values.studioName,
         phone: values.phone,
         email: values.email,
-        businessHours: values.businessHours,
+        businessHours: dayjsToHoursString(values.hours as [dayjs.Dayjs, dayjs.Dayjs]),
         address: fullAddress
       };
       
       await settingsApi.updateStudio(saveData);
-      setStoreInfo({ ...values, province, city, district, address: fullAddress });
-      setSavedStoreInfo({ ...values, province, city, district, address: fullAddress });
+      const nextInfo: StoreInfoValues = {
+        ...values,
+        businessHours: saveData.businessHours,
+        province,
+        city,
+        district,
+        address: values.address,
+        area: values.area || [province, city, district].filter(Boolean),
+        hours: values.hours,
+      };
+      setStoreInfo(nextInfo);
+      setSavedStoreInfo(nextInfo);
+      storeForm.setFieldsValue(nextInfo);
       setStoreSavedAt(todayText());
       message.success('门店信息已保存');
     } catch (err) {
@@ -340,15 +462,11 @@ export default function SettingsPage() {
     try {
       await settingsApi.updateNotification(key, checked);
       setNotifications((current) => current.map((item) => (item.key === key ? { ...item, enabled: checked } : item)));
+      setNotificationSavedAt(todayText());
+      message.success('通知设置已自动保存');
     } catch (err) {
       message.error(getErrorMessage(err, '更新失败'));
     }
-  };
-
-  const handleSaveNotifications = () => {
-    setSavedNotifications(notifications.map((item) => ({ ...item })));
-    setNotificationSavedAt(todayText());
-    message.success('通知设置已保存');
   };
 
   const handleCheckUpdate = () => {
@@ -506,15 +624,6 @@ export default function SettingsPage() {
     }
   };
 
-  const parseHoursToDayjs = (hours: string): [dayjs.Dayjs, dayjs.Dayjs] => {
-    const [start, end] = hours.split('-');
-    return [dayjs(start, 'HH:mm'), dayjs(end, 'HH:mm')];
-  };
-
-  const dayjsToHoursString = (hours: [dayjs.Dayjs, dayjs.Dayjs]): string => {
-    return `${hours[0].format('HH:mm')}-${hours[1].format('HH:mm')}`;
-  };
-
   if (loading) {
     return (
       <div className={`${pageCls.page} ${pageCls.workPage}`}>
@@ -530,11 +639,23 @@ export default function SettingsPage() {
     <div className={`${pageCls.page} ${pageCls.workPage}`}>
       <PageHeader title="系统设置" subtitle="配置门店信息、通知策略与系统安全选项。" />
 
+      <SettingsOverviewCard
+        eyebrow={SETTINGS_OVERVIEW_EYEBROW}
+        title={storeInfo.studioName || PLACEHOLDER_STORE_INFO.studioName}
+        summary={storeChanged
+          ? '当前门店基础信息存在未保存修改，可在完成核对后直接保存并同步到系统设置。'
+          : '统一查看门店档案、通知配置与安全状态，保持后台运营设置与门店信息一致。'}
+        statusLabel={storeChanged ? '处理中' : '正常'}
+        savedBadgeText={`最近保存 ${storeSavedAt}`}
+        metaItems={settingsOverviewMetaItems}
+        metrics={settingsOverviewMetrics}
+        primaryActionLabel="保存门店信息"
+        primaryActionDisabled={!storeChanged}
+        onPrimaryAction={handleSaveStoreInfo}
+      />
+
       <SectionCard title="门店信息" subtitle={`基础信息与营业时间 · 最近保存 ${storeSavedAt}${storeChanged ? ' · 有未保存修改' : ''}`}>
-        <Form form={storeForm} className={pageCls.settingsForm} layout="vertical" initialValues={{
-          ...storeInfo,
-          hours: parseHoursToDayjs(storeInfo.businessHours)
-        }}>
+        <Form form={storeForm} className={pageCls.settingsForm} layout="vertical">
           <Row gutter={18}>
             <Col span={12}>
               <Form.Item label="门店名称" name="studioName" rules={[{ required: true, message: '请输入门店名称' }]}>
@@ -591,11 +712,8 @@ export default function SettingsPage() {
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>通知设置</h3>
-              <div className={widgetCls.smallText}>配置系统通知和提醒 · 最近保存 {notificationSavedAt}</div>
+              <div className={widgetCls.smallText}>配置系统通知和提醒 · 开关变更后自动保存 · 最近保存 {notificationSavedAt}</div>
             </div>
-            <ActionButton ghost icon={<SaveOutlined />} onClick={handleSaveNotifications}>
-              保存 {notificationDirtyCount > 0 ? `(${notificationDirtyCount})` : ''}
-            </ActionButton>
           </div>
           <div className={pageCls.settingsSectionList}>
             {notifications.map((item) => (
@@ -646,27 +764,19 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className={pageCls.settingsSectionList}>
-            {securityActionsList.map((item) => (
-              <button
+            {securityActionRows.map((item) => (
+              <SettingsActionRow
                 key={item.title}
-                type="button"
-                className={`${widgetCls.settingRow} ${pageCls.plainActionRowButton}`}
+                title={item.title}
+                description={item.description}
+                statusLabel={item.statusLabel}
                 onClick={() => {
                   if (item.title === '两步验证') {
                     setTwoFactorEnabled(securityState.两步验证.status === '正常');
                   }
-                  setOpenSecurityDrawer(item.title);
+                  setOpenSecurityDrawer(item.title as SecurityActionTitle);
                 }}
-              >
-                <div>
-                  <div className={widgetCls.recordTitle}>{item.title}</div>
-                  <div className={widgetCls.smallText}>{securityState[item.title].detail}</div>
-                </div>
-                <div className={pageCls.statusMetaWrap}>
-                  <StatusTag status={securityState[item.title].status} />
-                  <ArrowRightOutlined />
-                </div>
-              </button>
+              />
             ))}
           </div>
         </div>
@@ -679,22 +789,14 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className={pageCls.settingsSectionList}>
-            {dataActionsList.map((item) => (
-              <button
+            {dataActionRows.map((item) => (
+              <SettingsActionRow
                 key={item.title}
-                type="button"
-                className={`${widgetCls.settingRow} ${pageCls.plainActionRowButton}`}
-                onClick={() => setOpenDataDrawer(item.title)}
-              >
-                <div>
-                  <div className={widgetCls.recordTitle}>{item.title}</div>
-                  <div className={widgetCls.smallText}>{dataState[item.title].detail}</div>
-                </div>
-                <div className={pageCls.statusMetaWrap}>
-                  <StatusTag status={dataState[item.title].status} />
-                  <ArrowRightOutlined />
-                </div>
-              </button>
+                title={item.title}
+                description={item.description}
+                statusLabel={item.statusLabel}
+                onClick={() => setOpenDataDrawer(item.title as DataActionTitle)}
+              />
             ))}
           </div>
         </div>
@@ -843,7 +945,7 @@ export default function SettingsPage() {
                 await settingsApi.initialize().catch(() => null);
                 const initialized = await settingsApi.getNotifications().catch(() => []);
                 setNotifications(initialized);
-                setSavedNotifications(initialized);
+                setNotificationSavedAt(todayText());
               }}
             >
               初始化通知模板

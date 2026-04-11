@@ -1,0 +1,128 @@
+.settingsOverviewCard {
+  gap: 18px;
+}
+
+.settingsOverviewTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.settingsOverviewContent {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.settingsOverviewBadges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.settingsOverviewEyebrow {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.settingsOverviewTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.settingsOverviewTitle {
+  margin: 0;
+  color: var(--text-heading);
+  font-size: clamp(28px, 3vw, 34px);
+  font-weight: var(--font-black);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.settingsOverviewSavedBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(248, 250, 251, 0.9);
+  border: 1px solid var(--border-soft);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+}
+
+.settingsOverviewAction {
+  display: flex;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.settingsOverviewMetaGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settingsOverviewMetaCard {
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+.settingsOverviewLabel {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.settingsOverviewValue {
+  margin-top: 8px;
+  color: var(--text-heading);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-bold);
+  line-height: 1.35;
+}
+
+.settingsOverviewHint,
+.settingsOverviewMetricHint {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.settingsActionRowContent {
+  min-width: 0;
+}
+
+.settingsActionRowIcon {
+  color: var(--icon-muted);
+}
+
+@media (max-width: 1024px) {
+  .settingsOverviewMetaGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .settingsOverviewTop {
+    flex-direction: column;
+  }
+
+  .settingsOverviewAction {
+    width: 100%;
+  }
+}
