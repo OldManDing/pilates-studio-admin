@@ -117,13 +117,13 @@
   line-height: 1.05;
   letter-spacing: -0.02em;
   color: var(--text-heading);
-  font-weight: 300;
+  font-weight: var(--font-regular);
 }
 
 .membershipSecondaryValue {
   font-size: var(--font-size-lg);
   color: var(--text-heading);
-  font-weight: 300;
+  font-weight: var(--font-regular);
 }
 
 .membershipProgressWrap {
@@ -148,9 +148,9 @@
   align-self: stretch;
   min-height: 48px;
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(47, 151, 131, 0.24);
+  border: 1px solid color-mix(in srgb, var(--mint) 24%, transparent);
   background: linear-gradient(135deg, var(--control-primary-start) 0%, var(--control-primary-end) 100%) !important;
-  box-shadow: 0 10px 22px rgba(52, 158, 136, 0.22);
+  box-shadow: var(--control-shadow-strong);
 }
 
 .quickActionGrid {
@@ -175,7 +175,7 @@
 
 .quickActionCard:hover {
   border-color: color-mix(in srgb, var(--mint) 18%, transparent);
-  box-shadow: 0 12px 24px rgba(31, 42, 51, 0.06);
+  box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
@@ -233,7 +233,7 @@
   line-height: 0.95;
   letter-spacing: -0.04em;
   color: var(--text-heading);
-  font-weight: 200;
+  font-weight: var(--font-regular);
 }
 
 .trainingSplit {
@@ -288,7 +288,7 @@
   line-height: 1;
   letter-spacing: -0.03em;
   color: var(--text-heading);
-  font-weight: 200;
+  font-weight: var(--font-regular);
 }
 
 .upcomingWeekday {

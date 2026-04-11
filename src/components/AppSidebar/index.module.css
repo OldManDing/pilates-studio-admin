@@ -26,8 +26,8 @@
   background: linear-gradient(135deg, var(--mint) 0%, var(--violet) 100%);
   display: grid;
   place-items: center;
-  color: white;
-  font-size: 24px;
+  color: var(--button-text-primary);
+  font-size: var(--font-size-xl);
   font-weight: var(--font-bold);
 }
 
@@ -110,15 +110,15 @@
   border-radius: var(--radius-sm);
   display: grid;
   place-items: center;
-  font-size: 18px;
+  font-size: var(--font-size-md);
   background: color-mix(in srgb, var(--text-main) 6%, transparent);
   color: var(--icon-muted);
   transition: background 0.2s ease, color 0.2s ease;
 }
 
 .active .icon {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  background: color-mix(in srgb, var(--button-text-primary) 20%, transparent);
+  color: var(--button-text-primary);
 }
 
 .label {
