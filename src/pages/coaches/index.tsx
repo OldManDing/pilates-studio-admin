@@ -1,6 +1,6 @@
 import { CalendarOutlined, DeleteOutlined, EditOutlined, HeartOutlined, PlusOutlined, SearchOutlined, StarOutlined, TeamOutlined } from '@ant-design/icons';
 import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Pagination, Popconfirm, Row, Select, Spin, message } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
@@ -88,7 +88,7 @@ export default function CoachesPage() {
     totalSessions: 0,
   });
 
-  const fetchCoaches = async (page = 1) => {
+  const fetchCoaches = useCallback(async (page = 1) => {
     try {
       setLoading(true);
       const response = await coachesApi.getPaged({
@@ -128,11 +128,11 @@ export default function CoachesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [messageApi, pageSize, searchValue, statusFilter]);
 
   useEffect(() => {
-    fetchCoaches(currentPage);
-  }, [currentPage, searchValue, statusFilter]);
+    void fetchCoaches(currentPage);
+  }, [currentPage, fetchCoaches]);
 
   useEffect(() => {
     setCurrentPage(1);

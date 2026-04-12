@@ -1,6 +1,6 @@
 import { AppstoreOutlined, CalendarOutlined, DeleteOutlined, EditOutlined, PlusOutlined, StarOutlined } from '@ant-design/icons';
 import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Pagination, Popconfirm, Row, Select, Spin, message } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
@@ -47,7 +47,6 @@ export default function CoursesPage() {
   const [detailCourse, setDetailCourse] = useState<Course | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
@@ -58,7 +57,7 @@ export default function CoursesPage() {
     popularCourse: '-',
   });
 
-  const fetchCourses = async (page = 1) => {
+  const fetchCourses = useCallback(async (page = 1) => {
     try {
       setLoading(true);
       const [coursesResponse, coachesData, reportsData] = await Promise.all([
@@ -105,40 +104,15 @@ export default function CoursesPage() {
       } finally {
         setLoading(false);
       }
-  };
+  }, [levelFilter, messageApi, pageSize, searchValue, typeFilter]);
 
   useEffect(() => {
-    fetchCourses(currentPage);
-  }, [currentPage, searchValue, typeFilter, levelFilter]);
+    void fetchCourses(currentPage);
+  }, [currentPage, fetchCourses]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchValue, typeFilter, levelFilter]);
-
-  const refreshCourses = async (silent = false) => {
-    try {
-      if (!silent) setIsRefreshing(true);
-      const refreshed = await coursesApi.getAll();
-      setCourseList(refreshed);
-
-      const totalCourses = refreshed.length;
-      const weeklySessions = refreshed.reduce((sum, c) => sum + (c._count?.sessions || 0), 0);
-      const popularCourse = totalCourses > 0
-        ? refreshed.reduce((max, c) => ((c._count?.sessions || 0) > (max._count?.sessions || 0) ? c : max), refreshed[0])?.name || '-'
-        : '-';
-
-      setStats((current) => ({
-        ...current,
-        totalCourses,
-        weeklySessions,
-        popularCourse,
-      }));
-    } catch (err) {
-      messageApi.error(getErrorMessage(err, '刷新课程失败'));
-    } finally {
-      if (!silent) setIsRefreshing(false);
-    }
-  };
 
   const courseTypeOptions = useMemo(
     () => Array.from(new Set(courseList.map((course) => course.type))),

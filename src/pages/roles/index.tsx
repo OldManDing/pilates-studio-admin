@@ -1,7 +1,6 @@
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons';
 import {
   App,
-  Button,
   Col,
   Descriptions,
   Drawer,
@@ -14,7 +13,7 @@ import {
   Spin,
   Switch,
 } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
 import PageHeader from '@/components/PageHeader';
@@ -25,7 +24,6 @@ import { CRUD_MODAL_WIDTH, NARROW_DETAIL_DRAWER_WIDTH, ROLE_PERMISSION_DRAWER_WI
 import pageCls from '@/styles/page.module.css';
 import { getErrorMessage } from '@/utils/errors';
 import roleCss from './index.module.css';
-import widgetCls from '@/styles/widgets.module.css';
 
 type RoleCode = 'OWNER' | 'FRONTDESK' | 'COACH' | 'FINANCE';
 
@@ -114,7 +112,7 @@ export default function RolesPage() {
   const [editingPermissionRole, setEditingPermissionRole] = useState<Role | null>(null);
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       let permissionList = await rolesApi.getPermissions().catch(() => []);
@@ -130,11 +128,11 @@ export default function RolesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [message]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    void fetchData();
+  }, [fetchData]);
 
   const groupedPermissions = useMemo(() => {
     const groupMap = new Map<string, Permission[]>();

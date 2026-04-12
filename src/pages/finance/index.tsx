@@ -10,10 +10,11 @@ import {
   WalletOutlined
 } from '@ant-design/icons';
 import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Row, Select, Spin, message } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import ActionButton from '@/components/ActionButton';
 import { createChartTooltip } from '@/components/ChartTooltip';
+import EmptyState from '@/components/EmptyState';
 import FilterModalFooter from '@/components/FilterModalFooter';
 import MemberAvatar from '@/components/MemberAvatar';
 import PageHeader from '@/components/PageHeader';
@@ -26,9 +27,9 @@ import widgetCls from '@/styles/widgets.module.css';
 import { membersApi, type Member } from '@/services/members';
 import { transactionsApi, type Transaction } from '@/services/transactions';
 import { reportsApi } from '@/services/reports';
-import type { TransactionStatus, TransactionKind } from '@/types';
+import type { AccentTone, TransactionStatus, TransactionKind } from '@/types';
 import { getErrorMessage } from '@/utils/errors';
-import { formatCurrency, formatPercent } from '@/utils/format';
+import { formatCurrency, getToneColor } from '@/utils/format';
 import { useIsMobile } from '@/utils/useResponsive';
 import { axisTick, chartGrid } from '@/utils/chartTheme';
 import { getToneFromName } from '@/utils/tone';
@@ -57,14 +58,6 @@ const kindMap: Record<TransactionKind, string> = {
   ADJUSTMENT: '调整',
 };
 
-const reverseStatusMap: Record<string, TransactionStatus> = {
-  '已完成': 'COMPLETED',
-  '待处理': 'PENDING',
-  '处理中': 'PROCESSING',
-  '已退款': 'REFUNDED',
-  '失败': 'FAILED',
-};
-
 type TransactionFormValues = {
   memberId?: string;
   kind: TransactionKind;
@@ -83,13 +76,13 @@ const transactionKindOptions = Object.entries(kindMap).map(([k, v]) => ({ label:
 
 const SIX_MONTHS_MS = 180 * 24 * 60 * 60 * 1000;
 
-const kindColorMap: Record<TransactionKind, string> = {
-  MEMBERSHIP_PURCHASE: '#43c7ab',
-  MEMBERSHIP_RENEWAL: '#8b7cff',
-  CLASS_PACKAGE_PURCHASE: '#ff8da8',
-  PRIVATE_CLASS_PURCHASE: '#ffb760',
-  REFUND: '#73a7ff',
-  ADJUSTMENT: '#73a7ff',
+const transactionKindToneMap: Record<TransactionKind, AccentTone> = {
+  MEMBERSHIP_PURCHASE: 'mint',
+  MEMBERSHIP_RENEWAL: 'violet',
+  CLASS_PACKAGE_PURCHASE: 'pink',
+  PRIVATE_CLASS_PURCHASE: 'orange',
+  REFUND: 'violet',
+  ADJUSTMENT: 'violet',
 };
 
 export default function FinancePage() {
@@ -117,7 +110,7 @@ export default function FinancePage() {
     profitMargin: '-', // 后端暂无支出数据
   });
 
-  const fetchTransactions = async (page = 1, pageSize = 100) => {
+  const fetchTransactions = useCallback(async (page = 1, pageSize = 100) => {
     try {
       const from = new Date(Date.now() - SIX_MONTHS_MS).toISOString().split('T')[0];
       const to = new Date().toISOString().split('T')[0];
@@ -139,11 +132,17 @@ export default function FinancePage() {
 
       // Build pie chart data from reports
       if (reportsRes?.transactionsByKind) {
-        const structure = reportsRes.transactionsByKind.map((item: any) => ({
-          name: kindMap[(item.kind as TransactionKind)] || item.kind,
-          value: Number(item._sum?.amountCents || 0) / 100,
-          fill: kindColorMap[(item.kind as TransactionKind)] || '#999',
-        }));
+        const structure = reportsRes.transactionsByKind.map((item: any) => {
+          const tone = transactionKindToneMap[item.kind as TransactionKind] || 'mint';
+          const colors = getToneColor(tone);
+
+          return {
+            name: kindMap[item.kind as TransactionKind] || item.kind,
+            value: Number(item._sum?.amountCents || 0) / 100,
+            fill: colors.solid,
+          };
+        });
+
         setRevenueStructure(structure);
       }
 
@@ -173,12 +172,12 @@ export default function FinancePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [messageApi]);
 
   useEffect(() => {
     setLoading(true);
-    fetchTransactions();
-  }, []);
+    void fetchTransactions();
+  }, [fetchTransactions]);
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -223,6 +222,12 @@ export default function FinancePage() {
     { title: '净利润', value: '待接入', hint: '需接入真实支出后计算', tone: 'violet' as const, icon: 'line' as const },
     { title: '利润率', value: stats.profitMargin, hint: '需接入真实支出后计算', tone: 'pink' as const, icon: 'pie' as const },
   ], [stats]);
+
+  const transactionFilterLabels = [
+    searchValue.trim() ? `关键词“${searchValue.trim()}”` : null,
+    statusFilter !== '全部' ? `状态：${statusMap[statusFilter as TransactionStatus] || statusFilter}` : null,
+    kindFilter !== '全部' ? `类型：${kindMap[kindFilter as TransactionKind] || kindFilter}` : null,
+  ].filter(Boolean);
 
   const exportTransactions = (rows: Transaction[], fileName: string, successMessage: string) => {
     if (rows.length === 0) {
@@ -362,7 +367,12 @@ export default function FinancePage() {
     setShowAllTransactions((current) => !current);
   };
 
-  const transactionCountLabel = `${filteredTransactions.length} 条记录`;
+  const transactionCountText = `当前共 ${filteredTransactions.length} 笔交易`;
+  const transactionResultSummary = transactionFilterLabels.length
+    ? `已按${transactionFilterLabels.join('、')}筛选，当前匹配 ${filteredTransactions.length} 笔交易。`
+    : showAllTransactions
+      ? `当前展示全部 ${filteredTransactions.length} 笔最近交易，支持继续筛选、编辑与查看详情。`
+      : `默认展示最近 4 笔交易，可展开查看全部 ${filteredTransactions.length} 笔。`;
   const viewAllLabel = searchValue.trim().length > 0 || statusFilter !== '全部' || kindFilter !== '全部'
     ? '查看全部'
     : showAllTransactions
@@ -382,7 +392,7 @@ export default function FinancePage() {
 
   if (loading && transactionList.length === 0) {
     return (
-      <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
+      <div className={`${pageCls.page} ${pageCls.workPage}`}>
         {contextHolder}
         <PageHeader
           title="财务报表"
@@ -397,7 +407,7 @@ export default function FinancePage() {
   }
 
   return (
-    <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
+    <div className={`${pageCls.page} ${pageCls.workPage}`}>
       {contextHolder}
       <PageHeader
         title="财务报表"
@@ -418,14 +428,14 @@ export default function FinancePage() {
               <BarChart data={financeBar} margin={{ top: 18, right: 8, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="financeRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#43c7ab" stopOpacity={0.96} />
-                    <stop offset="100%" stopColor="#6be0c8" stopOpacity={0.78} />
+                    <stop offset="0%" stopColor="var(--mint)" stopOpacity={0.96} />
+                    <stop offset="100%" stopColor="var(--control-primary-end)" stopOpacity={0.78} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
                 <XAxis dataKey="month" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} tick={axisTick} />
                 <YAxis axisLine={false} tickLine={false} tick={axisTick} />
-                <Tooltip cursor={{ fill: 'rgba(67, 199, 171, 0.08)' }} content={<FinanceTrendTooltip />} />
+                <Tooltip cursor={{ fill: 'var(--mint-soft)' }} content={<FinanceTrendTooltip />} />
                 <Bar dataKey="revenue" fill="url(#financeRevenue)" radius={[10, 10, 0, 0]} barSize={isMobile ? 16 : 24} />
               </BarChart>
             </ResponsiveContainer>
@@ -471,80 +481,87 @@ export default function FinancePage() {
 
       <SectionCard
         title="最近交易"
-        subtitle={`交易管理 · ${transactionCountLabel}`}
-        extra={<Button type="text" onClick={handleViewAll}>{viewAllLabel}</Button>}
+        subtitle="统一保留搜索、筛选、导出与详情查看，便于财务核对与日常跟进。"
+        extra={<Button type="text" className={pageCls.textAction} onClick={handleViewAll}>{viewAllLabel}</Button>}
       >
-        <div className={`${pageCls.toolbar} ${pageCls.toolbarCompact}`}>
-          <div className={pageCls.toolbarLeft}>
-            <Input
-              className={pageCls.toolbarSearch}
-              size="large"
-              value={searchValue}
-              prefix={<SearchOutlined />}
-              placeholder="按会员、交易类型、金额或日期搜索"
-              onChange={(event) => {
-                setSearchValue(event.target.value);
-                if (event.target.value.trim().length > 0) {
-                  setShowAllTransactions(true);
-                }
-              }}
-            />
+        <div className={pageCls.sectionContentStack}>
+          <div className={pageCls.sectionSummaryRow}>
+            <div className={pageCls.sectionSummaryText}>{transactionResultSummary}</div>
+            <span className={pageCls.sectionMetaPill}>{transactionCountText}</span>
           </div>
-          <div className={pageCls.toolbarRight}>
-            <ActionButton icon={<FilterOutlined />} ghost onClick={openFilterModal}>筛选</ActionButton>
-            <ActionButton icon={<DownloadOutlined />} ghost onClick={handleExportVisibleTransactions}>导出</ActionButton>
-            <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增交易</ActionButton>
-          </div>
-        </div>
 
-        <div className={widgetCls.recordList}>
-          {visibleTransactions.map((item) => (
-            <div key={item.id} className={`${widgetCls.recordItem} ${pageCls.surface} ${pageCls.memberRecordItem}`}>
-              <div className={widgetCls.recordMeta}>
-                <MemberAvatar name={item.member?.name || '未知'} tone={getToneFromName(item.member?.name || '未知')} />
-                <div className={pageCls.memberRecordHead}>
-                  <div className={pageCls.memberRecordNameRow}>
-                    <span className={pageCls.membersName}>{item.member?.name || '未知会员'}</span>
-                    <StatusTag status={statusMap[item.status] || item.status} />
+          <div className={`${pageCls.toolbar} ${pageCls.toolbarCompact}`}>
+            <div className={pageCls.toolbarLeft}>
+              <Input
+                className={pageCls.toolbarSearch}
+                size="large"
+                value={searchValue}
+                prefix={<SearchOutlined />}
+                placeholder="按会员、交易类型、金额或日期搜索"
+                onChange={(event) => {
+                  setSearchValue(event.target.value);
+                  if (event.target.value.trim().length > 0) {
+                    setShowAllTransactions(true);
+                  }
+                }}
+              />
+            </div>
+            <div className={pageCls.toolbarRight}>
+              <ActionButton icon={<FilterOutlined />} ghost onClick={openFilterModal}>筛选</ActionButton>
+              <ActionButton icon={<DownloadOutlined />} ghost onClick={handleExportVisibleTransactions}>导出</ActionButton>
+              <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增交易</ActionButton>
+            </div>
+          </div>
+
+          {visibleTransactions.length ? (
+            <div className={`${widgetCls.recordList} ${pageCls.sectionListStack}`}>
+              {visibleTransactions.map((item) => (
+                <div key={item.id} className={`${widgetCls.recordItem} ${pageCls.surface} ${pageCls.memberRecordItem}`}>
+                  <div className={widgetCls.recordMeta}>
+                    <MemberAvatar name={item.member?.name || '未知'} tone={getToneFromName(item.member?.name || '未知')} />
+                    <div className={pageCls.memberRecordHead}>
+                      <div className={pageCls.memberRecordNameRow}>
+                        <span className={pageCls.membersName}>{item.member?.name || '未知会员'}</span>
+                        <StatusTag status={statusMap[item.status] || item.status} />
+                      </div>
+                      <div className={widgetCls.recordSub}>{kindMap[item.kind] || item.kind}</div>
+                      <div className={pageCls.membersSubtext}>{new Date(item.happenedAt).toLocaleDateString('zh-CN')}</div>
+                    </div>
                   </div>
-                  <div className={widgetCls.recordSub}>{kindMap[item.kind] || item.kind}</div>
-                  <div className={pageCls.membersSubtext}>{new Date(item.happenedAt).toLocaleDateString('zh-CN')}</div>
-                </div>
-              </div>
 
-              <div className={pageCls.memberRecordGrid}>
-                <div className={pageCls.memberRecordField}>
-                  <div className={pageCls.memberRecordLabel}>交易金额</div>
-                  <div className={pageCls.memberRecordValue}>{formatCurrency(item.amountCents / 100)}</div>
-                </div>
-                <div className={pageCls.memberRecordField}>
-                  <div className={pageCls.memberRecordLabel}>交易状态</div>
-                  <div className={`${pageCls.memberRecordValue} ${widgetCls.detailOverviewStatValueLarge}`}>{statusMap[item.status] || item.status}</div>
-                </div>
-                <div className={pageCls.memberRecordField}>
-                  <div className={pageCls.memberRecordLabel}>交易日期</div>
-                  <div className={`${pageCls.memberRecordValue} ${widgetCls.detailOverviewStatValueLarge}`}>{new Date(item.happenedAt).toLocaleDateString('zh-CN')}</div>
-                </div>
-              </div>
+                  <div className={pageCls.memberRecordGrid}>
+                    <div className={pageCls.memberRecordField}>
+                      <div className={pageCls.memberRecordLabel}>交易金额</div>
+                      <div className={pageCls.memberRecordValue}>{formatCurrency(item.amountCents / 100)}</div>
+                    </div>
+                    <div className={pageCls.memberRecordField}>
+                      <div className={pageCls.memberRecordLabel}>交易状态</div>
+                      <div className={`${pageCls.memberRecordValue} ${widgetCls.detailOverviewStatValueLarge}`}>{statusMap[item.status] || item.status}</div>
+                    </div>
+                    <div className={pageCls.memberRecordField}>
+                      <div className={pageCls.memberRecordLabel}>交易日期</div>
+                      <div className={`${pageCls.memberRecordValue} ${widgetCls.detailOverviewStatValueLarge}`}>{new Date(item.happenedAt).toLocaleDateString('zh-CN')}</div>
+                    </div>
+                  </div>
 
-              <div className={`${pageCls.actionRowWrap} ${pageCls.actionRowWrapEnd}`}>
-                <Button size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={() => openEditModal(item)}>编辑</Button>
-                <Button size="large" className={pageCls.cardActionHalf} icon={<EyeOutlined />} onClick={() => setDetailTransaction(item)}>详情</Button>
-              </div>
+                  <div className={`${pageCls.actionRowWrap} ${pageCls.actionRowWrapEnd}`}>
+                    <Button type="primary" size="large" className={pageCls.cardActionHalf} icon={<EyeOutlined />} onClick={() => setDetailTransaction(item)}>详情</Button>
+                    <Button size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={() => openEditModal(item)}>编辑</Button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          ) : (
+            <div className={pageCls.sectionEmptyState}>
+              <EmptyState
+                title="暂无符合条件的交易记录"
+                description="试试调整搜索词，或清空筛选后重新查看全部交易。"
+                actionText="重置筛选"
+                onAction={resetFilters}
+              />
+            </div>
+          )}
         </div>
-
-        {visibleTransactions.length === 0 ? (
-          <div className={`${pageCls.surface} ${widgetCls.detailCard} ${pageCls.surfaceTopSpace}`}>
-            <div className={widgetCls.detailTitle}>暂无符合条件的交易记录</div>
-            <div className={`${widgetCls.smallText} ${pageCls.topSpaceSm}`}>试试调整搜索词，或清空筛选后重新查看全部交易。</div>
-            <div className={widgetCls.twoButtons}>
-              <Button size="large" className={pageCls.cardActionHalf} onClick={() => setSearchValue('')}>清空搜索</Button>
-              <Button type="primary" size="large" className={pageCls.cardActionHalf} onClick={resetFilters}>重置筛选</Button>
-            </div>
-          </div>
-        ) : null}
       </SectionCard>
 
       <Modal
