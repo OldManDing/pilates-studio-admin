@@ -54,12 +54,36 @@
   padding-bottom: var(--space-3);
   margin-right: -6px;
   scrollbar-gutter: stable;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(130, 146, 166, 0.34) transparent;
+}
+
+.menuGroup {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.menuGroup + .menuGroup {
+  padding-top: var(--space-3);
+  border-top: 1px solid color-mix(in srgb, var(--control-border) 90%, transparent);
+}
+
+.menuGroupLabel {
+  padding: 0 var(--space-2);
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .menu::-webkit-scrollbar {
-  display: none;
+  width: 8px;
+}
+
+.menu::-webkit-scrollbar-thumb {
+  background: rgba(130, 146, 166, 0.3);
+  border-radius: 999px;
 }
 
 .item {
@@ -94,14 +118,14 @@
 }
 
 .active {
-  background: var(--mint);
-  color: white;
-  box-shadow: var(--shadow-md);
-  border-color: transparent;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--mint) 20%, white) 0%, color-mix(in srgb, var(--violet) 12%, white) 100%);
+  color: var(--text-heading);
+  box-shadow: var(--shadow-sm);
+  border-color: color-mix(in srgb, var(--mint) 24%, transparent);
 }
 
 .active:focus-visible {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 22%, transparent), var(--shadow-md);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 20%, transparent), var(--shadow-sm);
 }
 
 .icon {
@@ -117,8 +141,8 @@
 }
 
 .active .icon {
-  background: color-mix(in srgb, var(--button-text-primary) 20%, transparent);
-  color: var(--button-text-primary);
+  background: color-mix(in srgb, var(--mint) 18%, transparent);
+  color: var(--text-mint);
 }
 
 .label {
@@ -128,7 +152,7 @@
 .desc {
   font-size: var(--font-size-xs);
   color: inherit;
-  opacity: 0.78;
+  opacity: 0.7;
   margin-top: var(--space-1);
 }
 

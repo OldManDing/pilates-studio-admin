@@ -12,6 +12,12 @@ type Props = {
   onNavigate: (path: string) => void;
 };
 
+const groupLabelMap = {
+  operations: '高频工作',
+  insights: '分析与复盘',
+  admin: '系统配置',
+} as const;
+
 const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
   const { message } = App.useApp();
   const [accountOpen, setAccountOpen] = useState(false);
@@ -88,6 +94,12 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
     return true;
   });
 
+  const groupedMenuItems = visibleMenuItems.reduce<Record<string, typeof visibleMenuItems>>((groups, item) => {
+    groups[item.group] = groups[item.group] || [];
+    groups[item.group].push(item);
+    return groups;
+  }, {});
+
   const handleUserAction = (key: 'settings' | 'logout') => {
     if (key === 'settings') {
       setAccountOpen(false);
@@ -125,26 +137,36 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
       </div>
 
       <div className={cls.menu}>
-        {visibleMenuItems.map((item) => {
-          const active = pathname === item.key || (item.key === '/dashboard' && pathname.startsWith('/dashboard/'));
+        {(Object.keys(groupLabelMap) as Array<keyof typeof groupLabelMap>).map((groupKey) => {
+          const items = groupedMenuItems[groupKey] || [];
+          if (!items.length) return null;
+
           return (
-            <div
-              key={item.key}
-              className={`${cls.item} ${active ? cls.active : ''}`}
-              onClick={() => onNavigate(item.key)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  onNavigate(item.key);
-                }
-              }}
-            >
-              <div className={cls.icon}>{item.icon}</div>
-              <div>
-                <div className={cls.label}>{item.label}</div>
-                <div className={cls.desc}>{item.description}</div>
-              </div>
+            <div key={groupKey} className={cls.menuGroup}>
+              <div className={cls.menuGroupLabel}>{groupLabelMap[groupKey]}</div>
+              {items.map((item) => {
+                const active = pathname === item.key || (item.key === '/dashboard' && pathname.startsWith('/dashboard/'));
+                return (
+                  <div
+                    key={item.key}
+                    className={`${cls.item} ${active ? cls.active : ''}`}
+                    onClick={() => onNavigate(item.key)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        onNavigate(item.key);
+                      }
+                    }}
+                  >
+                    <div className={cls.icon}>{item.icon}</div>
+                    <div>
+                      <div className={cls.label}>{item.label}</div>
+                      <div className={cls.desc}>{item.description}</div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           );
         })}
