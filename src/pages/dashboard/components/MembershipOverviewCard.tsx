@@ -1,34 +1,37 @@
 import { Button, Progress } from 'antd';
-import { ArrowRightOutlined, CrownOutlined } from '@ant-design/icons';
+import { CrownOutlined } from '@ant-design/icons';
 import SectionCard from '@/components/SectionCard';
-import pageCls from '@/styles/page.module.css';
 import styles from '../index.module.css';
 
 export type MembershipOverviewCardProps = {
   tierLabel: string;
   planName: string;
-  expiryDateText: string;
-  benefitText: string;
-  remainingDaysText: string;
+  conclusionText: string;
+  supportMetricOneLabel: string;
+  supportMetricOneText: string;
+  supportMetricTwoLabel: string;
+  supportMetricTwoText: string;
   progressPercent?: number;
+  progressText: string;
   onViewDetail?: () => void;
-  onPrimaryAction?: () => void;
 };
 
 export default function MembershipOverviewCard({
   tierLabel,
   planName,
-  expiryDateText,
-  benefitText,
-  remainingDaysText,
+  conclusionText,
+  supportMetricOneLabel,
+  supportMetricOneText,
+  supportMetricTwoLabel,
+  supportMetricTwoText,
   progressPercent,
+  progressText,
   onViewDetail,
-  onPrimaryAction,
 }: MembershipOverviewCardProps) {
   return (
     <SectionCard
       title="会员概览"
-      subtitle="仅保留会员运营摘要。"
+      subtitle="会员状态摘要"
       extra={
         onViewDetail ? (
           <Button type="text" className={styles.sectionAction} onClick={onViewDetail}>
@@ -47,21 +50,18 @@ export default function MembershipOverviewCard({
               </span>
               <span className={styles.membershipPlanName}>{planName}</span>
             </div>
-          </div>
-          <div className={styles.membershipDetailGroup}>
-            <div className={styles.membershipDetailLabel}>当前摘要</div>
-            <div className={styles.membershipDetailValue}>{benefitText}</div>
+            <div className={styles.membershipConclusion}>{conclusionText}</div>
           </div>
         </div>
 
         <div className={styles.membershipMetaGrid}>
           <div className={styles.membershipMetaCard}>
-            <div className={styles.membershipDetailLabel}>本月变化</div>
-            <div className={styles.membershipPrimaryValue}>{expiryDateText}</div>
+            <div className={styles.membershipDetailLabel}>{supportMetricOneLabel}</div>
+            <div className={styles.membershipPrimaryValue}>{supportMetricOneText}</div>
           </div>
           <div className={styles.membershipMetaCard}>
-            <div className={styles.membershipDetailLabel}>运营指标</div>
-            <div className={styles.membershipSecondaryValue}>{remainingDaysText}</div>
+            <div className={styles.membershipDetailLabel}>{supportMetricTwoLabel}</div>
+            <div className={styles.membershipSecondaryValue}>{supportMetricTwoText}</div>
           </div>
         </div>
 
@@ -73,20 +73,8 @@ export default function MembershipOverviewCard({
             trailColor="rgba(31, 42, 51, 0.06)"
             className={styles.membershipProgress}
           />
-          <span className={styles.membershipProgressText}>{remainingDaysText}</span>
+          <span className={styles.membershipProgressText}>{progressText}</span>
         </div>
-
-        {onPrimaryAction ? (
-          <Button
-            type="primary"
-            size="large"
-            className={`${pageCls.cardActionPrimary} ${styles.membershipPrimaryAction}`}
-            onClick={onPrimaryAction}
-          >
-            去预约管理处理
-            <ArrowRightOutlined />
-          </Button>
-        ) : null}
       </div>
     </SectionCard>
   );

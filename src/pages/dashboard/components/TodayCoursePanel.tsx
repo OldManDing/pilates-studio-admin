@@ -13,34 +13,48 @@ export type TodayCourseItem = {
   coachName: string;
   locationText: string;
   statusText?: string;
+  queueHintText?: string;
+  actionText?: string;
 };
 
 export type TodayCoursePanelProps = {
   items: TodayCourseItem[];
+  anomalyCount?: number;
   onViewAll?: () => void;
   onViewDetail?: (id: string) => void;
 };
 
-export default function TodayCoursePanel({ items, onViewAll, onViewDetail }: TodayCoursePanelProps) {
+const isAnomalyStatus = (statusText?: string) => statusText === '未到场' || statusText === '已取消';
+
+export default function TodayCoursePanel({
+  items,
+  anomalyCount = 0,
+  onViewAll,
+  onViewDetail,
+}: TodayCoursePanelProps) {
   return (
     <SectionCard
-      title="今日课程"
-      subtitle={`${new Date().toLocaleDateString('zh-CN')} · 今日课程摘要`}
+      title="今日执行队列"
+      subtitle={`${new Date().toLocaleDateString('zh-CN')} · 先确认，再签到，再回访`}
       extra={
         onViewAll ? (
           <Button type="text" className={styles.sectionAction} onClick={onViewAll}>
-            查看全部
+            去预约管理
           </Button>
         ) : null
       }
     >
+      {anomalyCount > 0 ? (
+        <div className={styles.todayAlertBar}>存在异常任务 {anomalyCount} 项，建议优先处理回访与补位。</div>
+      ) : null}
+
       {items.length > 0 ? (
-        <div className={widgetCls.recordListDense}>
+        <div className={`${widgetCls.recordListDense} ${styles.todayList}`}>
           {items.map((item) => (
             <button
               key={item.id}
               type="button"
-              className={`${widgetCls.recordItem} ${widgetCls.dashboardCourseItem} ${styles.itemButtonReset}`}
+              className={`${widgetCls.recordItem} ${widgetCls.dashboardCourseItem} ${styles.itemButtonReset} ${styles.todayItem} ${isAnomalyStatus(item.statusText) ? styles.todayItemAnomaly : ''}`}
               onClick={() => onViewDetail?.(item.id)}
             >
               <div className={widgetCls.recordMeta}>
@@ -51,16 +65,18 @@ export default function TodayCoursePanel({ items, onViewAll, onViewDetail }: Tod
                     {item.coachName} · {item.locationText}
                   </div>
                   <div className={widgetCls.recordSub}>{item.durationText}</div>
+                  {item.queueHintText ? <div className={styles.executionHint}>{item.queueHintText}</div> : null}
                 </div>
               </div>
               <div className={widgetCls.dashboardCourseAside}>
                 {item.statusText ? <StatusTag status={item.statusText} /> : null}
+                {item.actionText ? <span className={styles.executionActionPill}>{item.actionText}</span> : null}
               </div>
             </button>
           ))}
         </div>
       ) : (
-        <EmptyState size="compact" title="今日暂无课程" description="当前没有可展示的课程安排。" />
+        <EmptyState size="compact" title="今日执行队列为空" description="当前没有可执行的课程或预约任务。" />
       )}
     </SectionCard>
   );

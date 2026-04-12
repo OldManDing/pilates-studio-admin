@@ -19,7 +19,7 @@ export default function TrainingSummaryCard({
   goalLabel,
 }: TrainingSummaryCardProps) {
   return (
-    <SectionCard title="本月训练" subtitle="仅保留训练节奏摘要。">
+    <SectionCard title="训练节奏" subtitle="用于评估当前执行承载能力。">
       <div className={styles.trainingSummaryWrap}>
         <div className={styles.trainingHeadlineRow}>
           <div>

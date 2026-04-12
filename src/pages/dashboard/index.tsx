@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Spin, message } from 'antd';
+import { Button, Spin, message } from 'antd';
 import { CalendarOutlined, RiseOutlined, TeamOutlined, WalletOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '@/components/PageHeader';
@@ -31,10 +31,13 @@ type DashboardStats = {
 type MembershipOverviewViewModel = {
   tierLabel: string;
   planName: string;
-  expiryDateText: string;
-  benefitText: string;
-  remainingDaysText: string;
+  conclusionText: string;
+  supportMetricOneLabel: string;
+  supportMetricOneText: string;
+  supportMetricTwoLabel: string;
+  supportMetricTwoText: string;
   progressPercent?: number;
+  progressText: string;
 };
 
 type TodayCourseViewModel = {
@@ -45,6 +48,8 @@ type TodayCourseViewModel = {
   coachName: string;
   locationText: string;
   statusText?: string;
+  queueHintText?: string;
+  actionText?: string;
 };
 
 type TrainingSummaryViewModel = {
@@ -62,6 +67,17 @@ type UpcomingBookingViewModel = {
   title: string;
   metaText: string;
   tagText?: string;
+  scheduleHintText?: string;
+};
+
+type DashboardStatViewModel = {
+  title: string;
+  value: string;
+  hint: string;
+  tone: 'mint' | 'violet' | 'orange' | 'pink';
+  icon: keyof typeof iconMap;
+  compact?: boolean;
+  emphasis?: 'default' | 'high';
 };
 
 const iconMap = {
@@ -78,6 +94,53 @@ const bookingStatusToLabel = (status: string) => {
   if (status === 'CANCELLED') return '已取消';
   if (status === 'NO_SHOW') return '未到场';
   return '待确认';
+};
+
+const bookingPriorityRank: Record<string, number> = {
+  PENDING: 0,
+  CONFIRMED: 1,
+  COMPLETED: 2,
+  NO_SHOW: 3,
+  CANCELLED: 4,
+};
+
+const toValidDate = (value?: string) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+};
+
+const isSameCalendarDay = (left: Date, right: Date) =>
+  left.getFullYear() === right.getFullYear()
+  && left.getMonth() === right.getMonth()
+  && left.getDate() === right.getDate();
+
+const deriveExecutionHintText = (status: string) => {
+  if (status === 'PENDING') return '开课前需完成确认与到场提醒。';
+  if (status === 'CONFIRMED') return '已确认，关注签到与到课执行。';
+  if (status === 'NO_SHOW') return '存在未到场记录，建议尽快回访。';
+  if (status === 'COMPLETED') return '已完成，可在预约管理中复盘转化。';
+  if (status === 'CANCELLED') return '已取消，建议关注是否需要补位。';
+  return '建议进入预约管理核对当前预约状态。';
+};
+
+const deriveExecutionActionText = (status: string) => {
+  if (status === 'PENDING') return '立即确认';
+  if (status === 'CONFIRMED') return '准备签到';
+  if (status === 'NO_SHOW') return '发起回访';
+  if (status === 'COMPLETED') return '查看复盘';
+  if (status === 'CANCELLED') return '检查补位';
+  return '进入预约管理';
+};
+
+const deriveScheduleHintText = (status: string) => {
+  if (status === 'PENDING') return '待确认：建议在开课前完成通知。';
+  if (status === 'CONFIRMED') return '已确认：提前准备签到与场地。';
+  if (status === 'NO_SHOW') return '未到场：建议排入回访队列。';
+  if (status === 'COMPLETED') return '已完成：可关注后续复购。';
+  if (status === 'CANCELLED') return '已取消：留意候补需求。';
+  return '建议在预约管理中进一步确认排程状态。';
 };
 
 const formatTimeRange = (start?: string, end?: string) => {
@@ -122,49 +185,100 @@ const deriveMembershipSummary = (
   },
 ): MembershipOverviewViewModel => {
   if (!options.memberStatsAvailable) {
+    const revenueText = options.revenueAvailable
+      ? `¥${monthlyRevenue.toLocaleString('zh-CN')}`
+      : '交易汇总暂不可用';
+
     return {
       tierLabel: '数据受限',
       planName: '会员统计暂不可用',
-      expiryDateText: '请稍后刷新，或在会员管理模块核对统计服务状态',
-      benefitText: options.revenueAvailable
-        ? `当前可用营收 ¥${monthlyRevenue.toLocaleString('zh-CN')}`
-        : '交易汇总暂不可用',
-      remainingDaysText: '活跃率暂不可计算',
+      conclusionText: '会员统计未完成同步，建议先排查统计服务后再判断运营动作。',
+      supportMetricOneLabel: '建议动作',
+      supportMetricOneText: '检查会员统计服务状态',
+      supportMetricTwoLabel: '可用营收',
+      supportMetricTwoText: revenueText,
       progressPercent: 0,
+      progressText: '活跃率暂不可计算',
     };
   }
 
   const activityRate = stats.totalMembers > 0 ? Math.round((stats.activeMembers / stats.totalMembers) * 100) : 0;
-  const benefitText = options.bookingsAvailable
-    ? recentBookingCount > 0
-      ? `近期预约 ${recentBookingCount} 单`
-      : options.revenueAvailable
-        ? `月度营收 ¥${monthlyRevenue.toLocaleString('zh-CN')}`
-        : '交易汇总暂不可用'
+  const conclusionText = activityRate >= 72
+    ? '会员活跃稳定，可优先推进新增会员转化。'
+    : activityRate >= 50
+      ? '活跃率有提升空间，建议优先跟进沉默会员。'
+      : '活跃率偏低，建议先处理会员唤醒与到课跟进。';
+
+  const supportMetricTwoLabel = options.bookingsAvailable
+    ? '近期预约'
     : options.revenueAvailable
-      ? `月度营收 ¥${monthlyRevenue.toLocaleString('zh-CN')}`
+      ? '月度营收'
+      : '业务补充';
+
+  const supportMetricTwoText = options.bookingsAvailable
+    ? `${recentBookingCount} 单`
+    : options.revenueAvailable
+      ? `¥${monthlyRevenue.toLocaleString('zh-CN')}`
       : '预约与交易数据暂不可用';
 
   return {
     tierLabel: stats.activeMembers > 120 ? '高活跃' : '运营中',
     planName: `活跃会员 ${stats.activeMembers} / 总会员 ${stats.totalMembers || 0}`,
-    expiryDateText: stats.newMembersThisMonth > 0 ? `本月新增 ${stats.newMembersThisMonth} 位` : '本月暂无新增会籍',
-    benefitText,
-    remainingDaysText: `活跃率 ${activityRate}%`,
+    conclusionText,
+    supportMetricOneLabel: '本月新增',
+    supportMetricOneText: stats.newMembersThisMonth > 0 ? `${stats.newMembersThisMonth} 位` : '暂无新增',
+    supportMetricTwoLabel,
+    supportMetricTwoText,
     progressPercent: activityRate,
+    progressText: `活跃率 ${activityRate}%`,
   };
 };
 
-const mapTodayCourses = (courses: Course[]): TodayCourseViewModel[] =>
-  courses.slice(0, 4).map((course) => ({
+const mapTodayCourses = (bookings: Booking[], courses: Course[]): TodayCourseViewModel[] => {
+  const now = new Date();
+  const sortedBookings = [...bookings].sort((left, right) => {
+    const leftTime = toValidDate(left.session?.startsAt)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+    const rightTime = toValidDate(right.session?.startsAt)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+
+    if (leftTime !== rightTime) return leftTime - rightTime;
+    return (bookingPriorityRank[left.status] ?? 99) - (bookingPriorityRank[right.status] ?? 99);
+  });
+
+  const todayQueue = sortedBookings.filter((item) => {
+    const startsAt = toValidDate(item.session?.startsAt);
+    if (!startsAt) return false;
+    return isSameCalendarDay(startsAt, now);
+  });
+
+  const fallbackQueue = sortedBookings.filter((item) => item.status === 'PENDING' || item.status === 'CONFIRMED');
+  const executionQueue = (todayQueue.length ? todayQueue : fallbackQueue).slice(0, 4);
+
+  if (executionQueue.length > 0) {
+    return executionQueue.map((item) => ({
+      id: item.id,
+      title: item.session?.course?.name || '课程待确认',
+      timeText: formatTimeRange(item.session?.startsAt, item.session?.endsAt),
+      durationText: `会员 ${item.member?.name || '待匹配'}`,
+      coachName: item.session?.coach?.name || '待分配教练',
+      locationText: item.source === 'MINI_PROGRAM' ? '小程序预约' : '后台预约',
+      statusText: bookingStatusToLabel(item.status),
+      queueHintText: deriveExecutionHintText(item.status),
+      actionText: deriveExecutionActionText(item.status),
+    }));
+  }
+
+  return courses.slice(0, 4).map((course) => ({
     id: course.id,
     title: course.name,
-    timeText: '时段未同步',
+    timeText: '待补时段',
     durationText: `${formatDurationText(course.durationMinutes)} · ${course.type}`,
     coachName: course.coach?.name || '待分配教练',
     locationText: course.level ? `${course.level}课程` : '门店信息未同步',
     statusText: course.isActive ? '已确认' : '已取消',
+    queueHintText: '当前暂无可用预约队列，建议先校对课程启停与教练排班。',
+    actionText: '前往课程管理',
   }));
+};
 
 const deriveTrainingSummary = (
   courses: Course[],
@@ -185,23 +299,29 @@ const deriveTrainingSummary = (
   };
 };
 
-const mapUpcomingBookings = (items: Booking[]): UpcomingBookingViewModel[] =>
-  items.slice(0, 4).map((item) => {
-    const startsAt = item.session?.startsAt;
-    const startDate = startsAt ? new Date(startsAt) : null;
-    const hasValidDate = startDate !== null && !Number.isNaN(startDate.getTime());
+const mapUpcomingBookings = (items: Booking[]): UpcomingBookingViewModel[] => {
+  const now = new Date();
+  const normalized = items
+    .map((item) => ({
+      item,
+      startsAt: toValidDate(item.session?.startsAt),
+    }))
+    .filter((entry): entry is { item: Booking; startsAt: Date } => entry.startsAt !== null)
+    .sort((left, right) => left.startsAt.getTime() - right.startsAt.getTime());
 
-    return {
-      id: item.id,
-      dayText: hasValidDate ? new Intl.DateTimeFormat('zh-CN', { day: '2-digit' }).format(startDate) : '--',
-      weekdayText: hasValidDate
-        ? new Intl.DateTimeFormat('zh-CN', { weekday: 'short' }).format(startDate).replace('周', 'W')
-        : 'TBD',
-      title: item.session?.course?.name || '课程待确认',
-      metaText: `${item.session?.coach?.name || '待分配教练'} · ${formatTimeRange(item.session?.startsAt, item.session?.endsAt)}`,
-      tagText: bookingStatusToLabel(item.status),
-    };
-  });
+  const nearTerm = normalized.filter((entry) => !isSameCalendarDay(entry.startsAt, now));
+  const source = (nearTerm.length ? nearTerm : normalized).slice(0, 4);
+
+  return source.map((entry) => ({
+    id: entry.item.id,
+    dayText: new Intl.DateTimeFormat('zh-CN', { day: '2-digit' }).format(entry.startsAt),
+    weekdayText: new Intl.DateTimeFormat('zh-CN', { weekday: 'short' }).format(entry.startsAt),
+    title: entry.item.session?.course?.name || '课程待确认',
+    metaText: `${formatTimeRange(entry.item.session?.startsAt, entry.item.session?.endsAt)} · ${entry.item.session?.coach?.name || '待分配教练'}`,
+    tagText: bookingStatusToLabel(entry.item.status),
+    scheduleHintText: deriveScheduleHintText(entry.item.status),
+  }));
+};
 
 export default function DashboardPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -285,42 +405,19 @@ export default function DashboardPage() {
     fetchData();
   }, [messageApi]);
 
-  const dashboardStats = useMemo(
-    () => [
-      {
-        title: '总会员',
-        value: metricAvailability.memberStats ? String(stats.totalMembers) : '--',
-        hint: metricAvailability.memberStats ? `本月新增 ${stats.newMembersThisMonth}` : '会员统计暂不可用',
-        tone: 'mint' as const,
-        icon: 'team' as const,
-      },
-      {
-        title: '活跃会员',
-        value: metricAvailability.memberStats ? String(stats.activeMembers) : '--',
-        hint: metricAvailability.memberStats
-          ? `活跃率 ${stats.totalMembers ? ((stats.activeMembers / stats.totalMembers) * 100).toFixed(1) : 0}%`
-          : '活跃率暂不可计算',
-        tone: 'violet' as const,
-        icon: 'calendar' as const,
-      },
-      {
-        title: '待处理预约',
-        value: metricAvailability.bookings
-          ? String(bookingList.filter((item) => item.status === 'PENDING').length)
-          : '--',
-        hint: metricAvailability.bookings ? `今日预约 ${bookingList.length} 单` : '预约列表暂不可用',
-        tone: 'orange' as const,
-        icon: 'rise' as const,
-      },
-      {
-        title: '本月营收',
-        value: metricAvailability.revenue ? `¥${stats.monthlyRevenue.toLocaleString('zh-CN')}` : '--',
-        hint: metricAvailability.revenue ? '来源：交易汇总' : '交易汇总暂不可用',
-        tone: 'pink' as const,
-        icon: 'wallet' as const,
-      },
-    ],
-    [stats, bookingList, metricAvailability],
+  const pendingBookingCount = useMemo(
+    () => bookingList.filter((item) => item.status === 'PENDING').length,
+    [bookingList],
+  );
+
+  const noShowBookingCount = useMemo(
+    () => bookingList.filter((item) => item.status === 'NO_SHOW').length,
+    [bookingList],
+  );
+
+  const cancelledBookingCount = useMemo(
+    () => bookingList.filter((item) => item.status === 'CANCELLED').length,
+    [bookingList],
   );
 
   const membershipSummary = useMemo(
@@ -333,7 +430,51 @@ export default function DashboardPage() {
     [stats, bookingList.length, metricAvailability],
   );
 
-  const todayCourses = useMemo(() => mapTodayCourses(courseList), [courseList]);
+  const todayCourses = useMemo(
+    () => mapTodayCourses(bookingList, courseList),
+    [bookingList, courseList],
+  );
+
+  const dashboardStats = useMemo(
+    (): DashboardStatViewModel[] => [
+      {
+        title: '待处理预约',
+        value: metricAvailability.bookings ? String(bookingList.filter((item) => item.status === 'PENDING').length) : '--',
+        hint: metricAvailability.bookings ? '优先处理待确认与异常回访' : '预约列表暂不可用',
+        tone: 'orange' as const,
+        icon: 'rise' as const,
+        compact: true,
+        emphasis: 'high',
+      },
+      {
+        title: '今日执行',
+        value: metricAvailability.bookings ? String(todayCourses.length) : '--',
+        hint: metricAvailability.bookings ? '处理今日执行队列，保障签到到课' : '执行队列暂不可用',
+        tone: 'mint' as const,
+        icon: 'calendar' as const,
+        compact: true,
+      },
+      {
+        title: '活跃会员',
+        value: metricAvailability.memberStats ? String(stats.activeMembers) : '--',
+        hint: metricAvailability.memberStats
+          ? `活跃率 ${stats.totalMembers ? ((stats.activeMembers / stats.totalMembers) * 100).toFixed(1) : 0}%`
+          : '活跃率暂不可计算',
+        tone: 'violet' as const,
+        icon: 'team' as const,
+        compact: true,
+      },
+      {
+        title: '本月营收',
+        value: metricAvailability.revenue ? `¥${stats.monthlyRevenue.toLocaleString('zh-CN')}` : '--',
+        hint: metricAvailability.revenue ? '来源：交易汇总' : '交易汇总暂不可用',
+        tone: 'pink' as const,
+        icon: 'wallet' as const,
+        compact: true,
+      },
+    ],
+    [stats, bookingList, metricAvailability, todayCourses.length],
+  );
 
   const trainingSummary = useMemo(
     () => deriveTrainingSummary(courseList, coachList, stats.totalMembers),
@@ -358,7 +499,7 @@ export default function DashboardPage() {
         title="仪表盘"
         subtitle={partialFailures.length
           ? `当前部分模块暂不可用（${partialFailures.join('、')}），首页仅展示已校验的真实数据。`
-          : `欢迎回来：当前有 ${metricAvailability.courses ? todayCourses.length : '--'} 个课程概览、${metricAvailability.bookings ? bookingList.length : '--'} 条预约记录、${metricAvailability.memberStats ? stats.activeMembers : '--'} 位活跃会员。先看优先级，再进入正式模块处理。`}
+          : '先处理今日执行与异常，再跟进后续排程和经营概览。'}
       />
 
       {partialFailures.length ? (
@@ -373,32 +514,78 @@ export default function DashboardPage() {
         </SectionCard>
       ) : null}
 
-      <div className={pageCls.dashboardHeroGrid}>
-        {dashboardStats.map((item) => (
-          <StatCard key={item.title} {...item} icon={iconMap[item.icon]} />
-        ))}
-      </div>
-
       <div className={styles.dashboardStack}>
-        <div className={styles.topGrid}>
+        <section className={styles.taskFocusSection}>
+          <div className={styles.taskFocusHeader}>
+            <div>
+              <div className={styles.taskFocusEyebrow}>Task First</div>
+              <div className={styles.taskFocusTitle}>今日先执行，后续再排程</div>
+            </div>
+            <Button
+              type="primary"
+              size="large"
+              className={`${pageCls.cardActionPrimary} ${styles.taskFocusAction}`}
+              onClick={() => go('/bookings')}
+            >
+              处理最高优先任务
+            </Button>
+          </div>
+
+          <div className={styles.taskNorthStar}>先清待确认，再控异常，最后看经营。</div>
+
+          <div className={styles.taskPriorityRow}>
+            <span className={`${styles.taskPriorityPill} ${styles.taskPriorityPillCritical}`}>
+              最高优先：待确认 {metricAvailability.bookings ? pendingBookingCount : '--'} 单
+            </span>
+            <span className={`${styles.taskPriorityPill} ${styles.taskPriorityPillWarn}`}>
+              异常未到场 {metricAvailability.bookings ? noShowBookingCount : '--'} 单
+            </span>
+            <span className={`${styles.taskPriorityPill} ${styles.taskPriorityPillWarn}`}>
+              已取消 {metricAvailability.bookings ? cancelledBookingCount : '--'} 单
+            </span>
+            <span className={`${styles.taskPriorityPill} ${styles.taskPriorityPillCalm}`}>
+              今日执行 {todayCourses.length} 项
+            </span>
+            <span className={`${styles.taskPriorityPill} ${styles.taskPriorityPillCalm}`}>
+              后续排程 {metricAvailability.bookings ? upcomingBookings.length : '--'} 项
+            </span>
+          </div>
+
+          <div className={styles.taskPanelsGrid}>
+            <TodayCoursePanel
+              items={todayCourses}
+              anomalyCount={metricAvailability.bookings ? noShowBookingCount + cancelledBookingCount : 0}
+              onViewAll={() => go('/bookings')}
+              onViewDetail={() => go('/bookings')}
+            />
+            <UpcomingBookingsPanel
+              items={upcomingBookings}
+              onViewAll={() => go('/bookings')}
+              onViewDetail={() => go('/bookings')}
+            />
+          </div>
+        </section>
+
+        <div className={`${pageCls.dashboardHeroGrid} ${styles.kpiGrid}`}>
+          {dashboardStats.map((item) => (
+            <StatCard
+              key={item.title}
+              title={item.title}
+              value={item.value}
+              hint={item.hint}
+              tone={item.tone}
+              icon={iconMap[item.icon]}
+              compact={item.compact}
+              emphasis={item.emphasis}
+            />
+          ))}
+        </div>
+
+        <div className={styles.supportGrid}>
+          <TrainingSummaryCard {...trainingSummary} />
           <MembershipOverviewCard
             {...membershipSummary}
             onViewDetail={() => go('/members')}
-            onPrimaryAction={() => go('/bookings')}
-          />
-          <TrainingSummaryCard {...trainingSummary} />
-        </div>
-
-        <div className={pageCls.dashboardSectionGrid}>
-          <TodayCoursePanel
-            items={todayCourses}
-            onViewAll={() => go('/courses')}
-            onViewDetail={() => go('/courses')}
-          />
-          <UpcomingBookingsPanel
-            items={upcomingBookings}
-            onViewAll={() => go('/bookings')}
-            onViewDetail={() => go('/bookings')}
           />
         </div>
       </div>

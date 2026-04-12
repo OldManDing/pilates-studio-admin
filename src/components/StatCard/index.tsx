@@ -9,14 +9,24 @@ type Props = {
   hint: string;
   icon: ReactNode;
   tone?: AccentTone;
+  compact?: boolean;
+  emphasis?: 'default' | 'high';
 };
 
-const StatCard: FC<Props> = ({ title, value, hint, icon, tone = 'mint' }) => {
+const StatCard: FC<Props> = ({
+  title,
+  value,
+  hint,
+  icon,
+  tone = 'mint',
+  compact = false,
+  emphasis = 'default',
+}) => {
   const colors = getToneColor(tone);
 
   return (
     <div
-      className={cls.card}
+      className={`${cls.card} ${compact ? cls.compact : ''} ${emphasis === 'high' ? cls.highEmphasis : ''}`}
       style={{
         ['--stat-accent' as string]: colors.text,
         ['--stat-accent-border' as string]: colors.border,

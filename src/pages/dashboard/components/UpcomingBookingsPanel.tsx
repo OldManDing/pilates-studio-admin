@@ -11,6 +11,7 @@ export type UpcomingBookingItem = {
   title: string;
   metaText: string;
   tagText?: string;
+  scheduleHintText?: string;
 };
 
 export type UpcomingBookingsPanelProps = {
@@ -22,12 +23,12 @@ export type UpcomingBookingsPanelProps = {
 export default function UpcomingBookingsPanel({ items, onViewAll, onViewDetail }: UpcomingBookingsPanelProps) {
   return (
     <SectionCard
-      title="近期安排"
-      subtitle="最近预约摘要。"
+      title="近期排程"
+      subtitle="未来 1-3 天排班预览，用于场地与教练准备。"
       extra={
         onViewAll ? (
           <Button type="text" className={styles.sectionAction} onClick={onViewAll}>
-            全部预约
+            去预约管理
           </Button>
         ) : null
       }
@@ -46,18 +47,19 @@ export default function UpcomingBookingsPanel({ items, onViewAll, onViewDetail }
                 <div className={styles.upcomingWeekday}>{item.weekdayText}</div>
               </div>
               <div className={styles.upcomingDivider} />
-              <div className={styles.upcomingBody}>
-                <div className={styles.upcomingTitleRow}>
-                  <span className={styles.upcomingTitle}>{item.title}</span>
-                  {item.tagText ? <StatusTag status={item.tagText} /> : null}
+                <div className={styles.upcomingBody}>
+                  <div className={styles.upcomingTitleRow}>
+                    <span className={styles.upcomingTitle}>{item.title}</span>
+                    {item.tagText ? <StatusTag status={item.tagText} /> : null}
+                  </div>
+                  <div className={styles.upcomingMeta}>{item.metaText}</div>
+                  {item.scheduleHintText ? <div className={styles.upcomingHint}>{item.scheduleHintText}</div> : null}
                 </div>
-                <div className={styles.upcomingMeta}>{item.metaText}</div>
-              </div>
-            </button>
-          ))}
-        </div>
+              </button>
+            ))}
+          </div>
       ) : (
-        <EmptyState size="compact" title="近期暂无预约" description="当前没有可展示的预约安排。" />
+        <EmptyState size="compact" title="近期暂无排程" description="未来几天暂无可展示的预约安排。" />
       )}
     </SectionCard>
   );

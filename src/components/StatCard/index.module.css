@@ -13,6 +13,15 @@
   cursor: default;
 }
 
+.compact {
+  padding: var(--space-5);
+}
+
+.highEmphasis {
+  border-color: var(--stat-accent-border, color-mix(in srgb, var(--mint) 22%, transparent));
+  box-shadow: 0 16px 30px color-mix(in srgb, var(--stat-accent, var(--mint)) 12%, rgba(18, 38, 63, 0.09));
+}
+
 .card:hover {
   border-color: var(--stat-accent-border, color-mix(in srgb, var(--mint) 18%, transparent));
   background: var(--bg-surface-strong);
@@ -59,4 +68,20 @@
   border: 1px solid transparent;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
   font-size: var(--font-size-lg);
+}
+
+.compact .value {
+  margin-top: var(--space-3);
+  font-size: clamp(24px, 2.2vw, 30px);
+}
+
+.compact .hint {
+  font-size: var(--font-size-xs);
+  line-height: 1.45;
+}
+
+.compact .icon {
+  width: 46px;
+  height: 46px;
+  font-size: var(--font-size-md);
 }

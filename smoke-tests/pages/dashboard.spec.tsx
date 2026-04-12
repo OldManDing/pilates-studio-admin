@@ -78,9 +78,11 @@ describe('DashboardPage smoke test', () => {
     );
 
     await waitFor(() => {
+      expect(screen.getByText('今日执行队列')).toBeInTheDocument();
+      expect(screen.getByText(/最高优先：待确认/)).toBeInTheDocument();
       expect(screen.getByText('会员概览')).toBeInTheDocument();
-      expect(screen.getByText('本月训练')).toBeInTheDocument();
-      expect(screen.getByText('近期安排')).toBeInTheDocument();
+      expect(screen.getByText('训练节奏')).toBeInTheDocument();
+      expect(screen.getByText('近期排程')).toBeInTheDocument();
     });
   });
 });
