@@ -15,10 +15,19 @@ const StatCard: FC<Props> = ({ title, value, hint, icon, tone = 'mint' }) => {
   const colors = getToneColor(tone);
 
   return (
-    <div className={cls.card} style={{ ['--stat-accent' as string]: colors.solid }}>
+    <div
+      className={cls.card}
+      style={{
+        ['--stat-accent' as string]: colors.text,
+        ['--stat-accent-border' as string]: colors.border,
+      }}
+    >
       <div className={cls.top}>
         <div className={cls.title}>{title}</div>
-        <div className={cls.icon} style={{ background: colors.soft, color: colors.solid }}>
+        <div
+          className={cls.icon}
+          style={{ background: colors.soft, color: colors.text, borderColor: colors.border }}
+        >
           {icon}
         </div>
       </div>

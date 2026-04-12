@@ -1,39 +1,52 @@
 import type { CSSProperties, FC } from 'react';
 import { Tag } from 'antd';
+import { getToneColor } from '@/utils/format';
 
-const colorMap: Record<string, { color: string; bg: string }> = {
-  正常: { color: 'var(--text-mint)', bg: 'var(--mint-soft)' },
-  ACTIVE: { color: 'var(--text-mint)', bg: 'var(--mint-soft)' },
-  已确认: { color: 'var(--text-mint)', bg: 'var(--mint-soft)' },
-  CONFIRMED: { color: 'var(--text-mint)', bg: 'var(--mint-soft)' },
-  已完成: { color: 'var(--text-violet)', bg: 'var(--violet-soft)' },
-  COMPLETED: { color: 'var(--text-violet)', bg: 'var(--violet-soft)' },
-  待确认: { color: 'var(--text-orange)', bg: 'var(--orange-soft)' },
-  PENDING: { color: 'var(--text-orange)', bg: 'var(--orange-soft)' },
-  待激活: { color: 'var(--text-orange)', bg: 'var(--orange-soft)' },
-  PROCESSING: { color: 'var(--text-orange)', bg: 'var(--orange-soft)' },
-  已取消: { color: 'var(--text-pink)', bg: 'var(--pink-soft)' },
-  CANCELLED: { color: 'var(--text-pink)', bg: 'var(--pink-soft)' },
-  已发送: { color: 'var(--text-violet)', bg: 'var(--violet-soft)' },
-  SENT: { color: 'var(--text-violet)', bg: 'var(--violet-soft)' },
-  已读: { color: 'var(--text-mint)', bg: 'var(--mint-soft)' },
-  READ: { color: 'var(--text-mint)', bg: 'var(--mint-soft)' },
-  失败: { color: 'var(--text-pink)', bg: 'var(--pink-soft)' },
-  FAILED: { color: 'var(--text-pink)', bg: 'var(--pink-soft)' },
-  NO_SHOW: { color: 'var(--text-pink)', bg: 'var(--pink-soft)' },
-  已满: { color: 'var(--text-pink)', bg: 'var(--pink-soft)' },
-  余位充足: { color: 'var(--text-mint)', bg: 'var(--mint-soft)' },
-  '剩余 1 位': { color: 'var(--text-orange)', bg: 'var(--orange-soft)' },
-  '剩余 2 位': { color: 'var(--text-orange)', bg: 'var(--orange-soft)' },
-  已过期: { color: 'var(--text-secondary)', bg: 'rgba(241, 245, 249, 0.92)' },
-  EXPIRED: { color: 'var(--text-secondary)', bg: 'rgba(241, 245, 249, 0.92)' },
-  SUSPENDED: { color: 'var(--text-secondary)', bg: 'rgba(241, 245, 249, 0.92)' },
-  在职: { color: 'var(--text-mint)', bg: 'var(--mint-soft)' },
-  ON_LEAVE: { color: 'var(--text-pink)', bg: 'var(--pink-soft)' },
-  INACTIVE: { color: 'var(--text-pink)', bg: 'var(--pink-soft)' },
-  REFUNDED: { color: 'var(--text-pink)', bg: 'var(--pink-soft)' },
-  休假中: { color: 'var(--text-pink)', bg: 'var(--pink-soft)' },
-  处理中: { color: 'var(--text-orange)', bg: 'var(--orange-soft)' }
+const statusToneMap: Record<string, 'mint' | 'violet' | 'orange' | 'pink' | 'slate'> = {
+  正常: 'mint',
+  ACTIVE: 'mint',
+  已确认: 'mint',
+  CONFIRMED: 'mint',
+  在职: 'mint',
+  已读: 'mint',
+  READ: 'mint',
+  余位充足: 'mint',
+  已完成: 'violet',
+  COMPLETED: 'violet',
+  已发送: 'violet',
+  SENT: 'violet',
+  待确认: 'orange',
+  待发送: 'orange',
+  待处理: 'orange',
+  PENDING: 'orange',
+  待激活: 'orange',
+  PROCESSING: 'orange',
+  处理中: 'orange',
+  ON_LEAVE: 'orange',
+  休假中: 'orange',
+  '剩余 1 位': 'orange',
+  '剩余 2 位': 'orange',
+  已取消: 'pink',
+  CANCELLED: 'pink',
+  失败: 'pink',
+  FAILED: 'pink',
+  NO_SHOW: 'pink',
+  未到场: 'pink',
+  已满: 'pink',
+  REFUNDED: 'pink',
+  已退款: 'pink',
+  已过期: 'slate',
+  EXPIRED: 'slate',
+  SUSPENDED: 'slate',
+  INACTIVE: 'slate',
+  停用: 'slate',
+  已停用: 'slate',
+};
+
+const neutralTone = {
+  text: 'var(--text-secondary)',
+  soft: 'rgba(244, 247, 250, 0.96)',
+  border: 'rgba(148, 163, 184, 0.22)',
 };
 
 type Props = {
@@ -42,20 +55,27 @@ type Props = {
 
 const baseTagStyle: CSSProperties = {
   marginInlineEnd: 0,
+  minHeight: 28,
   borderRadius: 999,
-  paddingInline: 8,
-  lineHeight: '24px',
+  paddingInline: 10,
+  border: '1px solid transparent',
+  display: 'inline-flex',
+  alignItems: 'center',
+  lineHeight: '18px',
   fontSize: 'var(--font-size-xs)',
-  fontWeight: 600
+  fontWeight: 700,
+  letterSpacing: '0.01em',
 };
 
 const StatusTag: FC<Props> = ({ status }) => {
-  const item = colorMap[status] ?? { color: 'var(--text-secondary)', bg: 'rgba(241, 245, 249, 0.92)' };
+  const tone = statusToneMap[status] ?? 'slate';
+  const item = tone === 'slate' ? neutralTone : getToneColor(tone);
+
   return (
     <Tag
       bordered={false}
       // Keep the status colors inline because each tag is data-driven at runtime.
-      style={{ ...baseTagStyle, color: item.color, background: item.bg }}
+      style={{ ...baseTagStyle, color: item.text, background: item.soft, borderColor: item.border }}
     >
       {status}
     </Tag>

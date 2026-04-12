@@ -1,36 +1,43 @@
 .card {
-  padding: 20px;
-  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
   background: var(--bg-surface);
-  border: 1px solid var(--border-soft);
-  box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(14px);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--surface-shadow);
+  backdrop-filter: var(--surface-backdrop);
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
 }
 
 .card:hover {
-  border-color: color-mix(in srgb, var(--mint) 14%, transparent);
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 14px 30px rgba(19, 39, 64, 0.06);
-  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--mint) 18%, transparent);
+  background: var(--bg-surface-strong);
+  box-shadow: var(--surface-shadow-hover);
+  transform: translateY(-2px);
 }
 
 .header {
   display: flex;
   justify-content: space-between;
-  gap: var(--space-3);
-  align-items: center;
-  margin-bottom: var(--space-4);
+  gap: var(--space-4);
+  align-items: flex-start;
+  margin-bottom: var(--space-5);
 }
 
 .title {
   margin: 0;
   font-size: var(--font-size-lg);
   font-weight: var(--font-bold);
+  line-height: var(--leading-tight);
+  color: var(--text-heading);
 }
 
 .subtitle {
-  margin-top: 4px;
+  margin-top: var(--space-2);
   font-size: var(--font-size-sm);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
 }

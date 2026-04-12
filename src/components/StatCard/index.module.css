@@ -1,40 +1,45 @@
 .card {
-  border-radius: var(--radius-md);
-  padding: 20px;
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
   background: var(--bg-surface);
-  box-shadow: var(--shadow-soft);
-  border: 1px solid var(--border-soft);
-  backdrop-filter: blur(14px);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  box-shadow: var(--surface-shadow);
+  border: 1px solid var(--surface-border);
+  backdrop-filter: var(--surface-backdrop);
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
   cursor: default;
 }
 
 .card:hover {
-  border-color: color-mix(in srgb, var(--stat-accent, var(--mint)) 16%, transparent);
+  border-color: var(--stat-accent-border, color-mix(in srgb, var(--mint) 18%, transparent));
   background: var(--bg-surface-strong);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  box-shadow: var(--surface-shadow-hover);
+  transform: translateY(-2px);
 }
 
 .top {
   display: flex;
   justify-content: space-between;
-  gap: var(--space-3);
-  align-items: center;
+  gap: var(--space-4);
+  align-items: flex-start;
 }
 
 .title {
-  color: var(--text-tertiary);
-  font-size: var(--font-size-md);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-bold);
+  line-height: var(--leading-normal);
 }
 
 .value {
-  margin-top: var(--space-3);
-  font-size: var(--font-size-xl);
+  margin-top: var(--space-4);
+  font-size: clamp(var(--font-size-xl), 2.4vw, var(--font-size-2xl));
   font-weight: var(--font-black);
   line-height: var(--leading-tight);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   color: var(--stat-accent, var(--text-heading));
 }
 
@@ -42,13 +47,16 @@
   margin-top: var(--space-2);
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
+  line-height: var(--leading-normal);
 }
 
 .icon {
-  width: 46px;
-  height: 46px;
-  border-radius: var(--radius-sm);
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
   display: grid;
   place-items: center;
+  border: 1px solid transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
   font-size: var(--font-size-lg);
 }
