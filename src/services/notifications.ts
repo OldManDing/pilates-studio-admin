@@ -1,4 +1,4 @@
-import { api } from '@/utils/request';
+import { api, requestWithMeta } from '@/utils/request';
 
 export type NotificationChannel = 'SMS' | 'EMAIL' | 'MINI_PROGRAM' | 'INTERNAL';
 export type NotificationStatus = 'PENDING' | 'SENT' | 'READ' | 'FAILED';
@@ -76,7 +76,7 @@ export interface CreateNotificationData {
 
 export const notificationsApi = {
   getAll: (params: QueryNotificationsParams = {}) =>
-    api.get<NotificationListResponse>('/notifications', {
+    requestWithMeta<NotificationRecord[]>('/notifications', {
       params: {
         page: params.page,
         pageSize: params.pageSize,

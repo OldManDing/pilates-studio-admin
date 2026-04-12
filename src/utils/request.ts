@@ -24,6 +24,16 @@ interface ApiResponse<T> {
   };
 }
 
+export interface ApiSuccessEnvelope<T> {
+  data: T;
+  meta?: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 class ApiError extends Error {
   constructor(public code: string, message: string) {
     super(message);
@@ -84,6 +94,59 @@ export const request = async <T>(
     }
 
     return data.data;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      if (error.code === 'UNAUTHORIZED') {
+        localStorage.removeItem('pilates_access_token');
+        localStorage.removeItem('pilates_refresh_token');
+        window.location.href = '/login';
+      }
+      throw error;
+    }
+
+    message.error('网络请求失败，请检查网络连接');
+    throw new ApiError('NETWORK_ERROR', '网络请求失败');
+  }
+};
+
+export const requestWithMeta = async <T>(
+  endpoint: string,
+  options: RequestOptions = {}
+): Promise<ApiSuccessEnvelope<T>> => {
+  const token = getToken();
+  const { params, responseType = 'json', ...fetchOptions } = options;
+
+  const url = `${API_BASE_URL}${buildUrl(endpoint, params)}`;
+
+  const headers: Record<string, string> = {
+    ...(token && { Authorization: `Bearer ${token}` }),
+    ...((fetchOptions.headers as Record<string, string>) || {}),
+  };
+
+  if (!(fetchOptions.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  try {
+    const response = await fetch(url, {
+      ...fetchOptions,
+      headers,
+    });
+
+    if (responseType === 'blob') {
+      return { data: await response.blob() as T };
+    }
+
+    const data: ApiResponse<T> = await response.json();
+
+    if (!data.success) {
+      throw new ApiError(data.error?.code || 'UNKNOWN_ERROR', data.error?.message || '请求失败');
+    }
+
+    return {
+      data: data.data,
+      meta: data.meta,
+    };
   } catch (error) {
     if (error instanceof ApiError) {
       if (error.code === 'UNAUTHORIZED') {

@@ -1,4 +1,4 @@
-import { api } from '@/utils/request';
+import { api, requestWithMeta } from '@/utils/request';
 import type { PaginatedResponse } from './members';
 
 export interface Course {
@@ -42,7 +42,15 @@ export const coursesApi = {
     api.get<Course[]>('/courses'),
 
   getPaged: (params?: CoursesQueryParams) =>
-    api.get<PaginatedResponse<Course>>('/courses', { params }),
+    requestWithMeta<Course[]>('/courses', { params }).then((response) => ({
+      data: response.data,
+      meta: response.meta ?? {
+        page: params?.page ?? 1,
+        pageSize: params?.pageSize ?? 10,
+        total: response.data.length,
+        totalPages: response.data.length ? 1 : 0,
+      },
+    } as PaginatedResponse<Course>)),
 
   getActive: () =>
     api.get<Course[]>('/courses/active'),
