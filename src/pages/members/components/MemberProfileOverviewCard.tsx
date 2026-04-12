@@ -65,12 +65,12 @@ export default function MemberProfileOverviewCard({
         <div>
           <div className={styles.profileMetaLabel}>加入时间</div>
           <div className={styles.profileMetaValue}>{joinedDateText}</div>
-          <div className={styles.profileMetaSub}>当前会籍运行中</div>
+          <div className={styles.profileMetaSub}>用于识别会员生命周期阶段</div>
         </div>
         <div>
           <div className={styles.profileMetaLabel}>课时权益</div>
           <div className={styles.profileMetaValue}>{remainingCreditsText}</div>
-          <div className={styles.profileMetaSub}>{progressLabel}</div>
+          <div className={styles.profileMetaSub}>剩余可预约课时</div>
         </div>
       </div>
 
@@ -79,7 +79,7 @@ export default function MemberProfileOverviewCard({
           <span className={styles.profileMetaLabel}>使用进度</span>
           <span className={styles.profileProgressText}>{progressLabel}</span>
         </div>
-        <Progress percent={progressPercent} showInfo={false} strokeColor="#c4a574" trailColor="rgba(244, 244, 245, 0.95)" />
+        <Progress percent={progressPercent} showInfo={false} strokeColor="linear-gradient(90deg, var(--orange) 0%, color-mix(in srgb, var(--orange) 68%, var(--mint)) 100%)" trailColor="rgba(244, 244, 245, 0.95)" />
       </div>
 
       <div className={styles.profileHeroActionRow}>

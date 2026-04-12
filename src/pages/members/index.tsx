@@ -445,7 +445,7 @@ export default function MembersPage() {
               />
             </div>
             <div className={pageCls.toolbarRight}>
-              <ActionButton icon={<FilterOutlined />} ghost onClick={openFilterModal}>筛选</ActionButton>
+              <ActionButton icon={<FilterOutlined />} ghost onClick={openFilterModal}>筛选条件</ActionButton>
               <ActionButton icon={<DownloadOutlined />} ghost onClick={handleExportMembers}>导出</ActionButton>
             </div>
           </div>
@@ -553,12 +553,10 @@ export default function MembersPage() {
       </Modal>
 
       <Modal
-        title="筛选会员"
+        title="筛选条件"
         open={isFilterOpen}
         onCancel={() => setIsFilterOpen(false)}
         onOk={applyFilters}
-        okText="应用筛选"
-        cancelText="取消"
         destroyOnHidden
         footer={<FilterModalFooter onReset={resetFilters} onCancel={() => setIsFilterOpen(false)} onApply={applyFilters} />}
       >
