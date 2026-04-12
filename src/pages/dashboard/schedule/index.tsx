@@ -48,7 +48,7 @@ export default function DashboardSchedulePage() {
       }
     };
     fetchData();
-  }, []);
+  }, [messageApi]);
 
   const totalSessions = useMemo(() => scheduleCards.filter((coach) => /^\d+$/.test(coach.sessions)).reduce((sum, coach) => sum + Number.parseInt(coach.sessions, 10), 0), [scheduleCards]);
   const totalScheduleDays = useMemo(() => scheduleCards.reduce((sum, coach) => sum + coach.slots.length, 0), [scheduleCards]);
@@ -62,7 +62,7 @@ export default function DashboardSchedulePage() {
   }
 
   return (
-    <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
+    <div className={`${pageCls.page} ${pageCls.workPage}`}>
       {contextHolder}
       <PageHeader
         title="教练排班明细"
@@ -72,6 +72,11 @@ export default function DashboardSchedulePage() {
 
       <div className={pageCls.balancedTwoCol}>
         <SectionCard title="排班总览" subtitle="真实教练数据驱动">
+          <div className={pageCls.sectionContentStack}>
+            <div className={pageCls.sectionSummaryRow}>
+              <div className={pageCls.sectionSummaryText}>这页现在只展示真实教练覆盖范围和待接入排班状态，不再伪造固定周排班，确保首页钻取页和后台实际能力保持一致。</div>
+              <span className={pageCls.sectionMetaPill}>{scheduleCards.length} 位教练</span>
+            </div>
           <div className={widgetCls.detailOverviewGrid}>
             <div className={widgetCls.detailOverviewPanel}>
               <div className={widgetCls.detailOverviewSummary}>
@@ -104,13 +109,20 @@ export default function DashboardSchedulePage() {
               ) : null}
             </div>
           </div>
+          </div>
         </SectionCard>
 
         <SectionCard title="动作建议" subtitle="基于当前已接入数据的保守建议">
+          <div className={pageCls.sectionContentStack}>
+            <div className={pageCls.sectionSummaryRow}>
+              <div className={pageCls.sectionSummaryText}>先把高峰供给、低负载时段和待接入数据边界说清楚，避免这页看起来像完整排班系统但实际只是摘要入口。</div>
+              <span className={pageCls.sectionMetaPill}>保守建议</span>
+            </div>
           <div className={widgetCls.infoStack}>
             <div>• 优先保证高峰时段教练供给稳定。</div>
             <div>• 识别低负载时段，优化课程结构。</div>
             <div>• 详细排班管理请进入教练模块。</div>
+          </div>
           </div>
         </SectionCard>
       </div>
@@ -120,6 +132,11 @@ export default function DashboardSchedulePage() {
         subtitle="按教练维度查看班表强度与时段分布"
         extra={<Button type="text" className={widgetCls.dashboardCardAction} onClick={() => go('/coaches')}>进入教练模块</Button>}
       >
+        <div className={pageCls.sectionContentStack}>
+          <div className={pageCls.sectionSummaryRow}>
+            <div className={pageCls.sectionSummaryText}>按教练维度保留排班卡片，方便快速看到当前已接入信息和后续真实接口接入后的承载位置。</div>
+            <span className={pageCls.sectionMetaPill}>教练维度摘要</span>
+          </div>
         <div className={widgetCls.courseGrid}>
           {scheduleCards.map((coach) => (
             <div key={coach.name} className={widgetCls.detailCard}>
@@ -144,6 +161,7 @@ export default function DashboardSchedulePage() {
               </div>
             </div>
           ))}
+        </div>
         </div>
       </SectionCard>
     </div>

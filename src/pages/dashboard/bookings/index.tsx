@@ -40,7 +40,7 @@ export default function DashboardBookingsPage() {
       }
     };
     fetchData();
-  }, []);
+  }, [messageApi]);
 
   const pendingBookings = useMemo(() => bookings.filter((item) => item.status === 'PENDING'), [bookings]);
   const confirmedBookings = useMemo(() => bookings.filter((item) => item.status === 'CONFIRMED'), [bookings]);
@@ -55,7 +55,7 @@ export default function DashboardBookingsPage() {
   }
 
   return (
-    <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
+    <div className={`${pageCls.page} ${pageCls.workPage}`}>
       {contextHolder}
       <PageHeader
         title="今日预约明细"
@@ -65,6 +65,12 @@ export default function DashboardBookingsPage() {
 
       <div className={pageCls.balancedTwoCol}>
         <SectionCard title="预约总览" subtitle="真实预约数据驱动">
+          <div className={pageCls.sectionContentStack}>
+            <div className={pageCls.sectionSummaryRow}>
+              <div className={pageCls.sectionSummaryText}>优先关注待确认预约、临近开课记录和课程容量风险，让首页钻取页更像真正的运营处理台，而不是只读摘要。</div>
+              <span className={pageCls.sectionMetaPill}>近 30 条预约</span>
+            </div>
+
           <div className={widgetCls.detailOverviewGrid}>
             <div className={widgetCls.detailOverviewPanel}>
               <div className={widgetCls.detailOverviewSummary}>
@@ -97,13 +103,20 @@ export default function DashboardBookingsPage() {
               ) : null}
             </div>
           </div>
+          </div>
         </SectionCard>
 
         <SectionCard title="容量提醒" subtitle="与课程容量同步查看">
-          <div className={widgetCls.infoStack}>
+          <div className={pageCls.sectionContentStack}>
+            <div className={pageCls.sectionSummaryRow}>
+              <div className={pageCls.sectionSummaryText}>把容量风险和待确认预约放在同一层看，能更快判断哪些课程需要优先补位或直接联系会员。</div>
+              <span className={pageCls.sectionMetaPill}>{fullCourses.length ? '存在满班风险' : '容量稳定'}</span>
+            </div>
+            <div className={widgetCls.infoStack}>
             <div>• 满班课程：{fullCourses.length} 节</div>
             <div>• 建议优先联系待确认会员，减少空位损耗。</div>
             {priorityCourse ? <div>• 当前关注：{priorityCourse.name}</div> : null}
+          </div>
           </div>
         </SectionCard>
       </div>
@@ -113,9 +126,15 @@ export default function DashboardBookingsPage() {
         subtitle="按当前状态快速推进确认、联系与详情查看"
         extra={<Button type="text" className={widgetCls.dashboardCardAction} onClick={() => go('/bookings')}>进入完整预约模块</Button>}
       >
-        <div className={widgetCls.recordList}>
-          {bookings.slice(0, 12).map((item, idx) => (
-            <div key={item.id} className={`${widgetCls.recordItem} ${widgetCls.showcaseRecordItem}`}>
+          <div className={pageCls.sectionContentStack}>
+          <div className={pageCls.sectionSummaryRow}>
+            <div className={pageCls.sectionSummaryText}>下方保留最需要人工推进的预约记录，适合从仪表盘快速跳入，再进入完整预约模块做批量处理。</div>
+            <span className={pageCls.sectionMetaPill}>优先处理前 12 条</span>
+          </div>
+
+          <div className={widgetCls.recordList}>
+           {bookings.slice(0, 12).map((item, idx) => (
+             <div key={item.id} className={`${widgetCls.recordItem} ${widgetCls.showcaseRecordItem}`}>
               <div className={`${widgetCls.recordMeta} ${widgetCls.dashboardBookingMeta}`}>
                 <MemberAvatar name={item.member?.name || '-'} tone={tones[idx % tones.length]} />
                 <div className={`${widgetCls.dashboardBookingBody} ${widgetCls.detailCourseMeta}`}>
@@ -131,10 +150,11 @@ export default function DashboardBookingsPage() {
                 <Button type="primary" size="large" className={pageCls.cardActionHalf}>{item.status === 'PENDING' ? '立即确认' : '联系会员'}</Button>
                 <Button size="large" className={pageCls.cardActionHalf}>查看详情</Button>
               </div>
-            </div>
-          ))}
-        </div>
-      </SectionCard>
-    </div>
+             </div>
+           ))}
+          </div>
+          </div>
+        </SectionCard>
+      </div>
   );
 }

@@ -30,7 +30,7 @@ export default function DashboardCoursesPage() {
       }
     };
     fetchCourses();
-  }, []);
+  }, [messageApi]);
 
   const fullCount = useMemo(() => courses.filter((item) => (item._count?.sessions || 0) >= item.capacity).length, [courses]);
   const openCount = Math.max(0, courses.length - fullCount);
@@ -40,7 +40,7 @@ export default function DashboardCoursesPage() {
   }
 
   return (
-    <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
+    <div className={`${pageCls.page} ${pageCls.workPage}`}>
       {contextHolder}
       <PageHeader
         title="今日课程排期"
@@ -50,6 +50,11 @@ export default function DashboardCoursesPage() {
 
       <div className={pageCls.balancedTwoCol}>
         <SectionCard title="课程总览" subtitle="真实课程数据驱动" extra={<Button type="text" className={widgetCls.dashboardCardAction} onClick={() => go('/courses')}>进入完整课程模块</Button>}>
+          <div className={pageCls.sectionContentStack}>
+            <div className={pageCls.sectionSummaryRow}>
+              <div className={pageCls.sectionSummaryText}>这页用于快速判断课程排期结构和容量状态，决定是否要进一步进入课程模块做编排和调整。</div>
+              <span className={pageCls.sectionMetaPill}>{fullCount} 节接近满班</span>
+            </div>
           <div className={widgetCls.detailOverviewGrid}>
             <div className={widgetCls.detailOverviewPanel}>
               <div className={widgetCls.detailOverviewSummary}>
@@ -59,18 +64,30 @@ export default function DashboardCoursesPage() {
               </div>
             </div>
           </div>
+          </div>
         </SectionCard>
 
         <SectionCard title="动作建议" subtitle="按容量优先级处理课程">
-          <div className={widgetCls.infoStack}>
+          <div className={pageCls.sectionContentStack}>
+            <div className={pageCls.sectionSummaryRow}>
+              <div className={pageCls.sectionSummaryText}>把课程容量状态和教练分配一起看，可以更快判断是要补通知、调时段，还是直接优化课程结构。</div>
+              <span className={pageCls.sectionMetaPill}>{openCount} 节可优化</span>
+            </div>
+            <div className={widgetCls.infoStack}>
             <div>• 优先检查满班课程的候补策略与提醒通知。</div>
             <div>• 对低上座课程评估时段与教练配置。</div>
             <div>• 具体调整在课程管理页执行，确保流程可追踪。</div>
+          </div>
           </div>
         </SectionCard>
       </div>
 
       <SectionCard title="课程时段列表" subtitle="真实课程列表（摘要）">
+        <div className={pageCls.sectionContentStack}>
+          <div className={pageCls.sectionSummaryRow}>
+            <div className={pageCls.sectionSummaryText}>保留课程摘要、容量占比和状态标签，帮助从仪表盘快速判断今天的课程密度是否健康。</div>
+            <span className={pageCls.sectionMetaPill}>实时容量摘要</span>
+          </div>
         <div className={widgetCls.recordListDense}>
           {courses.map((course) => {
             const sessionCount = course._count?.sessions || 0;
@@ -89,6 +106,7 @@ export default function DashboardCoursesPage() {
               </div>
             );
           })}
+        </div>
         </div>
       </SectionCard>
     </div>
