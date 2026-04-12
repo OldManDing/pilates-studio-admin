@@ -8,13 +8,13 @@ type Props = {
 };
 
 const PageHeader: FC<Props> = ({ title, subtitle, extra }) => (
-  <div className={cls.header}>
-    <div>
+  <section className={cls.header}>
+    <div className={cls.content}>
       <h1 className={cls.title}>{title}</h1>
-      <div className={cls.subtitle}>{subtitle}</div>
+      <p className={cls.subtitle}>{subtitle}</p>
     </div>
-    {extra}
-  </div>
+    {extra ? <div className={cls.extra}>{extra}</div> : null}
+  </section>
 );
 
 export default PageHeader;
