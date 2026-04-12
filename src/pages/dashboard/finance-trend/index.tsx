@@ -131,14 +131,14 @@ export default function DashboardFinanceTrendPage() {
       }
     };
     fetchData();
-  }, []);
+  }, [messageApi]);
 
   if (loading) {
     return <div className={`${pageCls.page} ${pageCls.centeredState} ${pageCls.centeredStateTop}`}><Spin /></div>;
   }
 
   return (
-    <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
+    <div className={`${pageCls.page} ${pageCls.workPage}`}>
       {contextHolder}
       <PageHeader
         title="财务趋势钻取"
@@ -152,15 +152,29 @@ export default function DashboardFinanceTrendPage() {
         ))}
       </div>
 
+      <SectionCard title="财务分析说明" subtitle="统一当前财务钻取页的阅读口径与数据边界。">
+        <div className={pageCls.sectionContentStack}>
+          <div className={pageCls.sectionSummaryRow}>
+            <div className={pageCls.sectionSummaryText}>这里优先回答三个问题：最近营收有没有波动、收入结构靠什么支撑、最近现金流记录是否存在异常。利润与成本分析仍待支出侧真实数据接入。</div>
+            <span className={pageCls.sectionMetaPill}>近 7 个月窗口</span>
+          </div>
+        </div>
+      </SectionCard>
+
       <div className={pageCls.financeTwoCol}>
         <SectionCard title="营收趋势" subtitle="近 7 个月真实营收走势">
+          <div className={pageCls.sectionContentStack}>
+            <div className={pageCls.sectionSummaryRow}>
+              <div className={pageCls.sectionSummaryText}>保留真实营收柱图，不再额外构造利润曲线；先让趋势判断和数据边界足够清楚。</div>
+              <span className={pageCls.sectionMetaPill}>营收趋势</span>
+            </div>
           <div className={pageCls.chartPanelTall}>
             <ResponsiveContainer>
               <BarChart data={financeBar}>
                 <defs>
                   <linearGradient id="dashboardFinanceRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#43c7ab" stopOpacity={0.96} />
-                    <stop offset="100%" stopColor="#6be0c8" stopOpacity={0.78} />
+                    <stop offset="0%" stopColor="var(--mint)" stopOpacity={0.96} />
+                    <stop offset="100%" stopColor="var(--control-primary-end)" stopOpacity={0.78} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
@@ -172,9 +186,15 @@ export default function DashboardFinanceTrendPage() {
             </ResponsiveContainer>
           </div>
           <div className={widgetCls.smallText}>利润趋势待接入真实支出或成本数据后展示，当前不再使用固定利润率估算。</div>
+          </div>
         </SectionCard>
 
         <SectionCard title="营收构成占比" subtitle="会员与课程收入结构">
+          <div className={pageCls.sectionContentStack}>
+            <div className={pageCls.sectionSummaryRow}>
+              <div className={pageCls.sectionSummaryText}>用统一图例和占比列表帮助快速判断收入主要来自会籍、续费还是课程类交易。</div>
+              <span className={pageCls.sectionMetaPill}>结构占比</span>
+            </div>
           <div className={pageCls.chartPanelTall}>
             <ResponsiveContainer>
               <PieChart>
@@ -198,10 +218,16 @@ export default function DashboardFinanceTrendPage() {
               </div>
             ))}
           </div>
+          </div>
         </SectionCard>
       </div>
 
       <SectionCard title="最近交易" subtitle="用于快速核对现金流" extra={<Button type="text" onClick={() => go('/finance')}>进入完整财务模块</Button>}>
+        <div className={pageCls.sectionContentStack}>
+          <div className={pageCls.sectionSummaryRow}>
+            <div className={pageCls.sectionSummaryText}>保留最近交易清单，方便从财务趋势页直接判断近期交易状态、收入类型和金额是否存在异常波动。</div>
+            <span className={pageCls.sectionMetaPill}>最近 20 条交易</span>
+          </div>
         <div className={widgetCls.recordList}>
           {transactions.map((item, idx) => (
             <div key={item.id} className={`${widgetCls.recordItem} ${widgetCls.showcaseRecordItem}`}>
@@ -219,6 +245,7 @@ export default function DashboardFinanceTrendPage() {
               <div className={pageCls.metricValueStrong}>{formatCurrency(item.amountCents / 100)}</div>
             </div>
           ))}
+        </div>
         </div>
       </SectionCard>
     </div>
