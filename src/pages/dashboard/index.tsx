@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Spin, message } from 'antd';
 import { CalendarOutlined, RiseOutlined, TeamOutlined, WalletOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import ActionButton from '@/components/ActionButton';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import StatCard from '@/components/StatCard';
@@ -16,11 +15,9 @@ import { transactionsApi } from '@/services/transactions';
 import { getErrorMessage } from '@/utils/errors';
 import {
   MembershipOverviewCard,
-  QuickActionPanel,
   TodayCoursePanel,
   TrainingSummaryCard,
   UpcomingBookingsPanel,
-  type QuickActionItem,
 } from './components';
 import styles from './index.module.css';
 
@@ -338,16 +335,6 @@ export default function DashboardPage() {
 
   const todayCourses = useMemo(() => mapTodayCourses(courseList), [courseList]);
 
-  const quickActions = useMemo<QuickActionItem[]>(
-    () => [
-      { key: 'members', label: '会员管理', subLabel: 'MEMBERS', path: '/members' },
-      { key: 'courses', label: '课程管理', subLabel: 'COURSES', path: '/courses' },
-      { key: 'bookings', label: '预约管理', subLabel: 'BOOKINGS', path: '/bookings' },
-      { key: 'settings', label: '系统设置', subLabel: 'SETTINGS', path: '/settings' },
-    ],
-    [],
-  );
-
   const trainingSummary = useMemo(
     () => deriveTrainingSummary(courseList, coachList, stats.totalMembers),
     [courseList, coachList, stats.totalMembers],
@@ -371,19 +358,8 @@ export default function DashboardPage() {
         title="仪表盘"
         subtitle={partialFailures.length
           ? `当前部分模块暂不可用（${partialFailures.join('、')}），首页仅展示已校验的真实数据。`
-          : `欢迎回来：当前有 ${metricAvailability.courses ? todayCourses.length : '--'} 个课程概览、${metricAvailability.bookings ? bookingList.length : '--'} 条预约记录、${metricAvailability.memberStats ? stats.activeMembers : '--'} 位活跃会员。首页仅保留快速分流入口。`}
+          : `欢迎回来：当前有 ${metricAvailability.courses ? todayCourses.length : '--'} 个课程概览、${metricAvailability.bookings ? bookingList.length : '--'} 条预约记录、${metricAvailability.memberStats ? stats.activeMembers : '--'} 位活跃会员。先看优先级，再进入正式模块处理。`}
       />
-
-      <SectionCard title="导航口径" subtitle="首页卡片是运营分流入口，不替代各业务模块的完整工作页。">
-        <div className={widgetCls.detailInsightCard}>
-          <div className={pageCls.sectionSummaryText}>先看优先级，再跳进正式模块完成处理：首页只保留判断与分流，不承载完整操作链路。</div>
-          <div className={pageCls.pageHeaderActionGroup}>
-            <span className={pageCls.sectionMetaPill}>二级快捷入口</span>
-            <ActionButton ghost onClick={() => go('/members')}>前往会员管理</ActionButton>
-            <ActionButton ghost onClick={() => go('/bookings')}>前往预约管理</ActionButton>
-          </div>
-        </div>
-      </SectionCard>
 
       {partialFailures.length ? (
         <SectionCard
@@ -410,7 +386,7 @@ export default function DashboardPage() {
             onViewDetail={() => go('/members')}
             onPrimaryAction={() => go('/bookings')}
           />
-          <QuickActionPanel items={quickActions} onNavigate={go} />
+          <TrainingSummaryCard {...trainingSummary} />
         </div>
 
         <div className={pageCls.dashboardSectionGrid}>
@@ -419,10 +395,6 @@ export default function DashboardPage() {
             onViewAll={() => go('/courses')}
             onViewDetail={() => go('/courses')}
           />
-          <TrainingSummaryCard {...trainingSummary} />
-        </div>
-
-        <div className={styles.bottomGridSingle}>
           <UpcomingBookingsPanel
             items={upcomingBookings}
             onViewAll={() => go('/bookings')}
