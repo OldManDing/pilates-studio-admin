@@ -45,13 +45,13 @@ export default function DashboardGrowthPage() {
     <div className={`${pageCls.page} ${pageCls.workPage}`}>
       {contextHolder}
       <PageHeader
-        title="会员增长趋势"
-        subtitle="聚焦增量、活跃率和近期变化节奏。"
+        title="会员增长快捷入口"
+        subtitle="仪表盘二级入口：用于快速查看增量与活跃度摘要，深入分析与跟进请进入会员管理。"
         extra={<ActionButton ghost onClick={() => go('/dashboard')}>返回仪表盘</ActionButton>}
       />
 
       <div className={pageCls.balancedTwoCol}>
-        <SectionCard title="趋势摘要" subtitle="基于当前真实会员汇总数据">
+        <SectionCard title="趋势摘要（快捷）" subtitle="仅展示可信汇总，作为进入会员模块前的判断依据。">
           <div className={pageCls.sectionContentStack}>
             <div className={pageCls.sectionSummaryRow}>
               <div className={pageCls.sectionSummaryText}>这页暂时不再伪造历史增长曲线，而是先把当前增量、活跃度和后续动作建议讲清楚，避免把估算值误判成真实趋势。</div>
@@ -65,7 +65,7 @@ export default function DashboardGrowthPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="建议动作" subtitle="趋势判断后进入会员模块执行">
+        <SectionCard title="建议动作（辅助）" subtitle="快捷页仅做决策提示，具体执行统一进入会员管理。">
           <div className={pageCls.sectionContentStack}>
             <div className={pageCls.sectionSummaryRow}>
               <div className={pageCls.sectionSummaryText}>把增长看板定位为行动前摘要，而不是完整分析页；深入跟进统一进入会员模块处理。</div>
@@ -80,15 +80,15 @@ export default function DashboardGrowthPage() {
         </SectionCard>
       </div>
 
-      <SectionCard title="增长曲线" subtitle="待接入真实历史月度会员数据后展示" extra={<ActionButton ghost onClick={() => go('/members')}>进入会员模块</ActionButton>}>
+      <SectionCard title="历史趋势说明" subtitle="当前仅展示已接入汇总数据，不作为独立分析模块。" extra={<ActionButton ghost onClick={() => go('/members')}>进入会员管理</ActionButton>}>
         <div className={pageCls.sectionContentStack}>
         <div className={pageCls.sectionSummaryRow}>
-          <div className={pageCls.sectionSummaryText}>历史月度曲线待真实数据接入后再恢复展示，当前先保留明确说明，避免视觉上像“已经有真实趋势”。</div>
-          <span className={pageCls.sectionMetaPill}>历史数据待接入</span>
+          <div className={pageCls.sectionSummaryText}>历史月度曲线将在会员历史数据同步后展示。当前页面不生成估算曲线，避免将推测走势误读为真实历史。</div>
+          <span className={pageCls.sectionMetaPill}>仅展示真实汇总</span>
         </div>
         <div className={pageCls.chartPanelEmpty}>
-          <div className={widgetCls.detailOverviewLead}>暂无真实会员历史增长曲线</div>
-          <div className={widgetCls.detailOverviewText}>原先基于当前会员总量按线性比例生成的趋势曲线已移除，避免把估算走势误认为真实历史数据。</div>
+          <div className={widgetCls.detailOverviewLead}>历史增长曲线暂不可用</div>
+          <div className={widgetCls.detailOverviewText}>为保证信息可信度，当前仅保留已接入指标；历史趋势将在数据源可用后开放。</div>
         </div>
         </div>
       </SectionCard>
