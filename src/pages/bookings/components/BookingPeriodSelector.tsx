@@ -76,7 +76,7 @@ export default function BookingPeriodSelector({
             onChange={(event) => onSearchChange(event.target.value)}
           />
           <ActionButton icon={<FilterOutlined />} ghost className={pageCls.toolbarGhostAction} onClick={onOpenFilter}>
-            筛选
+            筛选条件
           </ActionButton>
         </div>
       </div>

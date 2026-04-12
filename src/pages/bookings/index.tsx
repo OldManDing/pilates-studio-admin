@@ -560,12 +560,10 @@ export default function BookingsPage() {
       </Modal>
 
       <Modal
-        title="筛选预约"
+        title="筛选条件"
         open={isFilterOpen}
         onCancel={() => setIsFilterOpen(false)}
         onOk={applyFilters}
-        okText="应用筛选"
-        cancelText="取消"
         destroyOnHidden
         footer={<FilterModalFooter onReset={resetFilters} onCancel={() => setIsFilterOpen(false)} onApply={applyFilters} />}
       >
