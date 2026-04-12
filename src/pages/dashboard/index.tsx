@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Spin, message } from 'antd';
 import { CalendarOutlined, RiseOutlined, TeamOutlined, WalletOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import ActionButton from '@/components/ActionButton';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import StatCard from '@/components/StatCard';
@@ -83,10 +84,10 @@ const bookingStatusToLabel = (status: string) => {
 };
 
 const formatTimeRange = (start?: string, end?: string) => {
-  if (!start) return '待接入排课时间';
+  if (!start) return '时段信息未同步';
 
   const startDate = new Date(start);
-  if (Number.isNaN(startDate.getTime())) return '待接入排课时间';
+  if (Number.isNaN(startDate.getTime())) return '时段信息未同步';
 
   const startText = new Intl.DateTimeFormat('zh-CN', {
     hour: '2-digit',
@@ -109,7 +110,7 @@ const formatTimeRange = (start?: string, end?: string) => {
 };
 
 const formatDurationText = (minutes?: number) => {
-  if (!minutes || minutes <= 0) return '时长待接入';
+  if (!minutes || minutes <= 0) return '时长信息未同步';
   return `${minutes} min`;
 };
 
@@ -117,14 +118,41 @@ const deriveMembershipSummary = (
   stats: DashboardStats,
   monthlyRevenue: number,
   recentBookingCount: number,
+  options: {
+    memberStatsAvailable: boolean;
+    revenueAvailable: boolean;
+    bookingsAvailable: boolean;
+  },
 ): MembershipOverviewViewModel => {
+  if (!options.memberStatsAvailable) {
+    return {
+      tierLabel: '数据受限',
+      planName: '会员统计暂不可用',
+      expiryDateText: '请稍后刷新，或在会员管理模块核对统计服务状态',
+      benefitText: options.revenueAvailable
+        ? `当前可用营收 ¥${monthlyRevenue.toLocaleString('zh-CN')}`
+        : '交易汇总暂不可用',
+      remainingDaysText: '活跃率暂不可计算',
+      progressPercent: 0,
+    };
+  }
+
   const activityRate = stats.totalMembers > 0 ? Math.round((stats.activeMembers / stats.totalMembers) * 100) : 0;
+  const benefitText = options.bookingsAvailable
+    ? recentBookingCount > 0
+      ? `近期预约 ${recentBookingCount} 单`
+      : options.revenueAvailable
+        ? `月度营收 ¥${monthlyRevenue.toLocaleString('zh-CN')}`
+        : '交易汇总暂不可用'
+    : options.revenueAvailable
+      ? `月度营收 ¥${monthlyRevenue.toLocaleString('zh-CN')}`
+      : '预约与交易数据暂不可用';
 
   return {
     tierLabel: stats.activeMembers > 120 ? '高活跃' : '运营中',
     planName: `活跃会员 ${stats.activeMembers} / 总会员 ${stats.totalMembers || 0}`,
     expiryDateText: stats.newMembersThisMonth > 0 ? `本月新增 ${stats.newMembersThisMonth} 位` : '本月暂无新增会籍',
-    benefitText: recentBookingCount > 0 ? `近期预约 ${recentBookingCount} 单` : `月度营收 ¥${monthlyRevenue.toLocaleString('zh-CN')}`,
+    benefitText,
     remainingDaysText: `活跃率 ${activityRate}%`,
     progressPercent: activityRate,
   };
@@ -134,10 +162,10 @@ const mapTodayCourses = (courses: Course[]): TodayCourseViewModel[] =>
   courses.slice(0, 4).map((course) => ({
     id: course.id,
     title: course.name,
-    timeText: '今日待排班',
+    timeText: '时段未同步',
     durationText: `${formatDurationText(course.durationMinutes)} · ${course.type}`,
     coachName: course.coach?.name || '待分配教练',
-    locationText: course.level ? `${course.level}课程` : '待接入门店',
+    locationText: course.level ? `${course.level}课程` : '门店信息未同步',
     statusText: course.isActive ? '已确认' : '已取消',
   }));
 
@@ -156,7 +184,7 @@ const deriveTrainingSummary = (
     hoursText: `${estimatedHours > 0 ? estimatedHours.toFixed(1) : '0.0'} h`,
     streakDaysText: `${streakDays} d`,
     goalPercent,
-    goalLabel: totalSessions > 0 ? `月度课节完成 ${goalPercent}%` : '月度目标进度待接入真实报表',
+    goalLabel: totalSessions > 0 ? `月度课节完成 ${goalPercent}%` : '当前暂无可计算的课节完成度',
   };
 };
 
@@ -194,6 +222,16 @@ export default function DashboardPage() {
   const [coachList, setCoachList] = useState<Coach[]>([]);
   const [bookingList, setBookingList] = useState<Booking[]>([]);
   const [partialFailures, setPartialFailures] = useState<string[]>([]);
+
+  const metricAvailability = useMemo(
+    () => ({
+      memberStats: !partialFailures.includes('会员统计'),
+      bookings: !partialFailures.includes('预约列表'),
+      courses: !partialFailures.includes('课程列表'),
+      revenue: !partialFailures.includes('交易汇总'),
+    }),
+    [partialFailures],
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -252,35 +290,50 @@ export default function DashboardPage() {
 
   const dashboardStats = useMemo(
     () => [
-      { title: '总会员', value: String(stats.totalMembers), hint: `本月新增 ${stats.newMembersThisMonth}`, tone: 'mint' as const, icon: 'team' as const },
+      {
+        title: '总会员',
+        value: metricAvailability.memberStats ? String(stats.totalMembers) : '--',
+        hint: metricAvailability.memberStats ? `本月新增 ${stats.newMembersThisMonth}` : '会员统计暂不可用',
+        tone: 'mint' as const,
+        icon: 'team' as const,
+      },
       {
         title: '活跃会员',
-        value: String(stats.activeMembers),
-        hint: `活跃率 ${stats.totalMembers ? ((stats.activeMembers / stats.totalMembers) * 100).toFixed(1) : 0}%`,
+        value: metricAvailability.memberStats ? String(stats.activeMembers) : '--',
+        hint: metricAvailability.memberStats
+          ? `活跃率 ${stats.totalMembers ? ((stats.activeMembers / stats.totalMembers) * 100).toFixed(1) : 0}%`
+          : '活跃率暂不可计算',
         tone: 'violet' as const,
         icon: 'calendar' as const,
       },
       {
         title: '待处理预约',
-        value: String(bookingList.filter((item) => item.status === 'PENDING').length),
-        hint: `今日预约 ${bookingList.length} 单`,
+        value: metricAvailability.bookings
+          ? String(bookingList.filter((item) => item.status === 'PENDING').length)
+          : '--',
+        hint: metricAvailability.bookings ? `今日预约 ${bookingList.length} 单` : '预约列表暂不可用',
         tone: 'orange' as const,
         icon: 'rise' as const,
       },
       {
         title: '本月营收',
-        value: `¥${stats.monthlyRevenue.toLocaleString('zh-CN')}`,
-        hint: '来源：交易汇总',
+        value: metricAvailability.revenue ? `¥${stats.monthlyRevenue.toLocaleString('zh-CN')}` : '--',
+        hint: metricAvailability.revenue ? '来源：交易汇总' : '交易汇总暂不可用',
         tone: 'pink' as const,
         icon: 'wallet' as const,
       },
     ],
-    [stats, bookingList],
+    [stats, bookingList, metricAvailability],
   );
 
   const membershipSummary = useMemo(
-    () => deriveMembershipSummary(stats, stats.monthlyRevenue, bookingList.length),
-    [stats, bookingList.length],
+    () =>
+      deriveMembershipSummary(stats, stats.monthlyRevenue, bookingList.length, {
+        memberStatsAvailable: metricAvailability.memberStats,
+        revenueAvailable: metricAvailability.revenue,
+        bookingsAvailable: metricAvailability.bookings,
+      }),
+    [stats, bookingList.length, metricAvailability],
   );
 
   const todayCourses = useMemo(() => mapTodayCourses(courseList), [courseList]);
@@ -304,7 +357,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className={`${pageCls.page} ${pageCls.showcasePage} ${pageCls.centeredState} ${pageCls.centeredStateMedium}`}>
+      <div className={`${pageCls.page} ${pageCls.workPage} ${pageCls.centeredState} ${pageCls.centeredStateMedium}`}>
         {contextHolder}
         <Spin size="large" />
       </div>
@@ -312,12 +365,25 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className={`${pageCls.page} ${pageCls.showcasePage}`}>
+    <div className={`${pageCls.page} ${pageCls.workPage}`}>
       {contextHolder}
       <PageHeader
         title="仪表盘"
-        subtitle={`欢迎回来，当前有 ${todayCourses.length} 个课程概览、${bookingList.length} 条预约记录，${stats.activeMembers} 位活跃会员。`}
+        subtitle={partialFailures.length
+          ? `当前部分模块暂不可用（${partialFailures.join('、')}），首页仅展示已校验的真实数据。`
+          : `欢迎回来：当前有 ${metricAvailability.courses ? todayCourses.length : '--'} 个课程概览、${metricAvailability.bookings ? bookingList.length : '--'} 条预约记录、${metricAvailability.memberStats ? stats.activeMembers : '--'} 位活跃会员。首页仅保留快速分流入口。`}
       />
+
+      <SectionCard title="导航口径" subtitle="首页卡片是运营分流入口，不替代各业务模块的完整工作页。">
+        <div className={widgetCls.detailInsightCard}>
+          <div className={pageCls.sectionSummaryText}>先看优先级，再跳进正式模块完成处理：首页只保留判断与分流，不承载完整操作链路。</div>
+          <div className={pageCls.pageHeaderActionGroup}>
+            <span className={pageCls.sectionMetaPill}>二级快捷入口</span>
+            <ActionButton ghost onClick={() => go('/members')}>前往会员管理</ActionButton>
+            <ActionButton ghost onClick={() => go('/bookings')}>前往预约管理</ActionButton>
+          </div>
+        </div>
+      </SectionCard>
 
       {partialFailures.length ? (
         <SectionCard

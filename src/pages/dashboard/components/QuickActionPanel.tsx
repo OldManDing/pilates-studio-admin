@@ -29,7 +29,7 @@ const iconMap: Record<QuickActionItem['key'], JSX.Element> = {
 
 export default function QuickActionPanel({ items, onNavigate }: QuickActionPanelProps) {
   return (
-    <SectionCard title="快捷入口" subtitle="保留首页导航节奏，快速进入后台核心工作区。">
+    <SectionCard title="模块快捷分流" subtitle="二级导航快捷入口：点击后进入对应业务模块处理完整工作流。">
       <div className={styles.quickActionGrid}>
         {items.map((item) => (
           <button
@@ -44,7 +44,7 @@ export default function QuickActionPanel({ items, onNavigate }: QuickActionPanel
               <div className={styles.quickActionSubLabel}>{item.subLabel}</div>
             </div>
             <span className={styles.inlineGhostButton}>
-              前往
+              进入模块
               <ArrowRightOutlined />
             </span>
           </button>

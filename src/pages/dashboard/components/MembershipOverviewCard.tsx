@@ -28,7 +28,7 @@ export default function MembershipOverviewCard({
   return (
     <SectionCard
       title="会员概览"
-      subtitle="聚合展示当前会籍活跃度与运营状态。"
+      subtitle="仪表盘快捷摘要：用于判断优先级，完整处理请进入会员/预约模块。"
       extra={
         onViewDetail ? (
           <Button type="text" className={styles.sectionAction} onClick={onViewDetail}>
@@ -84,7 +84,7 @@ export default function MembershipOverviewCard({
             className={`${pageCls.cardActionPrimary} ${styles.membershipPrimaryAction}`}
             onClick={onPrimaryAction}
           >
-            立即查看预约
+            去预约管理处理
             <ArrowRightOutlined />
           </Button>
         ) : null}

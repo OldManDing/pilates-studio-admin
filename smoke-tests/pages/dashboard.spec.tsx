@@ -79,7 +79,7 @@ describe('DashboardPage smoke test', () => {
 
     await waitFor(() => {
       expect(screen.getByText('会员概览')).toBeInTheDocument();
-      expect(screen.getByText('快捷入口')).toBeInTheDocument();
+      expect(screen.getByText('模块快捷分流')).toBeInTheDocument();
       expect(screen.getByText('本月训练')).toBeInTheDocument();
     });
   });
