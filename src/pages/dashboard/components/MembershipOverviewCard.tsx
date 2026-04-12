@@ -28,7 +28,7 @@ export default function MembershipOverviewCard({
   return (
     <SectionCard
       title="会员概览"
-      subtitle="仪表盘快捷摘要：用于判断优先级，完整处理请进入会员/预约模块。"
+      subtitle="仅保留会员运营摘要。"
       extra={
         onViewDetail ? (
           <Button type="text" className={styles.sectionAction} onClick={onViewDetail}>
@@ -40,7 +40,6 @@ export default function MembershipOverviewCard({
       <div className={styles.membershipCard}>
         <div className={styles.membershipCardTop}>
           <div>
-            <div className={styles.membershipEyebrow}>Membership</div>
             <div className={styles.membershipTierRow}>
               <span className={styles.membershipTierBadge}>
                 <CrownOutlined />
