@@ -23,7 +23,7 @@ export default function UpcomingBookingsPanel({ items, onViewAll, onViewDetail }
   return (
     <SectionCard
       title="近期安排"
-      subtitle="展示最近预约记录，帮助快速查看近期课程安排。"
+      subtitle="最近预约摘要。"
       extra={
         onViewAll ? (
           <Button type="text" className={styles.sectionAction} onClick={onViewAll}>
@@ -57,7 +57,7 @@ export default function UpcomingBookingsPanel({ items, onViewAll, onViewDetail }
           ))}
         </div>
       ) : (
-        <EmptyState title="近期暂无预约" description="预约数据接入正常后，这里会自动展示最近的课程安排。" />
+        <EmptyState size="compact" title="近期暂无预约" description="当前没有可展示的预约安排。" />
       )}
     </SectionCard>
   );

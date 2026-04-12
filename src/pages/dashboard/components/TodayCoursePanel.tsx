@@ -25,7 +25,7 @@ export default function TodayCoursePanel({ items, onViewAll, onViewDetail }: Tod
   return (
     <SectionCard
       title="今日课程"
-      subtitle={`${new Date().toLocaleDateString('zh-CN')} · 当前以课程基础信息为主，排班时间待继续接入`}
+      subtitle={`${new Date().toLocaleDateString('zh-CN')} · 今日课程摘要`}
       extra={
         onViewAll ? (
           <Button type="text" className={styles.sectionAction} onClick={onViewAll}>
@@ -60,7 +60,7 @@ export default function TodayCoursePanel({ items, onViewAll, onViewDetail }: Tod
           ))}
         </div>
       ) : (
-        <EmptyState title="今日暂无课程" description="当前没有可展示的课程安排，后续可继续接入真实排班时间。" />
+        <EmptyState size="compact" title="今日暂无课程" description="当前没有可展示的课程安排。" />
       )}
     </SectionCard>
   );
