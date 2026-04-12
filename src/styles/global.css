@@ -1,11 +1,13 @@
 :root {
   /* ═══ Typography System ═══ */
-  --font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-family:
+    'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-size-xs: 13px;
   --font-size-sm: 15px;
   --font-size-md: 16px;
   --font-size-lg: 20px;
   --font-size-xl: 28px;
+  --font-size-2xl: 36px;
   --font-regular: 400;
   --font-medium: 500;
   --font-semibold: 600;
@@ -22,16 +24,25 @@
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
+  --space-7: 28px;
   --space-8: 32px;
   --space-10: 40px;
   --space-12: 48px;
 
   /* ═══ Color System ═══ */
   --bg-app: #faf8f4;
-  --bg-surface: rgba(255, 255, 255, 0.92);
-  --bg-surface-strong: #fffdfb;
-  --bg-sidebar: #faf8f4;
-  --bg-accent: linear-gradient(135deg, #48d2b6 0%, #6be0c8 100%);
+  --bg-surface: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.96) 0%,
+    rgba(250, 253, 252, 0.92) 100%
+  );
+  --bg-surface-strong: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.99) 0%,
+    rgba(252, 255, 254, 0.96) 100%
+  );
+  --bg-sidebar: rgba(250, 248, 244, 0.92);
+  --bg-accent: linear-gradient(135deg, #53bfa8 0%, #77dac5 56%, #8878ee 100%);
 
   --text-main: #23313b;
   --text-heading: #1f2a33;
@@ -39,6 +50,11 @@
   --text-tertiary: #98a2b3;
   --text-soft: #a9b1bc;
   --text-success: #52c41a;
+  --text-mint: #2f8f7a;
+  --text-violet: #6f5fe0;
+  --text-orange: #bf7d3f;
+  --text-pink: #c56f86;
+  --text-blue: #587cd8;
 
   /* Brand Colors (single source of truth) */
   --mint: #53bfa8;
@@ -79,6 +95,11 @@
 
   /* ═══ Border & Shadow ═══ */
   --border-soft: rgba(15, 23, 42, 0.06);
+  --surface-border: rgba(255, 255, 255, 0.78);
+  --surface-backdrop: blur(20px);
+  --surface-shadow: 0 14px 32px rgba(18, 38, 63, 0.08);
+  --surface-shadow-hover: 0 18px 38px rgba(18, 38, 63, 0.11);
+  --shadow-soft: var(--surface-shadow);
   --shadow-sm: 0 4px 12px rgba(62, 71, 87, 0.04);
   --shadow-md: 0 8px 20px rgba(62, 71, 87, 0.06);
   --shadow-lg: 0 16px 32px rgba(62, 71, 87, 0.08);
@@ -105,7 +126,10 @@ body,
 }
 
 body {
-  background: var(--bg-app);
+  background:
+    radial-gradient(circle at top left, rgba(83, 191, 168, 0.08) 0%, transparent 26%),
+    radial-gradient(circle at top right, rgba(136, 120, 238, 0.06) 0%, transparent 22%),
+    var(--bg-app);
   font-family: var(--font-family);
   color: var(--text-main);
   font-size: var(--font-size-md);

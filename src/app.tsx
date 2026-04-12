@@ -10,20 +10,26 @@ export function rootContainer(container: ReactNode) {
       theme={{
         algorithm: theme.defaultAlgorithm,
         token: {
-          colorPrimary: '#47b29b',
-          colorSuccess: '#4db99f',
+          colorPrimary: '#53bfa8',
+          colorSuccess: '#53bfa8',
           colorWarning: '#efb169',
-          colorError: '#ef8ba0',
+          colorError: '#eb96ad',
           colorInfo: '#8878ee',
-          borderRadius: 18,
+          borderRadiusSM: 12,
+          borderRadius: 16,
           borderRadiusLG: 24,
           fontSize: 15,
           fontFamily:
-            'Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            'Inter, "Noto Sans SC", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
           colorBgLayout: '#faf8f4',
-          colorBgContainer: '#fffdfb',
-          colorText: '#23313b'
-        }
+          colorBgContainer: '#fffdfa',
+          colorBgElevated: '#fffdfb',
+          colorText: '#23313b',
+          colorTextSecondary: '#6d7683',
+          colorTextTertiary: '#98a2b3',
+          colorBorderSecondary: 'rgba(15, 23, 42, 0.08)',
+          boxShadowSecondary: '0 18px 38px rgba(18, 38, 63, 0.11)',
+        },
       }}
     >
       <AntdApp>{container}</AntdApp>
