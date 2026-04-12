@@ -1,6 +1,6 @@
 import {
   CalendarOutlined,
-  RightOutlined,
+  ArrowRightOutlined,
   SettingOutlined,
   TeamOutlined,
   UnorderedListOutlined,
@@ -38,12 +38,15 @@ export default function QuickActionPanel({ items, onNavigate }: QuickActionPanel
             className={styles.quickActionCard}
             onClick={() => onNavigate(item.path)}
           >
-            <div className={styles.quickActionIcon}>{iconMap[item.key] ?? <RightOutlined />}</div>
+            <div className={styles.quickActionIcon}>{iconMap[item.key] ?? <ArrowRightOutlined />}</div>
             <div className={styles.quickActionBody}>
               <div className={styles.quickActionLabel}>{item.label}</div>
               <div className={styles.quickActionSubLabel}>{item.subLabel}</div>
             </div>
-            <span className={styles.inlineGhostButton}>前往</span>
+            <span className={styles.inlineGhostButton}>
+              前往
+              <ArrowRightOutlined />
+            </span>
           </button>
         ))}
       </div>

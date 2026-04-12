@@ -1,6 +1,7 @@
 import { Button, Progress } from 'antd';
 import { ArrowRightOutlined, CrownOutlined } from '@ant-design/icons';
 import SectionCard from '@/components/SectionCard';
+import pageCls from '@/styles/page.module.css';
 import styles from '../index.module.css';
 
 export type MembershipOverviewCardProps = {
@@ -69,7 +70,7 @@ export default function MembershipOverviewCard({
           <Progress
             percent={progressPercent ?? 0}
             showInfo={false}
-            strokeColor="linear-gradient(90deg, #c4a574 0%, #d7be91 100%)"
+            strokeColor="linear-gradient(90deg, var(--mint) 0%, var(--control-primary-end) 100%)"
             trailColor="rgba(31, 42, 51, 0.06)"
             className={styles.membershipProgress}
           />
@@ -77,7 +78,12 @@ export default function MembershipOverviewCard({
         </div>
 
         {onPrimaryAction ? (
-          <Button type="primary" size="large" className={styles.membershipPrimaryAction} onClick={onPrimaryAction}>
+          <Button
+            type="primary"
+            size="large"
+            className={`${pageCls.cardActionPrimary} ${styles.membershipPrimaryAction}`}
+            onClick={onPrimaryAction}
+          >
             立即查看预约
             <ArrowRightOutlined />
           </Button>

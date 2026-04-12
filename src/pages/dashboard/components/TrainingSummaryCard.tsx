@@ -43,7 +43,7 @@ export default function TrainingSummaryCard({
           <Progress
             percent={goalPercent ?? 0}
             showInfo={false}
-            strokeColor="linear-gradient(90deg, #c4a574 0%, #d7be91 100%)"
+            strokeColor="linear-gradient(90deg, var(--violet) 0%, color-mix(in srgb, var(--violet) 62%, var(--mint)) 100%)"
             trailColor="rgba(31, 42, 51, 0.06)"
           />
           <div className={styles.trainingGoalText}>{goalLabel ?? '月度目标进度待接入'}</div>
