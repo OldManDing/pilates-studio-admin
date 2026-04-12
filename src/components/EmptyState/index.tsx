@@ -9,10 +9,11 @@ type Props = {
   image?: ReactNode;
   actionText?: string;
   onAction?: () => void;
+  size?: 'default' | 'compact';
 };
 
-const EmptyState: FC<Props> = ({ title, description, image, actionText, onAction }) => (
-  <div className={cls.wrapper}>
+const EmptyState: FC<Props> = ({ title, description, image, actionText, onAction, size = 'default' }) => (
+  <div className={`${cls.wrapper} ${size === 'compact' ? cls.compact : ''}`}>
     <Empty
       image={image}
       description={
