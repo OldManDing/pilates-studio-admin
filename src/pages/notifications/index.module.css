@@ -224,7 +224,7 @@
   padding: 8px 0 2px;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 992px) {
   .notificationCard {
     grid-template-columns: 1fr;
   }
@@ -248,7 +248,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .notificationCard,
   .overviewCard {
     padding: 14px;

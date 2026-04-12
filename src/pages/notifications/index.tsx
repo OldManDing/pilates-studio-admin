@@ -249,9 +249,17 @@ export default function NotificationsPage() {
         channel: channelFilter === 'ALL' ? undefined : channelFilter,
       });
 
-      setNotifications(response.data);
-      setCurrentPage(response.meta.page);
-      setTotal(response.meta.total);
+      const nextNotifications = response.data ?? [];
+      const nextMeta = response.meta ?? {
+        page,
+        pageSize: PAGE_SIZE,
+        total: nextNotifications.length,
+        totalPages: nextNotifications.length ? 1 : 0,
+      };
+
+      setNotifications(nextNotifications);
+      setCurrentPage(nextMeta.page);
+      setTotal(nextMeta.total);
     } catch (err) {
       messageApi.error(getErrorMessage(err, '加载通知列表失败'));
     } finally {
@@ -317,23 +325,23 @@ export default function NotificationsPage() {
         icon: 'total' as const,
       },
       {
-        title: '待发送',
+        title: '当前页待发送',
         value: String(notifications.filter((item) => item.status === 'PENDING').length),
         hint: '当前页待处理记录',
         tone: 'orange' as const,
         icon: 'pending' as const,
       },
       {
-        title: '已发送',
+        title: '当前页已发送',
         value: String(notifications.filter((item) => item.status === 'SENT').length),
-        hint: '当前页已送达记录',
+        hint: '等待阅读确认',
         tone: 'violet' as const,
         icon: 'sent' as const,
       },
       {
-        title: '已读',
+        title: '当前页已读',
         value: String(notifications.filter((item) => item.status === 'READ').length),
-        hint: '当前页已确认记录',
+        hint: '已完成确认',
         tone: 'pink' as const,
         icon: 'read' as const,
       },
@@ -349,7 +357,7 @@ export default function NotificationsPage() {
   const notificationCountText = `当前共 ${total} 条通知`;
   const notificationResultSummary = notificationFilterLabels.length
     ? `已按${notificationFilterLabels.join('、')}筛选，当前匹配 ${total} 条通知。`
-    : `当前共 ${total} 条通知，支持查看详情、筛选渠道并快速标记已读。`;
+    : `当前共 ${total} 条通知，可连续查看待发送、已发送与已读记录并快速跟进。`;
 
   const openComposerModal = () => {
     composerForm.setFieldsValue({
@@ -706,7 +714,7 @@ export default function NotificationsPage() {
                 <div>
                   <span className={styles.typePill}>{detailNotification.type}</span>
                   <h2 className={styles.overviewTitle}>{detailNotification.title}</h2>
-                  <div className={styles.overviewSubtitle}>使用现有后端 notifications API 创建与跟踪通知状态。</div>
+                  <div className={styles.overviewSubtitle}>查看通知渠道、接收对象与阅读状态，方便管理员快速核对通知执行情况。</div>
                 </div>
                 <StatusTag status={statusLabelMap[detailNotification.status]} />
               </div>
