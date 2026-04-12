@@ -124,7 +124,7 @@ describe('NotificationsPage smoke test', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: '新建通知' })).toBeInTheDocument();
-      expect(screen.getByText('仅会向当前选择的单个接收对象发送通知，提交时会保证只带一个目标 ID。')).toBeInTheDocument();
+      expect(screen.getByText('仅向当前选择对象发送。')).toBeInTheDocument();
       expect(membersApi.getAll).toHaveBeenCalledWith(1, 100, { search: undefined });
     }, { timeout: 20000 });
   }, 30000);
