@@ -18,7 +18,7 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    message.success(`已为预览账号 ${account} 准备重置指引`);
+    message.success(`已记录账号 ${account} 的找回申请，请联系门店管理员完成密码重置`);
   };
 
   return (
@@ -27,7 +27,8 @@ export default function ForgotPasswordPage() {
       <div className={cls.panel}>
         <div className={cls.brand}>普拉提工作室</div>
         <h1 className={cls.title}>找回登录密码</h1>
-        <p className={cls.subtitle}>输入邮箱或手机号后，会在当前页面展示预览环境的重置指引，不会发送真实邮件或短信。</p>
+        <p className={cls.subtitle}>输入邮箱或手机号后可提交找回申请。当前系统不会直接发送邮件或短信，请由门店管理员协助重置密码。</p>
+        <p className={cls.subtitle}>流程：提交申请 → 管理员核验身份 → 管理员在后台完成重置。</p>
 
         <Form<ForgotValues> className={cls.form} layout="vertical" onFinish={handleFinish} initialValues={{ account: 'admin@pilates.com' }}>
           <Form.Item label="账号" name="account" rules={[{ required: true, message: '请输入账号' }]}>
@@ -36,7 +37,7 @@ export default function ForgotPasswordPage() {
 
           <div className={cls.actions}>
             <ActionButton ghost icon={<UndoOutlined />} onClick={() => navigate('/login', { replace: true })}>返回登录</ActionButton>
-            <ActionButton icon={<MailOutlined />} htmlType="submit">查看重置指引</ActionButton>
+            <ActionButton icon={<MailOutlined />} htmlType="submit">提交找回申请</ActionButton>
           </div>
         </Form>
       </div>
