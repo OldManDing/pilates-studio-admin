@@ -58,13 +58,13 @@ export default function DashboardBookingsPage() {
     <div className={`${pageCls.page} ${pageCls.workPage}`}>
       {contextHolder}
       <PageHeader
-        title="今日预约明细"
-        subtitle="聚焦预约跟进事项，快速确认、联系与处理异常。"
+        title="预约处理快捷入口"
+        subtitle="仪表盘二级入口：仅用于快速识别待处理预约，具体确认、联系与异常处理请在预约管理完成。"
         extra={<ActionButton ghost onClick={() => go('/dashboard')}>返回仪表盘</ActionButton>}
       />
 
       <div className={pageCls.balancedTwoCol}>
-        <SectionCard title="预约总览" subtitle="真实预约数据驱动">
+        <SectionCard title="预约总览（快捷）" subtitle="仅展示近期摘要，避免与预约管理形成并列模块认知。">
           <div className={pageCls.sectionContentStack}>
             <div className={pageCls.sectionSummaryRow}>
               <div className={pageCls.sectionSummaryText}>优先关注待确认预约、临近开课记录和课程容量风险，让首页钻取页更像真正的运营处理台，而不是只读摘要。</div>
@@ -106,7 +106,7 @@ export default function DashboardBookingsPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="容量提醒" subtitle="与课程容量同步查看">
+        <SectionCard title="容量提醒（辅助）" subtitle="用于快速判断风险，后续动作统一进入业务模块执行。">
           <div className={pageCls.sectionContentStack}>
             <div className={pageCls.sectionSummaryRow}>
               <div className={pageCls.sectionSummaryText}>把容量风险和待确认预约放在同一层看，能更快判断哪些课程需要优先补位或直接联系会员。</div>
@@ -122,19 +122,19 @@ export default function DashboardBookingsPage() {
       </div>
 
       <SectionCard
-        title="待处理预约"
-        subtitle="按当前状态快速推进确认、联系与详情查看"
-        extra={<Button type="text" className={widgetCls.dashboardCardAction} onClick={() => go('/bookings')}>进入完整预约模块</Button>}
+        title="待处理预约（摘要）"
+        subtitle="保留少量优先记录用于分流，完整列表与批量操作请进入预约管理。"
+        extra={<Button type="text" className={widgetCls.dashboardCardAction} onClick={() => go('/bookings')}>进入预约管理</Button>}
       >
           <div className={pageCls.sectionContentStack}>
           <div className={pageCls.sectionSummaryRow}>
-            <div className={pageCls.sectionSummaryText}>下方保留最需要人工推进的预约记录，适合从仪表盘快速跳入，再进入完整预约模块做批量处理。</div>
-            <span className={pageCls.sectionMetaPill}>优先处理前 12 条</span>
+            <div className={pageCls.sectionSummaryText}>这里只保留优先处理记录，便于快速判断是否要进入预约管理做完整确认与跟进。</div>
+             <span className={pageCls.sectionMetaPill}>快捷显示前 12 条</span>
           </div>
 
           <div className={widgetCls.recordList}>
            {bookings.slice(0, 12).map((item, idx) => (
-             <div key={item.id} className={`${widgetCls.recordItem} ${widgetCls.showcaseRecordItem}`}>
+             <div key={item.id} className={`${widgetCls.recordItem} ${widgetCls.workRecordItem}`}>
               <div className={`${widgetCls.recordMeta} ${widgetCls.dashboardBookingMeta}`}>
                 <MemberAvatar name={item.member?.name || '-'} tone={tones[idx % tones.length]} />
                 <div className={`${widgetCls.dashboardBookingBody} ${widgetCls.detailCourseMeta}`}>
@@ -147,8 +147,7 @@ export default function DashboardBookingsPage() {
                 </div>
               </div>
               <div className={widgetCls.detailActionGroup}>
-                <Button type="primary" size="large" className={pageCls.cardActionHalf}>{item.status === 'PENDING' ? '立即确认' : '联系会员'}</Button>
-                <Button size="large" className={pageCls.cardActionHalf}>查看详情</Button>
+                <Button type="primary" size="large" className={pageCls.cardActionPrimary} onClick={() => go('/bookings')}>进入预约管理处理</Button>
               </div>
              </div>
            ))}
