@@ -318,8 +318,8 @@ export default function CoursesPage() {
       </div>
 
       <CourseBrowseShell
-        eyebrow="COURSE BROWSE"
-        title="课程浏览"
+        eyebrow="课程工作台"
+        title="课程列表"
         subtitle={courseBrowseSubtitle}
         resultCountText={`共 ${total} 门`}
         searchValue={searchValue}
