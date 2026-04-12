@@ -16,7 +16,6 @@ export type CoachRecordCardProps = {
   phoneText: string;
   ratingText: string;
   specialtiesText: string;
-  specialtiesCountText: string;
   tone: AccentTone;
   onEdit: () => void;
   onViewDetail: () => void;
@@ -31,7 +30,6 @@ export default function CoachRecordCard({
   phoneText,
   ratingText,
   specialtiesText,
-  specialtiesCountText,
   tone,
   onEdit,
   onViewDetail,
@@ -69,7 +67,6 @@ export default function CoachRecordCard({
       </div>
 
       <div className={`${widgetCls.detailActionGroup} ${styles.coachRecordActions}`}>
-        <span className={styles.coachSpecialtyBadge}>{specialtiesCountText}</span>
         <Button type="primary" size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={onEdit}>
           编辑资料
         </Button>

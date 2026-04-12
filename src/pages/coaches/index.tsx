@@ -1,7 +1,9 @@
-import { CalendarOutlined, DeleteOutlined, EditOutlined, HeartOutlined, PlusOutlined, SearchOutlined, StarOutlined, TeamOutlined } from '@ant-design/icons';
+import { CalendarOutlined, DeleteOutlined, EditOutlined, FilterOutlined, HeartOutlined, PlusOutlined, SearchOutlined, StarOutlined, TeamOutlined } from '@ant-design/icons';
 import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Pagination, Popconfirm, Row, Select, Spin, message } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
+import EmptyState from '@/components/EmptyState';
+import FilterModalFooter from '@/components/FilterModalFooter';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import StatCard from '@/components/StatCard';
@@ -32,6 +34,10 @@ type CoachFormValues = {
   bio?: string;
   specialtiesText: string;
   certificatesText: string;
+};
+
+type CoachFilterDraft = {
+  status: CoachStatus | '全部';
 };
 
 const coachStatusOptions: CoachStatus[] = ['ACTIVE', 'ON_LEAVE', 'INACTIVE'];
@@ -75,6 +81,8 @@ export default function CoachesPage() {
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState('');
   const [statusFilter, setStatusFilter] = useState<CoachStatus | '全部'>('全部');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filterDraft, setFilterDraft] = useState<CoachFilterDraft>({ status: '全部' });
   const [editingCoach, setEditingCoach] = useState<Coach | null>(null);
   const [detailCoach, setDetailCoach] = useState<Coach | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -203,11 +211,17 @@ export default function CoachesPage() {
         messageApi.success('教练已添加');
       }
 
-      const refreshed = await coachesApi.getAll();
-      setCoachList(refreshed);
+      const refreshed = await coachesApi.getPaged({
+        page: currentPage,
+        pageSize: 10,
+        search: searchValue.trim() || undefined,
+        status: statusFilter === '全部' ? undefined : statusFilter,
+      });
+      setCoachList(refreshed.data);
+      setTotal(refreshed.meta.total);
 
       if (detailCoach && editingCoach) {
-        const updated = refreshed.find((c) => c.id === detailCoach.id) || null;
+        const updated = refreshed.data.find((c) => c.id === detailCoach.id) || null;
         setDetailCoach(updated);
       }
 
@@ -255,6 +269,33 @@ export default function CoachesPage() {
     },
   ] : [];
 
+  const coachFilterLabels = [
+    searchValue.trim() ? `关键词“${searchValue.trim()}”` : null,
+    statusFilter !== '全部' ? `状态：${coachStatusLabels[statusFilter]}` : null,
+  ].filter(Boolean);
+
+  const coachCountText = `当前共 ${total} 位教练`;
+  const coachResultSummary = coachFilterLabels.length
+    ? `已按${coachFilterLabels.join('、')}筛选，当前匹配 ${total} 位教练。`
+    : `当前共 ${total} 位教练，可继续查看详情、编辑资料或调整状态。`;
+
+  const openFilterModal = () => {
+    setFilterDraft({ status: statusFilter });
+    setIsFilterOpen(true);
+  };
+
+  const applyFilters = () => {
+    setStatusFilter(filterDraft.status);
+    setIsFilterOpen(false);
+  };
+
+  const resetFilters = () => {
+    const nextDraft: CoachFilterDraft = { status: '全部' };
+    setFilterDraft(nextDraft);
+    setStatusFilter(nextDraft.status);
+    setIsFilterOpen(false);
+  };
+
   if (loading && coachList.length === 0) {
     return (
       <div className={`${pageCls.page} ${pageCls.workPage}`}>
@@ -286,65 +327,99 @@ export default function CoachesPage() {
         ))}
       </div>
 
-      <div className={pageCls.toolbar}>
-        <div className={pageCls.toolbarLeft}>
-          <Input
-            className={pageCls.toolbarSearch}
-            size="large"
-            value={searchValue}
-            prefix={<SearchOutlined />}
-            placeholder="按教练姓名、电话或邮箱搜索"
-            onChange={(event) => setSearchValue(event.target.value)}
-          />
-        </div>
-        <div className={pageCls.toolbarRight}>
-          <Select
-            size="large"
-            value={statusFilter}
-            className={`${pageCls.settingsInput} ${pageCls.toolbarSelect}`}
-            options={[{ label: '全部状态', value: '全部' }, ...coachStatusOptions.map((item) => ({ label: coachStatusLabels[item], value: item }))]}
-            onChange={(value: CoachStatus | '全部') => setStatusFilter(value)}
-          />
-        </div>
-      </div>
-
-      {coachList.length ? (
-        <>
-          <div className={`${widgetCls.recordList} ${pageCls.workSection}`}>
-            {coachList.map((coach) => (
-              <CoachRecordCard
-                key={coach.id}
-                name={coach.name}
-                coachCodeText={coach.coachCode || 'COACH'}
-                statusLabel={coachStatusLabels[coach.status] || coach.status}
-                experienceText={coach.experience || '经验信息待补充'}
-                emailText={coach.email || '-'}
-                phoneText={coach.phone}
-                ratingText={formatCoachRating(coach.rating)}
-                specialtiesText={getDisplayListText(coach.specialties, '待补充擅长方向', 2)}
-                specialtiesCountText={coach.specialties?.length ? `${coach.specialties.length} 项专长` : '待补充专长'}
-                tone={getToneFromName(coach.name)}
-                onEdit={() => openEditModal(coach)}
-                onViewDetail={() => setDetailCoach(coach)}
-              />
-            ))}
+      <SectionCard
+        title="教练列表"
+        subtitle="统一保留搜索、筛选与详情入口，便于排班协同与资料维护。"
+      >
+        <div className={pageCls.sectionContentStack}>
+          <div className={pageCls.sectionSummaryRow}>
+            <div className={pageCls.sectionSummaryText}>{coachResultSummary}</div>
+            <span className={pageCls.sectionMetaPill}>{coachCountText}</span>
           </div>
-          <div className={pageCls.centerPagination}>
-            <Pagination
-              current={currentPage}
-              pageSize={pageSize}
-              total={total}
-              onChange={setCurrentPage}
-              showSizeChanger={false}
+
+          <div className={pageCls.toolbar}>
+            <div className={pageCls.toolbarLeft}>
+              <Input
+                className={pageCls.toolbarSearch}
+                size="large"
+                value={searchValue}
+                prefix={<SearchOutlined />}
+                placeholder="按教练姓名、电话或邮箱搜索"
+                onChange={(event) => setSearchValue(event.target.value)}
+              />
+            </div>
+            <div className={pageCls.toolbarRight}>
+              <ActionButton icon={<FilterOutlined />} ghost onClick={openFilterModal}>筛选条件</ActionButton>
+            </div>
+          </div>
+
+          {coachList.length ? (
+            <>
+              <div className={`${widgetCls.recordList} ${pageCls.sectionListStack}`}>
+                {coachList.map((coach) => (
+                  <CoachRecordCard
+                    key={coach.id}
+                    name={coach.name}
+                    coachCodeText={coach.coachCode || 'COACH'}
+                    statusLabel={coachStatusLabels[coach.status] || coach.status}
+                    experienceText={coach.experience || '经验信息待补充'}
+                    emailText={coach.email || '-'}
+                    phoneText={coach.phone}
+                    ratingText={formatCoachRating(coach.rating)}
+                    specialtiesText={getDisplayListText(coach.specialties, '待补充擅长方向', 2)}
+                    tone={getToneFromName(coach.name)}
+                    onEdit={() => openEditModal(coach)}
+                    onViewDetail={() => setDetailCoach(coach)}
+                  />
+                ))}
+              </div>
+              <div className={pageCls.sectionPagination}>
+                <Pagination
+                  current={currentPage}
+                  pageSize={pageSize}
+                  total={total}
+                  onChange={setCurrentPage}
+                  showSizeChanger={false}
+                />
+              </div>
+            </>
+          ) : (
+            <div className={pageCls.sectionEmptyState}>
+              <EmptyState
+                title="暂无符合条件的教练"
+                description="可以调整搜索词，或清空筛选后继续查看全部教练。"
+                actionText="重置筛选"
+                onAction={() => {
+                  setSearchValue('');
+                  resetFilters();
+                }}
+              />
+            </div>
+          )}
+        </div>
+      </SectionCard>
+
+      <Modal
+        title="筛选条件"
+        open={isFilterOpen}
+        onCancel={() => setIsFilterOpen(false)}
+        onOk={applyFilters}
+        destroyOnHidden
+        footer={<FilterModalFooter onReset={resetFilters} onCancel={() => setIsFilterOpen(false)} onApply={applyFilters} />}
+      >
+        <div className={pageCls.filterModalBody}>
+          <div>
+            <div className={`${widgetCls.smallText} ${pageCls.filterFieldLabel}`}>教练状态</div>
+            <Select
+              size="large"
+              value={filterDraft.status}
+              className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`}
+              options={[{ label: '全部状态', value: '全部' }, ...coachStatusOptions.map((item) => ({ label: coachStatusLabels[item], value: item }))]}
+              onChange={(value: CoachStatus | '全部') => setFilterDraft((current) => ({ ...current, status: value }))}
             />
           </div>
-        </>
-      ) : (
-        <div className={`${pageCls.surface} ${widgetCls.detailCard} ${pageCls.surfaceTopSpace}`}>
-          <div className={widgetCls.detailTitle}>暂无符合条件的教练</div>
-          <div className={`${widgetCls.smallText} ${pageCls.topSpaceSm}`}>可以调整搜索词，或者切换状态筛选。</div>
         </div>
-      )}
+      </Modal>
 
       <Modal
         className={pageCls.crudModal}

@@ -61,7 +61,7 @@ export default function CoachProfileOverviewCard({
         <div className={styles.coachProfileMetaCard}>
           <div className={styles.coachMetaLabel}>学员评分</div>
           <div className={styles.coachMetaValue}>{ratingText}</div>
-          <div className={styles.coachMetaSub}>当前状态 {statusLabel}</div>
+          <div className={styles.coachMetaSub}>用于辅助排课与服务质量判断</div>
         </div>
       </div>
 
