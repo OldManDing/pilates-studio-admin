@@ -2,15 +2,16 @@ import { HeartOutlined, RiseOutlined, SmileOutlined } from '@ant-design/icons';
 import { Progress, Spin, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { createChartTooltip } from '@/components/ChartTooltip';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import StatCard from '@/components/StatCard';
 import pageCls from '@/styles/page.module.css';
-import widgetCls from '@/styles/widgets.module.css';
 import { analyticsApi } from '@/services/analytics';
 import { getErrorMessage } from '@/utils/errors';
 import { axisTick, chartGrid } from '@/utils/chartTheme';
 import { useIsMobile } from '@/utils/useResponsive';
+import styles from './index.module.css';
 
 const iconMap = {
   target: <RiseOutlined />,
@@ -67,7 +68,7 @@ export default function AnalyticsPage() {
     };
 
     fetchData();
-  }, []);
+  }, [messageApi]);
 
   const analyticsStats = useMemo(
     () => [
@@ -79,9 +80,27 @@ export default function AnalyticsPage() {
     [stats]
   );
 
+  const analyticsScopeText = '分析范围：近 30 天交易与预约分布，外加近 6 个月会员留存趋势。';
+
+  const TrendTooltipRenderer = createChartTooltip({
+    labelMap: {
+      totalMembers: '会员总量',
+      activeMembers: '活跃会员',
+      newMembers: '新增会员',
+    },
+  });
+
+  const DistributionTooltipRenderer = createChartTooltip({
+    labelMap: { value: '预约热度' },
+  });
+
+  const PopularityTooltipRenderer = createChartTooltip({
+    labelMap: { value: '交易次数' },
+  });
+
   if (loading) {
     return (
-      <div className={pageCls.page}>
+      <div className={`${pageCls.page} ${styles.analyticsPage}`}>
         <PageHeader title="数据分析" subtitle="深度洞察业务数据和运营指标。" />
         <div className={`${pageCls.centeredState} ${pageCls.centeredStateShort}`}><Spin size="large" /></div>
       </div>
@@ -89,7 +108,7 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className={pageCls.page}>
+    <div className={`${pageCls.page} ${styles.analyticsPage}`}>
       {contextHolder}
       <PageHeader title="数据分析" subtitle="深度洞察业务数据和运营指标。" />
 
@@ -99,49 +118,89 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
+      <SectionCard title="分析总览" subtitle="统一说明当前分析口径，帮助团队理解图表数据来源。">
+        <div className={styles.analyticsSummaryCard}>
+          <div className={styles.analyticsSummaryRow}>
+            <div className={styles.analyticsSummaryText}>{analyticsScopeText}</div>
+            <span className={styles.analyticsScopePill}>固定分析窗口</span>
+          </div>
+          <div className={styles.analyticsProgressCard}>
+            <div className={styles.analyticsProgressItem}>
+              <div className={styles.analyticsProgressLabel}>目标达成</div>
+              <div className={styles.analyticsProgressValue}>{stats.goalAchievement}</div>
+              <Progress percent={Number.parseFloat(stats.goalAchievement) || 0} showInfo={false} strokeColor="linear-gradient(90deg, var(--mint) 0%, var(--control-primary-end) 100%)" />
+              <div className={styles.analyticsProgressHint}>当前以营收目标完成率为核心指标，反映经营计划推进情况。</div>
+            </div>
+            <div className={styles.analyticsProgressItem}>
+              <div className={styles.analyticsProgressLabel}>会员留存</div>
+              <div className={styles.analyticsProgressValue}>{stats.retentionRate}</div>
+              <Progress percent={Number.parseFloat(stats.retentionRate) || 0} showInfo={false} strokeColor="linear-gradient(90deg, var(--violet) 0%, color-mix(in srgb, var(--violet) 62%, var(--mint)) 100%)" />
+              <div className={styles.analyticsProgressHint}>与预约热度、活跃会员趋势结合阅读，更容易判断经营质量。</div>
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+
       <div className={pageCls.twoCol}>
         <SectionCard title="交易类型热度" subtitle="按交易类型统计近 30 天发生次数">
-          <div className={pageCls.chartPanel}>
+          <div className={styles.analyticsChartCard}>
+            <div className={styles.analyticsLegend}>
+              <span className={styles.analyticsLegendItem}><span className={styles.analyticsLegendDot} style={{ background: 'var(--mint)' }} />交易次数</span>
+            </div>
+            <div className={pageCls.chartPanel}>
             <ResponsiveContainer>
               <BarChart data={coursePopularity}>
                 <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
                 <XAxis dataKey="label" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} tick={axisTick} />
                 <YAxis axisLine={false} tickLine={false} tick={axisTick} />
-                <Tooltip />
-                <Bar dataKey="value" fill="#43c7ab" radius={[10, 10, 0, 0]} barSize={isMobile ? 18 : 28} />
+                <Tooltip content={<PopularityTooltipRenderer />} />
+                <Bar dataKey="value" fill="var(--mint)" radius={[10, 10, 0, 0]} barSize={isMobile ? 18 : 28} />
               </BarChart>
             </ResponsiveContainer>
+          </div>
           </div>
         </SectionCard>
 
         <SectionCard title="预约时段分布" subtitle="按真实预约时段聚合最近 30 天热度">
-          <div className={pageCls.chartPanel}>
+          <div className={styles.analyticsChartCard}>
+            <div className={styles.analyticsLegend}>
+              <span className={styles.analyticsLegendItem}><span className={styles.analyticsLegendDot} style={{ background: 'var(--orange)' }} />预约热度</span>
+            </div>
+            <div className={pageCls.chartPanel}>
             <ResponsiveContainer>
               <LineChart data={bookingDistribution}>
                 <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
                 <XAxis dataKey="label" axisLine={false} tickLine={false} tick={axisTick} />
                 <YAxis axisLine={false} tickLine={false} tick={axisTick} />
-                <Tooltip />
-                <Line type="monotone" dataKey="value" stroke="#ffb760" strokeWidth={3.2} dot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} />
+                <Tooltip content={<DistributionTooltipRenderer />} />
+                <Line type="monotone" dataKey="value" stroke="var(--orange)" strokeWidth={3.2} dot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} />
               </LineChart>
             </ResponsiveContainer>
+          </div>
           </div>
         </SectionCard>
       </div>
 
       <SectionCard title="会员留存趋势" subtitle="近 6 个月会员总量、活跃量与新增趋势">
-        <div className={pageCls.chartPanel}>
+        <div className={styles.analyticsChartCard}>
+          <div className={styles.analyticsLegend}>
+            <span className={styles.analyticsLegendItem}><span className={styles.analyticsLegendDot} style={{ background: 'var(--mint)' }} />会员总量</span>
+            <span className={styles.analyticsLegendItem}><span className={styles.analyticsLegendDot} style={{ background: 'var(--violet)' }} />活跃会员</span>
+            <span className={styles.analyticsLegendItem}><span className={styles.analyticsLegendDot} style={{ background: 'var(--pink)' }} />新增会员</span>
+          </div>
+          <div className={pageCls.chartPanel}>
           <ResponsiveContainer>
             <LineChart data={memberRetentionTrend}>
               <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
               <XAxis dataKey="month" axisLine={false} tickLine={false} tick={axisTick} />
               <YAxis axisLine={false} tickLine={false} tick={axisTick} />
-              <Tooltip />
-              <Line type="monotone" dataKey="totalMembers" stroke="#43c7ab" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 5 }} />
-              <Line type="monotone" dataKey="activeMembers" stroke="#8b7cff" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 5 }} />
-              <Line type="monotone" dataKey="newMembers" stroke="#ff8da8" strokeWidth={2.5} strokeDasharray="6 6" dot={{ r: 0 }} activeDot={{ r: 5 }} />
+              <Tooltip content={<TrendTooltipRenderer />} />
+              <Line type="monotone" dataKey="totalMembers" stroke="var(--mint)" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 5 }} />
+              <Line type="monotone" dataKey="activeMembers" stroke="var(--violet)" strokeWidth={3} dot={{ r: 0 }} activeDot={{ r: 5 }} />
+              <Line type="monotone" dataKey="newMembers" stroke="var(--pink)" strokeWidth={2.5} strokeDasharray="6 6" dot={{ r: 0 }} activeDot={{ r: 5 }} />
             </LineChart>
           </ResponsiveContainer>
+        </div>
         </div>
       </SectionCard>
     </div>
