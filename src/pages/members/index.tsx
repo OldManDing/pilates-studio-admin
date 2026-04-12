@@ -1,6 +1,6 @@
 import { DeleteOutlined, DownloadOutlined, EditOutlined, FilterOutlined, PlusOutlined, SearchOutlined, TeamOutlined, ThunderboltOutlined, UserAddOutlined, WarningOutlined } from '@ant-design/icons';
 import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Pagination, Popconfirm, Row, Select, Spin, message } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
 import FilterModalFooter from '@/components/FilterModalFooter';
@@ -14,8 +14,8 @@ import widgetCls from '@/styles/widgets.module.css';
 import { bookingStatusLabels, memberStatusLabels, type MemberStatus, type TransactionKind, type TransactionStatus } from '@/types';
 import { membersApi, type Member } from '@/services/members';
 import { membershipPlansApi, type MembershipPlan } from '@/services/membershipPlans';
-import { bookingsApi, type Booking } from '@/services/bookings';
-import { transactionsApi, type Transaction } from '@/services/transactions';
+import { type Booking } from '@/services/bookings';
+import { type Transaction } from '@/services/transactions';
 import { reportsApi } from '@/services/reports';
 import { getErrorMessage } from '@/utils/errors';
 import { getToneFromName } from '@/utils/tone';
@@ -112,7 +112,7 @@ export default function MembersPage() {
       }
     };
     fetchStats();
-  }, []);
+  }, [messageApi]);
 
   // Fetch membership plans
   useEffect(() => {
@@ -125,10 +125,10 @@ export default function MembersPage() {
       }
     };
     fetchPlans();
-  }, []);
+  }, [messageApi]);
 
   // Fetch members
-  const fetchMembers = async (page = 1) => {
+  const fetchMembers = useCallback(async (page = 1) => {
     try {
       setLoading(true);
       const response = await membersApi.getAll(page, pageSize, {
@@ -144,11 +144,11 @@ export default function MembersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [messageApi, pageSize, planFilter, searchValue, statusFilter]);
 
   useEffect(() => {
-    fetchMembers(1);
-  }, [searchValue, statusFilter, planFilter]);
+    void fetchMembers(1);
+  }, [fetchMembers]);
 
   useEffect(() => {
     if (!detailMember) {
@@ -188,7 +188,7 @@ export default function MembersPage() {
     return () => {
       cancelled = true;
     };
-  }, [detailMember]);
+  }, [detailMember, messageApi]);
 
   const membersStats = useMemo(() => [
     { title: '总会员数', value: String(stats.totalMembers), hint: '↑ 7.2% 环比增长', tone: 'mint' as const, icon: 'team' as const },
@@ -196,6 +196,21 @@ export default function MembersPage() {
     { title: '本月新增', value: String(stats.newMembersThisMonth), hint: '较上月新增', tone: 'pink' as const, icon: 'plus' as const },
     { title: '即将到期', value: String(stats.expiringSoonCount), hint: '需跟进续费', tone: 'orange' as const, icon: 'alert' as const },
   ], [stats]);
+
+  const currentPlanLabel = planFilter === '全部'
+    ? null
+    : membershipPlans.find((plan) => plan.id === planFilter)?.name || '已选会籍';
+
+  const memberFilterLabels = [
+    searchValue.trim() ? `关键词“${searchValue.trim()}”` : null,
+    statusFilter !== '全部' ? `状态：${memberStatusLabels[statusFilter]}` : null,
+    currentPlanLabel ? `会籍：${currentPlanLabel}` : null,
+  ].filter(Boolean);
+
+  const membersCountText = `当前共 ${total} 位会员`;
+  const membersResultSummary = memberFilterLabels.length
+    ? `已按${memberFilterLabels.join('、')}筛选，当前匹配 ${total} 位会员。`
+    : `当前共 ${total} 位会员，可继续查看档案、编辑资料或导出当前结果。`;
 
   const openCreateModal = () => {
     setEditingMember(null);
@@ -408,59 +423,79 @@ export default function MembersPage() {
         ))}
       </div>
 
-      <div className={pageCls.toolbar}>
-        <div className={pageCls.toolbarLeft}>
-          <Input
-            className={pageCls.toolbarSearch}
-            size="large"
-            value={searchValue}
-            prefix={<SearchOutlined />}
-            placeholder="按会员姓名、手机号或邮箱搜索"
-            onChange={(event) => setSearchValue(event.target.value)}
-          />
-        </div>
-        <div className={pageCls.toolbarRight}>
-          <ActionButton icon={<FilterOutlined />} ghost onClick={openFilterModal}>筛选</ActionButton>
-          <ActionButton icon={<DownloadOutlined />} ghost onClick={handleExportMembers}>导出</ActionButton>
-        </div>
-      </div>
+      <SectionCard
+        title="会员列表"
+        subtitle="统一保留搜索、筛选、导出和详情入口，方便前台高频跟进。"
+      >
+        <div className={pageCls.sectionContentStack}>
+          <div className={pageCls.sectionSummaryRow}>
+            <div className={pageCls.sectionSummaryText}>{membersResultSummary}</div>
+            <span className={pageCls.sectionMetaPill}>{membersCountText}</span>
+          </div>
 
-      {members.length ? (
-        <>
-          <div className={`${widgetCls.recordList} ${pageCls.workSection}`}>
-            {members.map((member) => (
-              <MemberRecordCard
-                key={member.id}
-                id={member.id}
-                name={member.name}
-                phone={member.phone}
-                email={member.email || '-'}
-                planName={member.plan?.name || '-'}
-                joinedDateText={formatDate(member.joinedAt)}
-                remainingCreditsText={`剩余课时 ${member.remainingCredits} 节`}
-                memberCodeText={member.memberCode || 'MEMBER'}
-                statusLabel={memberStatusLabels[member.status]}
-                tone={getToneFromName(member.name)}
-                onEdit={() => openEditModal(member)}
-                onViewDetail={() => setDetailMember(member)}
+          <div className={pageCls.toolbar}>
+            <div className={pageCls.toolbarLeft}>
+              <Input
+                className={pageCls.toolbarSearch}
+                size="large"
+                value={searchValue}
+                prefix={<SearchOutlined />}
+                placeholder="按会员姓名、手机号或邮箱搜索"
+                onChange={(event) => setSearchValue(event.target.value)}
               />
-            ))}
+            </div>
+            <div className={pageCls.toolbarRight}>
+              <ActionButton icon={<FilterOutlined />} ghost onClick={openFilterModal}>筛选</ActionButton>
+              <ActionButton icon={<DownloadOutlined />} ghost onClick={handleExportMembers}>导出</ActionButton>
+            </div>
           </div>
-          <div className={pageCls.centerPagination}>
-            <Pagination
-              current={currentPage}
-              pageSize={pageSize}
-              total={total}
-              onChange={handlePageChange}
-              showSizeChanger={false}
-            />
-          </div>
-        </>
-      ) : (
-        <div className={`${pageCls.surface} ${widgetCls.detailCard} ${pageCls.surfaceTopSpace}`}>
-          <EmptyState title="暂无符合条件的会员" description="试试调整搜索词或清空筛选条件，也可以直接新增会员。" actionText="清空筛选" onAction={() => { setSearchValue(''); resetFilters(); }} />
+
+          {members.length ? (
+            <>
+              <div className={`${widgetCls.recordList} ${pageCls.sectionListStack}`}>
+                {members.map((member) => (
+                  <MemberRecordCard
+                    key={member.id}
+                    id={member.id}
+                    name={member.name}
+                    phone={member.phone}
+                    email={member.email || '-'}
+                    planName={member.plan?.name || '-'}
+                    joinedDateText={formatDate(member.joinedAt)}
+                    remainingCreditsText={`剩余课时 ${member.remainingCredits} 节`}
+                    memberCodeText={member.memberCode || 'MEMBER'}
+                    statusLabel={memberStatusLabels[member.status]}
+                    tone={getToneFromName(member.name)}
+                    onEdit={() => openEditModal(member)}
+                    onViewDetail={() => setDetailMember(member)}
+                  />
+                ))}
+              </div>
+              <div className={pageCls.sectionPagination}>
+                <Pagination
+                  current={currentPage}
+                  pageSize={pageSize}
+                  total={total}
+                  onChange={handlePageChange}
+                  showSizeChanger={false}
+                />
+              </div>
+            </>
+          ) : (
+            <div className={pageCls.sectionEmptyState}>
+              <EmptyState
+                title="暂无符合条件的会员"
+                description="试试调整搜索词或清空筛选条件，也可以直接新增会员。"
+                actionText="清空筛选"
+                onAction={() => {
+                  setSearchValue('');
+                  resetFilters();
+                }}
+              />
+            </div>
+          )}
         </div>
-      )}
+      </SectionCard>
 
       <Modal
         className={pageCls.crudModal}

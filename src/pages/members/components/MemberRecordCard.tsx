@@ -66,8 +66,8 @@ export default function MemberRecordCard({
 
       <div className={widgetCls.detailActionGroup}>
         <div className={pageCls.memberRemainingBadge}>{remainingCreditsText}</div>
+        <Button type="primary" size="large" className={pageCls.cardActionHalf} onClick={onViewDetail}>查看详情</Button>
         <Button size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={onEdit}>编辑</Button>
-        <Button size="large" className={pageCls.cardActionHalf} onClick={onViewDetail}>查看详情</Button>
       </div>
     </div>
   );
