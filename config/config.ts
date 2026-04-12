@@ -53,6 +53,7 @@ export default defineConfig({
     { path: '/bookings', component: '@/pages/bookings' },
     { path: '/coaches', component: '@/pages/coaches' },
     { path: '/finance', component: '@/pages/finance' },
+    { path: '/notifications', component: '@/pages/notifications' },
     { path: '/roles', component: '@/pages/roles' },
     { path: '/settings', component: '@/pages/settings' },
     { path: '*', component: '@/pages/not-found', layout: false }
