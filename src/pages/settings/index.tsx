@@ -19,6 +19,7 @@ import {
   type SettingsOverviewMetaItem,
   type SettingsOverviewMetric,
 } from './components';
+import styles from './index.module.css';
 
 interface StoreInfoValues {
   studioName: string;
@@ -234,9 +235,8 @@ export default function SettingsPage() {
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [disablePassword, setDisablePassword] = useState('');
   const [exportRange, setExportRange] = useState('近 30 天');
-  const [restoreSource, setRestoreSource] = useState('最近一次备份');
-  const [systemVersion, setSystemVersion] = useState('v2.6.1');
-  const [lastUpdated, setLastUpdated] = useState('2026-03-28');
+  const [systemVersion] = useState('v2.6.1');
+  const [lastUpdated] = useState('2026-03-28');
   const [systemStatus, setSystemStatus] = useState<'稳定' | '检查中'>('稳定');
   const [openSecurityDrawer, setOpenSecurityDrawer] = useState<SecurityDrawerKey>(null);
   const [openDataDrawer, setOpenDataDrawer] = useState<DataDrawerKey>(null);
@@ -641,7 +641,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className={`${pageCls.page} ${pageCls.workPage}`}>
+    <div className={`${pageCls.page} ${pageCls.workPage} ${styles.settingsPage}`}>
       <PageHeader title="系统设置" subtitle="配置门店信息、通知策略与系统安全选项。" />
 
       <SettingsOverviewCard
@@ -660,56 +660,81 @@ export default function SettingsPage() {
       />
 
       <SectionCard title="门店信息" subtitle={`基础信息与营业时间 · 最近保存 ${storeSavedAt}${storeChanged ? ' · 有未保存修改' : ''}`}>
-        <Form form={storeForm} className={pageCls.settingsForm} layout="vertical">
-          <Row gutter={18}>
-            <Col span={12}>
-              <Form.Item label="门店名称" name="studioName" rules={[{ required: true, message: '请输入门店名称' }]}>
-                <Input className={pageCls.settingsInput} size="large" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="联系电话" name="phone" rules={[{ required: true, message: '请输入联系电话' }]}>
-                <Input className={pageCls.settingsInput} size="large" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="邮箱地址" name="email" rules={[{ required: true, message: '请输入邮箱地址' }, { type: 'email', message: '请输入有效邮箱地址' }]}>
-                <Input className={pageCls.settingsInput} size="large" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="营业时间" name="hours" rules={[{ required: true, message: '请选择营业时间' }]}>
-                <TimePicker.RangePicker
-                  className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`}
-                  size="large"
-                  format="HH:mm"
-                  minuteStep={30}
-                  onChange={(value) => {
-                    if (value) {
-                      storeForm.setFieldsValue({ businessHours: dayjsToHoursString(value as [dayjs.Dayjs, dayjs.Dayjs]) });
-                    }
-                  }}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={24}>
-              <Form.Item label="省市区" name="area" rules={[{ required: true, message: '请选择省市区' }]}>
-                <Cascader
-                  className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`}
-                  size="large"
-                  options={provinceCityDistrictData}
-                  placeholder="请选择省市区"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={24}>
-              <Form.Item label="详细地址" name="address" rules={[{ required: true, message: '请输入详细地址' }]}>
-                <Input className={pageCls.settingsInput} size="large" placeholder="请输入街道、楼栋、门牌号等" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <ActionButton icon={<SaveOutlined />} onClick={handleSaveStoreInfo}>保存更改</ActionButton>
-        </Form>
+        <div className={styles.settingsSectionStack}>
+          <div className={styles.settingsSectionSummary}>
+            <div className={styles.settingsSectionSummaryText}>
+              统一维护门店基础档案、联系方式与营业时间，避免前台展示、通知模板和管理员配置出现信息不一致。
+            </div>
+            <span className={styles.settingsSectionPill}>{storeChanged ? '待保存修改' : '信息已同步'}</span>
+          </div>
+
+          <Form form={storeForm} className={pageCls.settingsForm} layout="vertical">
+            <div className={styles.settingsFormSectionGrid}>
+              <div className={styles.settingsFormSectionCard}>
+                <h3 className={styles.settingsFormSectionTitle}>基础档案</h3>
+                <p className={styles.settingsFormSectionHint}>用于展示门店名称、联系电话与对外联系邮箱。</p>
+                <Row gutter={18}>
+                  <Col span={24}>
+                    <Form.Item label="门店名称" name="studioName" rules={[{ required: true, message: '请输入门店名称' }]}>
+                      <Input className={pageCls.settingsInput} size="large" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={24}>
+                    <Form.Item label="联系电话" name="phone" rules={[{ required: true, message: '请输入联系电话' }]}>
+                      <Input className={pageCls.settingsInput} size="large" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={24}>
+                    <Form.Item label="邮箱地址" name="email" rules={[{ required: true, message: '请输入邮箱地址' }, { type: 'email', message: '请输入有效邮箱地址' }]}>
+                      <Input className={pageCls.settingsInput} size="large" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </div>
+
+              <div className={styles.settingsFormSectionCard}>
+                <h3 className={styles.settingsFormSectionTitle}>营业与地址</h3>
+                <p className={styles.settingsFormSectionHint}>用于门店营业时间展示和后台配置核对。</p>
+                <Row gutter={18}>
+                  <Col span={24}>
+                    <Form.Item label="营业时间" name="hours" rules={[{ required: true, message: '请选择营业时间' }]}>
+                      <TimePicker.RangePicker
+                        className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`}
+                        size="large"
+                        format="HH:mm"
+                        minuteStep={30}
+                        onChange={(value) => {
+                          if (value) {
+                            storeForm.setFieldsValue({ businessHours: dayjsToHoursString(value as [dayjs.Dayjs, dayjs.Dayjs]) });
+                          }
+                        }}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col span={24}>
+                    <Form.Item label="省市区" name="area" rules={[{ required: true, message: '请选择省市区' }]}>
+                      <Cascader
+                        className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`}
+                        size="large"
+                        options={provinceCityDistrictData}
+                        placeholder="请选择省市区"
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col span={24}>
+                    <Form.Item label="详细地址" name="address" rules={[{ required: true, message: '请输入详细地址' }]}>
+                      <Input className={pageCls.settingsInput} size="large" placeholder="请输入街道、楼栋、门牌号等" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </div>
+            </div>
+
+            <div className={styles.settingsPrimaryActionRow}>
+              <ActionButton icon={<SaveOutlined />} onClick={handleSaveStoreInfo}>保存更改</ActionButton>
+            </div>
+          </Form>
+        </div>
       </SectionCard>
 
       <div className={`${pageCls.equalCol} ${pageCls.equalColTopSpace}`}>
@@ -748,7 +773,7 @@ export default function SettingsPage() {
               <div className={widgetCls.smallText}>当前版本和更新状态</div>
             </div>
           </div>
-          <div className={widgetCls.recordList}>
+          <div className={styles.settingsUtilityGrid}>
             <div className={widgetCls.metricCard}>
               <div className={widgetCls.metricLabel}>系统版本</div>
               <div className={widgetCls.metricValue}>{systemVersion}</div>
