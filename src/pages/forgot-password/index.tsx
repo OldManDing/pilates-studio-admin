@@ -27,8 +27,7 @@ export default function ForgotPasswordPage() {
       <div className={cls.panel}>
         <div className={cls.brand}>普拉提工作室</div>
         <h1 className={cls.title}>找回登录密码</h1>
-        <p className={cls.subtitle}>输入邮箱或手机号后可提交找回申请。当前系统不会直接发送邮件或短信，请由门店管理员协助重置密码。</p>
-        <p className={cls.subtitle}>流程：提交申请 → 管理员核验身份 → 管理员在后台完成重置。</p>
+        <p className={cls.subtitle}>输入邮箱或手机号后提交找回申请，由管理员协助重置密码。</p>
 
         <Form<ForgotValues> className={cls.form} layout="vertical" onFinish={handleFinish} initialValues={{ account: 'admin@pilates.com' }}>
           <Form.Item label="账号" name="account" rules={[{ required: true, message: '请输入账号' }]}>

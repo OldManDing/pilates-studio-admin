@@ -101,7 +101,7 @@ export default function AnalyticsPage() {
   if (loading) {
     return (
       <div className={`${pageCls.page} ${styles.analyticsPage}`}>
-        <PageHeader title="数据分析" subtitle="深度洞察业务数据和运营指标。" />
+        <PageHeader title="数据分析" />
         <div className={`${pageCls.centeredState} ${pageCls.centeredStateShort}`}><Spin size="large" /></div>
       </div>
     );
@@ -110,7 +110,7 @@ export default function AnalyticsPage() {
   return (
     <div className={`${pageCls.page} ${styles.analyticsPage}`}>
       {contextHolder}
-      <PageHeader title="数据分析" subtitle="深度洞察业务数据和运营指标。" />
+      <PageHeader title="数据分析" />
 
       <div className={pageCls.heroGrid}>
         {analyticsStats.map((item) => (
@@ -118,7 +118,7 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
-      <SectionCard title="分析总览" subtitle="统一说明当前分析口径，帮助团队理解图表数据来源。">
+      <SectionCard title="分析总览">
         <div className={styles.analyticsSummaryCard}>
           <div className={styles.analyticsSummaryRow}>
             <div className={styles.analyticsSummaryText}>{analyticsScopeText}</div>
@@ -129,13 +129,13 @@ export default function AnalyticsPage() {
               <div className={styles.analyticsProgressLabel}>目标达成</div>
               <div className={styles.analyticsProgressValue}>{stats.goalAchievement}</div>
               <Progress percent={Number.parseFloat(stats.goalAchievement) || 0} showInfo={false} strokeColor="linear-gradient(90deg, var(--mint) 0%, var(--control-primary-end) 100%)" />
-              <div className={styles.analyticsProgressHint}>当前以营收目标完成率为核心指标，反映经营计划推进情况。</div>
+              <div className={styles.analyticsProgressHint}>营收目标完成率。</div>
             </div>
             <div className={styles.analyticsProgressItem}>
               <div className={styles.analyticsProgressLabel}>会员留存</div>
               <div className={styles.analyticsProgressValue}>{stats.retentionRate}</div>
               <Progress percent={Number.parseFloat(stats.retentionRate) || 0} showInfo={false} strokeColor="linear-gradient(90deg, var(--violet) 0%, color-mix(in srgb, var(--violet) 62%, var(--mint)) 100%)" />
-              <div className={styles.analyticsProgressHint}>与预约热度、活跃会员趋势结合阅读，更容易判断经营质量。</div>
+              <div className={styles.analyticsProgressHint}>会员留存概览。</div>
             </div>
           </div>
         </div>

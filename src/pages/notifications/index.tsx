@@ -468,7 +468,6 @@ export default function NotificationsPage() {
 
       <PageHeader
         title="通知管理"
-        subtitle="查看通知记录、筛选状态与渠道，并支持最小化手动发送。"
         extra={<ActionButton icon={<PlusOutlined />} onClick={openComposerModal}>新建通知</ActionButton>}
       />
 
@@ -480,7 +479,6 @@ export default function NotificationsPage() {
 
       <SectionCard
         title="通知列表"
-        subtitle="统一保留状态、渠道筛选与已读动作，方便管理员连续处理通知记录。"
       >
         <div className={pageCls.sectionContentStack}>
           <div className={pageCls.sectionSummaryRow}>
@@ -596,7 +594,7 @@ export default function NotificationsPage() {
             <div className={pageCls.sectionEmptyState}>
               <EmptyState
                 title="暂无通知记录"
-                description="当前筛选条件下还没有通知，可以先新建一条手动发送通知。"
+                description="当前筛选条件下暂无通知。"
                 actionText="新建通知"
                 onAction={openComposerModal}
               />
@@ -640,7 +638,7 @@ export default function NotificationsPage() {
             rules={[{ required: true, message: '请选择接收对象' }]}
             extra={currentRecipientLoading
               ? `正在加载${recipientTypeLabelMap[recipientType]}列表...`
-              : '仅会向当前选择的单个接收对象发送通知，提交时会保证只带一个目标 ID。'}
+              : '仅向当前选择对象发送。'}
           >
             <Select
               allowClear
@@ -673,7 +671,7 @@ export default function NotificationsPage() {
           </Form.Item>
 
           <Form.Item name="type" label="通知类型" rules={[{ required: true, message: '请输入通知类型' }]}> 
-            <Input className={pageCls.settingsInput} placeholder="例如：BOOKING_REMINDER" />
+            <Input className={pageCls.settingsInput} placeholder="请输入通知类型" />
           </Form.Item>
 
           <Form.Item name="title" label="通知标题" rules={[{ required: true, message: '请输入通知标题' }]}> 

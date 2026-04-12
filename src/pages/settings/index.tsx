@@ -632,7 +632,7 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className={`${pageCls.page} ${pageCls.workPage}`}>
-        <PageHeader title="系统设置" subtitle="配置门店信息、通知策略与系统安全选项。" />
+        <PageHeader title="系统设置" />
         <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
           <Spin size="large" />
         </div>
@@ -642,7 +642,7 @@ export default function SettingsPage() {
 
   return (
     <div className={`${pageCls.page} ${pageCls.workPage} ${styles.settingsPage}`}>
-      <PageHeader title="系统设置" subtitle="配置门店信息、通知策略与系统安全选项。" />
+      <PageHeader title="系统设置" />
 
       <SettingsOverviewCard
         eyebrow={SETTINGS_OVERVIEW_EYEBROW}
@@ -663,7 +663,7 @@ export default function SettingsPage() {
         <div className={styles.settingsSectionStack}>
           <div className={styles.settingsSectionSummary}>
             <div className={styles.settingsSectionSummaryText}>
-              统一维护门店基础档案、联系方式与营业时间，避免前台展示、通知模板和管理员配置出现信息不一致。
+              维护门店基础档案、联系方式与营业时间。
             </div>
             <span className={styles.settingsSectionPill}>{storeChanged ? '待保存修改' : '信息已同步'}</span>
           </div>
@@ -672,7 +672,7 @@ export default function SettingsPage() {
             <div className={styles.settingsFormSectionGrid}>
               <div className={styles.settingsFormSectionCard}>
                 <h3 className={styles.settingsFormSectionTitle}>基础档案</h3>
-                <p className={styles.settingsFormSectionHint}>用于展示门店名称、联系电话与对外联系邮箱。</p>
+                <p className={styles.settingsFormSectionHint}>门店基础档案。</p>
                 <Row gutter={18}>
                   <Col span={24}>
                     <Form.Item label="门店名称" name="studioName" rules={[{ required: true, message: '请输入门店名称' }]}>
@@ -694,7 +694,7 @@ export default function SettingsPage() {
 
               <div className={styles.settingsFormSectionCard}>
                 <h3 className={styles.settingsFormSectionTitle}>营业与地址</h3>
-                <p className={styles.settingsFormSectionHint}>用于门店营业时间展示和后台配置核对。</p>
+                <p className={styles.settingsFormSectionHint}>营业时间与地址。</p>
                 <Row gutter={18}>
                   <Col span={24}>
                     <Form.Item label="营业时间" name="hours" rules={[{ required: true, message: '请选择营业时间' }]}>
@@ -742,7 +742,7 @@ export default function SettingsPage() {
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>通知设置</h3>
-              <div className={widgetCls.smallText}>通知策略归档于系统设置内，可在此快速调整开关，并进入通知管理查看记录或手动发送。</div>
+              <div className={widgetCls.smallText}>查看通知开关与入口。</div>
             </div>
           </div>
           <div className={pageCls.settingsSectionList}>

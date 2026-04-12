@@ -422,7 +422,6 @@ export default function FinancePage() {
         {contextHolder}
         <PageHeader
           title="财务报表"
-          subtitle="查看营收、支出与门店财务分析。"
           extra={<ActionButton icon={<DownloadOutlined />} onClick={handleExportReport}>导出报表</ActionButton>}
         />
         <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
@@ -437,7 +436,6 @@ export default function FinancePage() {
       {contextHolder}
       <PageHeader
         title="财务报表"
-        subtitle="聚焦最近交易、营收趋势与构成，便于门店做日常财务核对与导出。"
         extra={<ActionButton icon={<DownloadOutlined />} onClick={handleExportReport}>导出报表</ActionButton>}
       />
 
@@ -466,7 +464,7 @@ export default function FinancePage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className={widgetCls.smallText}>成本、利润与利润率指标将在真实支出数据接入后再补充到财务工作台。</div>
+          <div className={widgetCls.smallText}>成本相关指标后续补充。</div>
         </SectionCard>
 
         <SectionCard title="营收构成" subtitle="按会员类型分类">
@@ -507,7 +505,6 @@ export default function FinancePage() {
 
       <SectionCard
         title="最近交易"
-        subtitle="统一保留搜索、筛选、导出与详情查看，便于财务核对与日常跟进。"
         extra={<Button type="text" className={pageCls.textAction} onClick={handleViewAll}>{viewAllLabel}</Button>}
       >
         <div className={pageCls.sectionContentStack}>
@@ -581,7 +578,7 @@ export default function FinancePage() {
             <div className={pageCls.sectionEmptyState}>
               <EmptyState
                 title="暂无符合条件的交易记录"
-                description="试试调整搜索词，或清空筛选后重新查看全部交易。"
+                description="调整搜索词或筛选条件后再试。"
                 actionText="重置筛选"
                 onAction={resetFilters}
               />

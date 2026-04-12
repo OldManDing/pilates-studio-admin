@@ -6,7 +6,6 @@ import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import StatCard from '@/components/StatCard';
 import pageCls from '@/styles/page.module.css';
-import widgetCls from '@/styles/widgets.module.css';
 import { bookingsApi, type Booking } from '@/services/bookings';
 import { coursesApi, type Course } from '@/services/courses';
 import { coachesApi, type Coach } from '@/services/coaches';
@@ -543,18 +542,17 @@ export default function DashboardPage() {
       <PageHeader
         title="仪表盘"
         subtitle={partialFailures.length
-          ? `当前部分模块暂不可用（${partialFailures.join('、')}），首页仅展示已校验的真实数据。`
-          : '先处理今日执行与异常，再跟进后续排程和经营概览。'}
+          ? `部分模块暂不可用：${partialFailures.join('、')}`
+          : '先处理今日执行与异常。'}
       />
 
       {partialFailures.length ? (
         <SectionCard
           title="部分数据加载失败"
-          subtitle={`当前未成功加载：${partialFailures.join('、')}。其余模块数据已正常展示。`}
+          subtitle={`未成功加载：${partialFailures.join('、')}`}
         >
           <div className={styles.partialFailureWrap}>
-            <span className={styles.partialFailurePill}>已降级展示</span>
-            <span className={widgetCls.smallText}>建议稍后刷新，首页其余模块仍可继续使用。</span>
+            <span className={styles.partialFailurePill}>稍后刷新</span>
           </div>
         </SectionCard>
       ) : null}
@@ -576,21 +574,18 @@ export default function DashboardPage() {
             </Button>
           </div>
 
-          <div className={styles.taskNorthStar}>先清待确认，再控异常，最后看经营。</div>
-
           <div
             className={`${styles.anomalyPriorityBlock} ${metricAvailability.bookings && unresolvedAnomalyCount > 0 ? styles.anomalyPriorityBlockCritical : ''}`}
           >
             <div className={styles.anomalyPriorityHead}>
               <div>
-                <div className={styles.anomalyPriorityEyebrow}>Anomaly Priority</div>
                 <div className={styles.anomalyPriorityTitle}>异常优先处理</div>
               </div>
               <span className={styles.anomalyPrioritySummary}>
                 {metricAvailability.bookings
                   ? unresolvedAnomalyCount > 0
-                    ? `当前异常 ${unresolvedAnomalyCount} 单，先处理回访与补位`
-                    : '当前无异常，继续消化待确认队列'
+                    ? `异常 ${unresolvedAnomalyCount} 单`
+                    : '当前无异常'
                   : '预约数据暂不可用'}
               </span>
             </div>
@@ -628,12 +623,10 @@ export default function DashboardPage() {
             <TodayCoursePanel
               items={todayCourses}
               anomalyCount={metricAvailability.bookings ? noShowBookingCount + cancelledBookingCount : 0}
-              onViewAll={() => go('/bookings')}
               onViewDetail={() => go('/bookings')}
             />
             <UpcomingBookingsPanel
               items={upcomingBookings}
-              onViewAll={() => go('/bookings')}
               onViewDetail={() => go('/bookings')}
             />
           </div>

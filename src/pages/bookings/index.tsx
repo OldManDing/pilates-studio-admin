@@ -403,7 +403,6 @@ export default function BookingsPage() {
         {contextHolder}
         <PageHeader
           title="预约管理"
-          subtitle="管理所有课程预约和签到记录。"
           extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增预约</ActionButton>}
         />
         <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
@@ -418,14 +417,13 @@ export default function BookingsPage() {
       {contextHolder}
       <PageHeader
         title="预约管理"
-        subtitle="管理所有课程预约和签到记录。"
         extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增预约</ActionButton>}
       />
 
       <BookingHeroStats items={bookingStats} />
 
       <BookingPeriodSelector
-        eyebrow="BOOKING SELECTOR"
+        eyebrow="预约"
         title="预约日程"
         subtitle={bookingSelectorSubtitle}
         resultCountText={bookingCountText}
@@ -439,7 +437,6 @@ export default function BookingsPage() {
 
       <SectionCard
         title="预约列表"
-        subtitle="统一保留状态推进、详情查看与日期筛选结果，便于日常排课处理。"
       >
         <div className={pageCls.sectionContentStack}>
           <div className={pageCls.sectionSummaryRow}>
@@ -483,7 +480,7 @@ export default function BookingsPage() {
             <div className={pageCls.sectionEmptyState}>
               <EmptyState
                 title="当前筛选下暂无预约"
-                description="你可以重置筛选条件，或直接创建一条新的预约记录。"
+                description="调整筛选条件后再试。"
                 actionText="重置筛选"
                 onAction={() => {
                   setSearchValue('');

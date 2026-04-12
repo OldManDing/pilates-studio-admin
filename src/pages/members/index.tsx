@@ -398,7 +398,6 @@ export default function MembersPage() {
         {contextHolder}
         <PageHeader
           title="会员管理"
-          subtitle="管理所有会员信息和会籍状态。"
           extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增会员</ActionButton>}
         />
         <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
@@ -413,7 +412,6 @@ export default function MembersPage() {
       {contextHolder}
       <PageHeader
         title="会员管理"
-        subtitle="管理所有会员信息和会籍状态。"
         extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增会员</ActionButton>}
       />
 
@@ -425,7 +423,6 @@ export default function MembersPage() {
 
       <SectionCard
         title="会员列表"
-        subtitle="统一保留搜索、筛选、导出和详情入口，方便前台高频跟进。"
       >
         <div className={pageCls.sectionContentStack}>
           <div className={pageCls.sectionSummaryRow}>
@@ -485,7 +482,7 @@ export default function MembersPage() {
             <div className={pageCls.sectionEmptyState}>
               <EmptyState
                 title="暂无符合条件的会员"
-                description="试试调整搜索词或清空筛选条件，也可以直接新增会员。"
+                description="调整搜索词或筛选条件后再试。"
                 actionText="清空筛选"
                 onAction={() => {
                   setSearchValue('');
@@ -512,17 +509,17 @@ export default function MembersPage() {
           <Row gutter={18}>
             <Col xs={24} md={12}>
               <Form.Item name="name" label="会员姓名" rules={[{ required: true, message: '请输入会员姓名' }]}>
-                <Input className={pageCls.settingsInput} placeholder="例如：林若溪" />
+                <Input className={pageCls.settingsInput} placeholder="请输入会员姓名" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="phone" label="手机号" rules={[{ required: true, message: '请输入手机号' }]}>
-                <Input className={pageCls.settingsInput} placeholder="例如：138****5612" />
+                <Input className={pageCls.settingsInput} placeholder="请输入手机号" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="email" label="邮箱" rules={[{ type: 'email', message: '请输入有效邮箱地址' }]}>
-                <Input className={pageCls.settingsInput} placeholder="例如：member@demo.com" />
+                <Input className={pageCls.settingsInput} placeholder="请输入邮箱" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>

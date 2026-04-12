@@ -302,7 +302,6 @@ export default function CoachesPage() {
         {contextHolder}
         <PageHeader
           title="教练管理"
-          subtitle="管理教练信息、排班和绩效。"
           extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增教练</ActionButton>}
         />
         <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
@@ -317,7 +316,6 @@ export default function CoachesPage() {
       {contextHolder}
       <PageHeader
         title="教练管理"
-        subtitle="管理教练信息、排班和绩效。"
         extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增教练</ActionButton>}
       />
 
@@ -329,7 +327,6 @@ export default function CoachesPage() {
 
       <SectionCard
         title="教练列表"
-        subtitle="统一保留搜索、筛选与详情入口，便于排班协同与资料维护。"
       >
         <div className={pageCls.sectionContentStack}>
           <div className={pageCls.sectionSummaryRow}>
@@ -387,7 +384,7 @@ export default function CoachesPage() {
             <div className={pageCls.sectionEmptyState}>
               <EmptyState
                 title="暂无符合条件的教练"
-                description="可以调整搜索词，或清空筛选后继续查看全部教练。"
+                description="调整搜索词或筛选条件后再试。"
                 actionText="重置筛选"
                 onAction={() => {
                   setSearchValue('');
@@ -456,22 +453,22 @@ export default function CoachesPage() {
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="experience" label="经验信息">
-                <Input className={pageCls.settingsInput} placeholder="例如：5 年经验" />
+                <Input className={pageCls.settingsInput} placeholder="请输入经验信息" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="bio" label="个人简介">
-                <Input className={pageCls.settingsInput} placeholder="简短的个人介绍" />
+                <Input className={pageCls.settingsInput} placeholder="请输入个人简介" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="specialtiesText" label="专长领域">
-                <TextArea className={pageCls.settingsInput} rows={4} placeholder="每行一个专长领域，例如：Reformer&#10;Mat&#10;Prenatal" />
+                <TextArea className={pageCls.settingsInput} rows={4} placeholder="每行一个专长领域" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="certificatesText" label="资质认证">
-                <TextArea className={pageCls.settingsInput} rows={4} placeholder="每行一个资质认证，例如：BASI Pilates&#10;PMA 认证" />
+                <TextArea className={pageCls.settingsInput} rows={4} placeholder="每行一个资质认证" />
               </Form.Item>
             </Col>
           </Row>
@@ -509,7 +506,7 @@ export default function CoachesPage() {
 
             <CoachProfileStats items={detailCoachStatItems} />
 
-            <SectionCard title="教练档案" subtitle="保留管理员日常查看与编辑所需的基础字段，便于核对档案状态。">
+            <SectionCard title="教练档案">
               <Descriptions column={1} size="small" bordered>
                 <Descriptions.Item label="教练编号">{detailCoach.coachCode || '-'}</Descriptions.Item>
                 <Descriptions.Item label="教练姓名">{detailCoach.name}</Descriptions.Item>

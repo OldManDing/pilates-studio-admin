@@ -133,22 +133,22 @@ export default function CoursesPage() {
   const courseStats = useMemo(() => [
     { title: '课程总数', value: String(stats.totalCourses), hint: '覆盖常规课程', tone: 'mint' as const, icon: 'calendar' as const },
     { title: '本周课程', value: String(stats.weeklySessions), hint: '已排期课时', tone: 'violet' as const, icon: 'app' as const },
-    { title: '平均上座率', value: stats.avgOccupancy, hint: '↑ 5.3% vs 上周', tone: 'orange' as const, icon: 'percent' as const },
+    { title: '平均上座率', value: stats.avgOccupancy, hint: '当前排班摘要', tone: 'orange' as const, icon: 'percent' as const },
     { title: '最受欢迎', value: stats.popularCourse, hint: '满座率最高', tone: 'pink' as const, icon: 'star' as const },
   ], [stats]);
 
   const courseBrowseSubtitle =
     searchValue.trim().length > 0 || typeFilter !== '全部' || levelFilter !== '全部'
-      ? '已根据关键词、课程类型与难度缩小范围，保留全部课程维护与详情操作。'
-      : '按课程名称、课程类型与难度快速浏览课程，保持后台配置与查看路径清晰统一。';
+      ? '已按条件筛选。'
+      : '按课程名称、类型与难度查看。';
 
   const courseCardItems: CourseListCardProps[] = courseList.map((course) => ({
     id: course.id,
     codeText: course.courseCode || 'COURSE',
     name: course.name,
     summaryText: course.isActive
-      ? '当前课程可继续用于排期与课程维护。'
-      : '当前课程已停用，仍保留基础档案与历史排期。',
+      ? '当前可继续排期。'
+      : '当前已停用。',
     typeLabel: course.type,
     levelLabel: course.level,
     statusLabel: course.isActive ? '正常开课' : '已停用',
@@ -292,7 +292,6 @@ export default function CoursesPage() {
         {contextHolder}
         <PageHeader
           title="课程管理"
-          subtitle="管理所有课程设置和排期。"
           extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增课程</ActionButton>}
         />
         <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
@@ -307,7 +306,6 @@ export default function CoursesPage() {
       {contextHolder}
       <PageHeader
         title="课程管理"
-        subtitle="管理所有课程设置和排期。"
         extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增课程</ActionButton>}
       />
 
