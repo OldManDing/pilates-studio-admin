@@ -2,12 +2,10 @@ import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, SaveOutlined }
 import {
   App,
   Col,
-  Descriptions,
   Drawer,
   Form,
   Input,
   Modal,
-  Popconfirm,
   Row,
   Select,
   Spin,
@@ -22,6 +20,7 @@ import StatusTag from '@/components/StatusTag';
 import { rolesApi, type Permission, type Role } from '@/services/roles';
 import { CRUD_MODAL_WIDTH, NARROW_DETAIL_DRAWER_WIDTH, ROLE_PERMISSION_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
+import widgetCls from '@/styles/widgets.module.css';
 import { getErrorMessage } from '@/utils/errors';
 import roleCss from './index.module.css';
 
@@ -102,7 +101,7 @@ const actionLabelMap: Record<string, string> = {
 
 export default function RolesPage() {
   const [form] = Form.useForm<RoleFormValues>();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -206,6 +205,28 @@ export default function RolesPage() {
     }
   };
 
+  const handleDeleteRole = (role: Role) => {
+    modal.confirm({
+      title: '删除角色',
+      content: '删除后该角色将无法恢复，且不会删除保留角色或已分配角色。',
+      okText: '确认删除',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await rolesApi.remove(role.id);
+          message.success('角色已删除');
+          if (detailRole?.id === role.id) {
+            setDetailRole(null);
+          }
+          await fetchData();
+        } catch (err) {
+          message.error(getErrorMessage(err, '删除角色失败'));
+        }
+      },
+    });
+  };
+
   return (
     <div className={`${pageCls.page} ${pageCls.workPage}`}>
       <PageHeader
@@ -271,33 +292,15 @@ export default function RolesPage() {
                     >
                       编辑权限
                     </ActionButton>
-                    <Popconfirm
-                      title="删除角色"
-                      description="删除后该角色将无法恢复，且不会删除保留角色或已分配角色。"
-                      okText="确认删除"
-                      cancelText="取消"
-                      onConfirm={async () => {
-                        try {
-                          await rolesApi.remove(item.id);
-                          message.success('角色已删除');
-                          if (detailRole?.id === item.id) {
-                            setDetailRole(null);
-                          }
-                          await fetchData();
-                        } catch (err) {
-                          message.error(getErrorMessage(err, '删除角色失败'));
-                        }
-                      }}
+                    <ActionButton
+                      size="large"
+                      ghost
+                      className={roleCss.roleActionButton}
+                      icon={<DeleteOutlined />}
+                      onClick={() => handleDeleteRole(item)}
                     >
-                      <ActionButton
-                        size="large"
-                        ghost
-                        className={roleCss.roleActionButton}
-                        icon={<DeleteOutlined />}
-                      >
-                        删除角色
-                      </ActionButton>
-                    </Popconfirm>
+                      删除角色
+                    </ActionButton>
                   </div>
                 </div>
               );
@@ -390,13 +393,69 @@ export default function RolesPage() {
         onClose={() => setDetailRole(null)}
       >
         {detailRole ? (
-          <Descriptions column={1} size="small" bordered>
-            <Descriptions.Item label="角色类型">{roleCodeLabel[detailRole.code as RoleCode] || detailRole.code}</Descriptions.Item>
-            <Descriptions.Item label="角色名称">{detailRole.name}</Descriptions.Item>
-            <Descriptions.Item label="角色说明">{detailRole.description || '-'}</Descriptions.Item>
-            <Descriptions.Item label="管理员人数">{detailRole._count?.admins || 0} 人</Descriptions.Item>
-            <Descriptions.Item label="权限数量">{detailRole.permissions.length} 项</Descriptions.Item>
-          </Descriptions>
+          <div className={pageCls.detailContentStack}>
+            <div className={widgetCls.detailOverviewPanel}>
+              <div className={widgetCls.detailOverviewSummary}>
+                <div className={widgetCls.detailInsightLabel}>角色摘要</div>
+                <div className={widgetCls.detailOverviewLead}>{detailRole.name}</div>
+                <div className={widgetCls.detailOverviewText}>{detailRole.description || '暂无角色说明，可在角色设置中补充职责范围。'}</div>
+              </div>
+              <div className={widgetCls.detailOverviewStatGrid}>
+                <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatMint}`}>
+                  <div className={widgetCls.detailInsightLabel}>角色类型</div>
+                  <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>
+                    {roleCodeLabel[detailRole.code as RoleCode] || detailRole.code}
+                  </div>
+                </div>
+                <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatViolet}`}>
+                  <div className={widgetCls.detailInsightLabel}>管理员人数</div>
+                  <div className={widgetCls.detailOverviewStatValue}>{detailRole._count?.admins || 0} 人</div>
+                </div>
+                <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatOrange}`}>
+                  <div className={widgetCls.detailInsightLabel}>权限数量</div>
+                  <div className={widgetCls.detailOverviewStatValue}>{detailRole.permissions.length} 项</div>
+                </div>
+              </div>
+            </div>
+
+            <SectionCard title="角色信息" subtitle="仅保留角色识别与职责说明，避免与上方摘要重复。">
+              <div className={widgetCls.metricGrid}>
+                <div className={widgetCls.metricCard}>
+                  <div className={widgetCls.metricLabel}>角色类型</div>
+                  <div className={widgetCls.metricValue}>{roleCodeLabel[detailRole.code as RoleCode] || detailRole.code}</div>
+                </div>
+                <div className={widgetCls.metricCard}>
+                  <div className={widgetCls.metricLabel}>角色名称</div>
+                  <div className={widgetCls.metricValue}>{detailRole.name}</div>
+                </div>
+                <div className={widgetCls.metricCard}>
+                  <div className={widgetCls.metricLabel}>职责说明</div>
+                  <div className={widgetCls.metricValue}>{detailRole.description || '暂无角色说明'}</div>
+                </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard title="权限摘要" subtitle="展示当前角色已关联的权限项，便于快速核对覆盖范围。">
+              {detailRole.permissions.length ? (
+                <div className={pageCls.rolePermissionList}>
+                  {detailRole.permissions.map(({ permission }) => {
+                    const actionLabel = actionLabelMap[permission.action] || permission.action;
+                    const moduleLabel = moduleNameMap[permission.module] || permission.module;
+                    return (
+                      <div key={permission.id} className={pageCls.rolePermissionItem}>
+                        <div className={pageCls.rolePermissionText}>
+                          <div className={pageCls.rolePermissionCode}>{actionLabel} {moduleLabel}</div>
+                          <div className={pageCls.rolePermissionDesc}>{permission.description || '暂无描述'}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <EmptyState title="暂无权限项" description="该角色尚未分配权限，可在“编辑权限”中补充。" />
+              )}
+            </SectionCard>
+          </div>
         ) : null}
       </Drawer>
     </div>
