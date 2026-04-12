@@ -5,6 +5,20 @@ import CoachesPage from '@/pages/coaches';
 
 vi.mock('@/services/coaches', () => ({
   coachesApi: {
+    getPaged: vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: 'coach-1',
+          coachCode: 'C000001',
+          name: '李静',
+          phone: '13800000000',
+          status: 'ACTIVE',
+          specialties: [{ value: 'Reformer' }],
+          certificates: [],
+        },
+      ],
+      meta: { page: 1, total: 1 },
+    }),
     getAll: vi.fn().mockResolvedValue([
       {
         id: 'coach-1',

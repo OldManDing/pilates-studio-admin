@@ -19,7 +19,7 @@ import {
   Spin,
   message,
 } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
 import PageHeader from '@/components/PageHeader';
@@ -72,12 +72,6 @@ const emptyRecipientLoadingState: Record<RecipientType, boolean> = {
   miniUser: false,
   admin: false,
 };
-const emptyRecipientLoadedState: Record<RecipientType, boolean> = {
-  member: false,
-  miniUser: false,
-  admin: false,
-};
-
 const statusLabelMap: Record<NotificationStatus, string> = {
   PENDING: '待发送',
   SENT: '已发送',
@@ -245,7 +239,7 @@ export default function NotificationsPage() {
   const [recipientOptionsLoading, setRecipientOptionsLoading] = useState<Record<RecipientType, boolean>>(emptyRecipientLoadingState);
   const recipientType = Form.useWatch('recipientType', composerForm) || 'member';
 
-  const loadNotifications = async (page = currentPage) => {
+  const loadNotifications = useCallback(async (page = currentPage) => {
     try {
       setLoading(true);
       const response = await notificationsApi.getAll({
@@ -263,13 +257,13 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [channelFilter, currentPage, messageApi, statusFilter]);
 
   useEffect(() => {
     void loadNotifications(currentPage);
-  }, [currentPage, statusFilter, channelFilter]);
+  }, [currentPage, loadNotifications]);
 
-  const loadRecipientOptions = async (type: RecipientType, search?: string) => {
+  const loadRecipientOptions = useCallback(async (type: RecipientType, search?: string) => {
     try {
       setRecipientOptionsLoading((current) => ({
         ...current,
@@ -303,7 +297,7 @@ export default function NotificationsPage() {
         [type]: false,
       }));
     }
-  };
+  }, [messageApi]);
 
   useEffect(() => {
     if (!composerOpen) {
@@ -311,7 +305,7 @@ export default function NotificationsPage() {
     }
 
     void loadRecipientOptions(recipientType);
-  }, [composerOpen, recipientType]);
+  }, [composerOpen, loadRecipientOptions, recipientType]);
 
   const summaryStats = useMemo(
     () => [
@@ -346,6 +340,16 @@ export default function NotificationsPage() {
     ],
     [notifications, total],
   );
+
+  const notificationFilterLabels = [
+    statusFilter !== 'ALL' ? `状态：${statusLabelMap[statusFilter]}` : null,
+    channelFilter !== 'ALL' ? `渠道：${channelLabelMap[channelFilter]}` : null,
+  ].filter(Boolean);
+
+  const notificationCountText = `当前共 ${total} 条通知`;
+  const notificationResultSummary = notificationFilterLabels.length
+    ? `已按${notificationFilterLabels.join('、')}筛选，当前匹配 ${total} 条通知。`
+    : `当前共 ${total} 条通知，支持查看详情、筛选渠道并快速标记已读。`;
 
   const openComposerModal = () => {
     composerForm.setFieldsValue({
@@ -466,120 +470,131 @@ export default function NotificationsPage() {
         ))}
       </div>
 
-      <div className={pageCls.toolbar}>
-        <div className={pageCls.toolbarLeft}>
-          <Select
-            value={statusFilter}
-            className={pageCls.settingsInput}
-            style={{ width: 180 }}
-            options={[
-              { label: '全部状态', value: 'ALL' },
-              { label: statusLabelMap.PENDING, value: 'PENDING' },
-              { label: statusLabelMap.SENT, value: 'SENT' },
-              { label: statusLabelMap.READ, value: 'READ' },
-              { label: statusLabelMap.FAILED, value: 'FAILED' },
-            ]}
-            onChange={(value: FilterStatus) => {
-              setCurrentPage(1);
-              setStatusFilter(value);
-            }}
-          />
-          <Select
-            value={channelFilter}
-            className={pageCls.settingsInput}
-            style={{ width: 180 }}
-            options={[
-              { label: '全部渠道', value: 'ALL' },
-              { label: channelLabelMap.INTERNAL, value: 'INTERNAL' },
-              { label: channelLabelMap.MINI_PROGRAM, value: 'MINI_PROGRAM' },
-              { label: channelLabelMap.EMAIL, value: 'EMAIL' },
-              { label: channelLabelMap.SMS, value: 'SMS' },
-            ]}
-            onChange={(value: FilterChannel) => {
-              setCurrentPage(1);
-              setChannelFilter(value);
-            }}
-          />
-        </div>
-        <div className={pageCls.toolbarRight}>
-          <div className={styles.summaryHint}>按状态与渠道筛选通知记录，列表支持分页与详情查看。</div>
-        </div>
-      </div>
-
       <SectionCard
         title="通知列表"
-        subtitle={`当前共 ${total} 条通知记录，支持查看详情与标记已读。`}
+        subtitle="统一保留状态、渠道筛选与已读动作，方便管理员连续处理通知记录。"
       >
-        {notifications.length ? (
-          <div className={`${widgetCls.recordList} ${pageCls.workSection}`}>
-            {notifications.map((notification) => {
-              const recipient = getRecipientSummary(notification);
+        <div className={pageCls.sectionContentStack}>
+          <div className={pageCls.sectionSummaryRow}>
+            <div className={pageCls.sectionSummaryText}>{notificationResultSummary}</div>
+            <span className={pageCls.sectionMetaPill}>{notificationCountText}</span>
+          </div>
 
-              return (
-                <div key={notification.id} className={styles.notificationCard}>
-                  <div className={styles.notificationMain}>
-                    <div className={styles.notificationHeader}>
-                      <div className={styles.notificationTitleWrap}>
-                        <span className={styles.typePill}>{notification.type}</span>
-                        <h3 className={styles.notificationTitle}>{notification.title}</h3>
-                      </div>
-                      <StatusTag status={statusLabelMap[notification.status]} />
-                    </div>
-
-                    <div className={styles.notificationMetaRow}>
-                      <span className={styles.channelPill}>{channelLabelMap[notification.channel]}</span>
-                      <span className={styles.recipientPill}>{recipient.typeLabel} · {recipient.label}</span>
-                      <span className={styles.timestampPill}>创建于 {formatDateTime(notification.createdAt)}</span>
-                    </div>
-
-                    <div className={styles.notificationPreview}>{notification.content}</div>
-                  </div>
-
-                  <div className={styles.notificationAside}>
-                    <Descriptions column={1} size="small">
-                      <Descriptions.Item label="接收对象">{recipient.meta}</Descriptions.Item>
-                      <Descriptions.Item label="已发送">{formatDateTime(notification.sentAt)}</Descriptions.Item>
-                      <Descriptions.Item label="已读时间">{formatDateTime(notification.readAt)}</Descriptions.Item>
-                    </Descriptions>
-
-                    <div className={styles.notificationActions}>
-                      <Button icon={<EyeOutlined />} onClick={() => openDetailDrawer(notification)}>
-                        查看详情
-                      </Button>
-                      <Button
-                        type="primary"
-                        icon={<CheckCircleOutlined />}
-                        disabled={notification.status === 'READ'}
-                        onClick={() => handleMarkAsRead(notification)}
-                      >
-                        标记已读
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            <div className={styles.paginationWrap}>
-              <Pagination
-                current={currentPage}
-                pageSize={PAGE_SIZE}
-                total={total}
-                onChange={setCurrentPage}
-                showSizeChanger={false}
+          <div className={pageCls.toolbar}>
+            <div className={pageCls.toolbarLeft}>
+              <Select
+                value={statusFilter}
+                className={`${pageCls.settingsInput} ${pageCls.toolbarSelect} ${pageCls.toolbarSelectWide}`}
+                options={[
+                  { label: '全部状态', value: 'ALL' },
+                  { label: statusLabelMap.PENDING, value: 'PENDING' },
+                  { label: statusLabelMap.SENT, value: 'SENT' },
+                  { label: statusLabelMap.READ, value: 'READ' },
+                  { label: statusLabelMap.FAILED, value: 'FAILED' },
+                ]}
+                onChange={(value: FilterStatus) => {
+                  setCurrentPage(1);
+                  setStatusFilter(value);
+                }}
+              />
+              <Select
+                value={channelFilter}
+                className={`${pageCls.settingsInput} ${pageCls.toolbarSelect} ${pageCls.toolbarSelectWide}`}
+                options={[
+                  { label: '全部渠道', value: 'ALL' },
+                  { label: channelLabelMap.INTERNAL, value: 'INTERNAL' },
+                  { label: channelLabelMap.MINI_PROGRAM, value: 'MINI_PROGRAM' },
+                  { label: channelLabelMap.EMAIL, value: 'EMAIL' },
+                  { label: channelLabelMap.SMS, value: 'SMS' },
+                ]}
+                onChange={(value: FilterChannel) => {
+                  setCurrentPage(1);
+                  setChannelFilter(value);
+                }}
               />
             </div>
           </div>
-        ) : (
-          <div className={styles.emptyWrap}>
-            <EmptyState
-              title="暂无通知记录"
-              description="当前筛选条件下还没有通知，可以先新建一条手动发送通知。"
-              actionText="新建通知"
-              onAction={openComposerModal}
-            />
-          </div>
-        )}
+
+          {notifications.length ? (
+            <>
+              <div className={`${widgetCls.recordList} ${pageCls.sectionListStack}`}>
+                {notifications.map((notification) => {
+                  const recipient = getRecipientSummary(notification);
+
+                  return (
+                    <div key={notification.id} className={styles.notificationCard}>
+                      <div className={styles.notificationMain}>
+                        <div className={styles.notificationHeader}>
+                          <div className={styles.notificationTitleWrap}>
+                            <span className={styles.typePill}>{notification.type}</span>
+                            <h3 className={styles.notificationTitle}>{notification.title}</h3>
+                          </div>
+                          <StatusTag status={statusLabelMap[notification.status]} />
+                        </div>
+
+                        <div className={styles.notificationMetaRow}>
+                          <span className={styles.channelPill}>{channelLabelMap[notification.channel]}</span>
+                          <span className={styles.recipientPill}>{recipient.typeLabel} · {recipient.label}</span>
+                          <span className={styles.timestampPill}>创建于 {formatDateTime(notification.createdAt)}</span>
+                        </div>
+
+                        <div className={styles.notificationPreview}>{notification.content}</div>
+                      </div>
+
+                      <div className={styles.notificationAside}>
+                        <Descriptions column={1} size="small">
+                          <Descriptions.Item label="接收对象">{recipient.meta}</Descriptions.Item>
+                          <Descriptions.Item label="已发送">{formatDateTime(notification.sentAt)}</Descriptions.Item>
+                          <Descriptions.Item label="已读时间">{formatDateTime(notification.readAt)}</Descriptions.Item>
+                        </Descriptions>
+
+                        <div className={styles.notificationActions}>
+                          <Button
+                            size="large"
+                            className={pageCls.cardActionSecondary}
+                            icon={<EyeOutlined />}
+                            onClick={() => openDetailDrawer(notification)}
+                          >
+                            查看详情
+                          </Button>
+                          <Button
+                            type="primary"
+                            size="large"
+                            className={pageCls.cardActionPrimary}
+                            icon={<CheckCircleOutlined />}
+                            disabled={notification.status === 'READ'}
+                            onClick={() => handleMarkAsRead(notification)}
+                          >
+                            标记已读
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className={pageCls.sectionPagination}>
+                <Pagination
+                  current={currentPage}
+                  pageSize={PAGE_SIZE}
+                  total={total}
+                  onChange={setCurrentPage}
+                  showSizeChanger={false}
+                />
+              </div>
+            </>
+          ) : (
+            <div className={pageCls.sectionEmptyState}>
+              <EmptyState
+                title="暂无通知记录"
+                description="当前筛选条件下还没有通知，可以先新建一条手动发送通知。"
+                actionText="新建通知"
+                onAction={openComposerModal}
+              />
+            </div>
+          )}
+        </div>
       </SectionCard>
 
       <Modal
