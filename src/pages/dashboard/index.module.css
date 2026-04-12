@@ -44,8 +44,137 @@
   font-weight: var(--font-semibold);
 }
 
+.anomalyPriorityBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--orange) 18%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--orange) 10%, transparent) 0%, color-mix(in srgb, var(--pink) 6%, transparent) 100%);
+}
+
+.anomalyPriorityBlockCritical {
+  border-color: color-mix(in srgb, var(--pink) 26%, transparent);
+  box-shadow: 0 14px 28px color-mix(in srgb, var(--pink) 12%, rgba(18, 38, 63, 0.08));
+}
+
+.anomalyPriorityHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.anomalyPriorityEyebrow {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.anomalyPriorityTitle {
+  margin-top: 2px;
+  color: var(--text-heading);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-bold);
+}
+
+.anomalyPrioritySummary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--pink) 22%, transparent);
+  background: color-mix(in srgb, var(--pink) 10%, transparent);
+  color: var(--text-pink);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+}
+
+.anomalyPriorityGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.anomalyPriorityCard {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.84);
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.anomalyPriorityCard:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(38, 57, 84, 0.08);
+}
+
+.anomalyPriorityCardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.anomalyPriorityCardLabel {
+  color: var(--text-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-bold);
+}
+
+.anomalyPriorityCardCount {
+  color: var(--text-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-black);
+}
+
+.anomalyPriorityCardDetail {
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  line-height: 1.45;
+}
+
+.anomalyPriorityCardCritical {
+  border-color: color-mix(in srgb, var(--pink) 24%, transparent);
+  background: color-mix(in srgb, var(--pink) 8%, #fff);
+}
+
+.anomalyPriorityCardCritical .anomalyPriorityCardCount {
+  color: var(--text-pink);
+}
+
+.anomalyPriorityCardWarn {
+  border-color: color-mix(in srgb, var(--orange) 26%, transparent);
+  background: color-mix(in srgb, var(--orange) 8%, #fff);
+}
+
+.anomalyPriorityCardWarn .anomalyPriorityCardCount {
+  color: var(--text-orange);
+}
+
 .taskFocusAction {
   min-height: 44px;
+  padding-inline: 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--control-border-strong);
+  background: var(--control-surface);
+  color: var(--text-heading);
+  font-weight: var(--font-bold);
+  box-shadow: var(--control-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  width: auto;
+}
+
+.taskFocusAction:hover {
+  border-color: color-mix(in srgb, var(--mint) 26%, transparent);
+  background: var(--control-surface-hover);
 }
 
 .taskPriorityRow {
@@ -91,6 +220,7 @@
 
 .kpiGrid {
   margin-bottom: 4px;
+  opacity: 0.94;
 }
 
 .supportGrid {
@@ -299,10 +429,12 @@
 }
 
 .todayList {
-  gap: var(--space-2);
+  gap: 8px;
 }
 
 .todayItem {
+  min-height: 84px;
+  padding: 10px 12px;
   border-color: color-mix(in srgb, var(--mint) 14%, transparent);
   background: color-mix(in srgb, var(--mint) 6%, transparent);
 }
@@ -310,6 +442,48 @@
 .todayItemAnomaly {
   border-color: color-mix(in srgb, var(--pink) 22%, transparent);
   background: color-mix(in srgb, var(--pink) 8%, transparent);
+}
+
+.todayTaskMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.todayTaskPriorityBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: var(--font-bold);
+}
+
+.todayTaskPriorityCritical {
+  border: 1px solid color-mix(in srgb, var(--pink) 28%, transparent);
+  background: color-mix(in srgb, var(--pink) 14%, transparent);
+  color: var(--text-pink);
+}
+
+.todayTaskPriorityWarn {
+  border: 1px solid color-mix(in srgb, var(--orange) 28%, transparent);
+  background: color-mix(in srgb, var(--orange) 14%, transparent);
+  color: var(--text-orange);
+}
+
+.todayTaskPriorityNormal {
+  border: 1px solid color-mix(in srgb, var(--mint) 18%, transparent);
+  background: color-mix(in srgb, var(--mint) 10%, transparent);
+  color: var(--text-mint);
+}
+
+.todayTaskNext {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-semibold);
 }
 
 .membershipPrimaryAction {
@@ -535,6 +709,7 @@
 }
 
 @media (max-width: 1200px) {
+  .anomalyPriorityGrid,
   .taskPanelsGrid,
   .supportGrid,
   .bottomGrid {

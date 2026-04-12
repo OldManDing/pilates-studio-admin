@@ -78,6 +78,15 @@ type DashboardStatViewModel = {
   icon: keyof typeof iconMap;
   compact?: boolean;
   emphasis?: 'default' | 'high';
+  subtle?: boolean;
+};
+
+type AnomalyCardViewModel = {
+  key: 'noShow' | 'cancelled' | 'pending';
+  label: string;
+  detail: string;
+  count: number;
+  tone: 'critical' | 'warn';
 };
 
 const iconMap = {
@@ -420,6 +429,38 @@ export default function DashboardPage() {
     [bookingList],
   );
 
+  const unresolvedAnomalyCount = useMemo(
+    () => noShowBookingCount + cancelledBookingCount,
+    [noShowBookingCount, cancelledBookingCount],
+  );
+
+  const anomalyCards = useMemo(
+    (): AnomalyCardViewModel[] => [
+      {
+        key: 'noShow',
+        label: '未到场回访',
+        detail: '优先回访并记录原因，避免连续流失。',
+        count: noShowBookingCount,
+        tone: 'critical',
+      },
+      {
+        key: 'cancelled',
+        label: '取消补位',
+        detail: '确认取消原因并尽快安排补位。',
+        count: cancelledBookingCount,
+        tone: 'critical',
+      },
+      {
+        key: 'pending',
+        label: '待确认排队',
+        detail: '按开课时段逐项确认，避免临时冲突。',
+        count: pendingBookingCount,
+        tone: 'warn',
+      },
+    ],
+    [noShowBookingCount, cancelledBookingCount, pendingBookingCount],
+  );
+
   const membershipSummary = useMemo(
     () =>
       deriveMembershipSummary(stats, stats.monthlyRevenue, bookingList.length, {
@@ -445,6 +486,7 @@ export default function DashboardPage() {
         icon: 'rise' as const,
         compact: true,
         emphasis: 'high',
+        subtle: true,
       },
       {
         title: '今日执行',
@@ -453,6 +495,7 @@ export default function DashboardPage() {
         tone: 'mint' as const,
         icon: 'calendar' as const,
         compact: true,
+        subtle: true,
       },
       {
         title: '活跃会员',
@@ -463,6 +506,7 @@ export default function DashboardPage() {
         tone: 'violet' as const,
         icon: 'team' as const,
         compact: true,
+        subtle: true,
       },
       {
         title: '本月营收',
@@ -471,6 +515,7 @@ export default function DashboardPage() {
         tone: 'pink' as const,
         icon: 'wallet' as const,
         compact: true,
+        subtle: true,
       },
     ],
     [stats, bookingList, metricAvailability, todayCourses.length],
@@ -522,27 +567,55 @@ export default function DashboardPage() {
               <div className={styles.taskFocusTitle}>今日先执行，后续再排程</div>
             </div>
             <Button
-              type="primary"
+              type="default"
               size="large"
-              className={`${pageCls.cardActionPrimary} ${styles.taskFocusAction}`}
+              className={styles.taskFocusAction}
               onClick={() => go('/bookings')}
             >
-              处理最高优先任务
+              去预约管理处理
             </Button>
           </div>
 
           <div className={styles.taskNorthStar}>先清待确认，再控异常，最后看经营。</div>
 
+          <div
+            className={`${styles.anomalyPriorityBlock} ${metricAvailability.bookings && unresolvedAnomalyCount > 0 ? styles.anomalyPriorityBlockCritical : ''}`}
+          >
+            <div className={styles.anomalyPriorityHead}>
+              <div>
+                <div className={styles.anomalyPriorityEyebrow}>Anomaly Priority</div>
+                <div className={styles.anomalyPriorityTitle}>异常优先处理</div>
+              </div>
+              <span className={styles.anomalyPrioritySummary}>
+                {metricAvailability.bookings
+                  ? unresolvedAnomalyCount > 0
+                    ? `当前异常 ${unresolvedAnomalyCount} 单，先处理回访与补位`
+                    : '当前无异常，继续消化待确认队列'
+                  : '预约数据暂不可用'}
+              </span>
+            </div>
+
+            <div className={styles.anomalyPriorityGrid}>
+              {anomalyCards.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={`${styles.anomalyPriorityCard} ${item.tone === 'critical' ? styles.anomalyPriorityCardCritical : styles.anomalyPriorityCardWarn}`}
+                  onClick={() => go('/bookings')}
+                >
+                  <div className={styles.anomalyPriorityCardHead}>
+                    <span className={styles.anomalyPriorityCardLabel}>{item.label}</span>
+                    <span className={styles.anomalyPriorityCardCount}>
+                      {metricAvailability.bookings ? `${item.count} 单` : '--'}
+                    </span>
+                  </div>
+                  <div className={styles.anomalyPriorityCardDetail}>{item.detail}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className={styles.taskPriorityRow}>
-            <span className={`${styles.taskPriorityPill} ${styles.taskPriorityPillCritical}`}>
-              最高优先：待确认 {metricAvailability.bookings ? pendingBookingCount : '--'} 单
-            </span>
-            <span className={`${styles.taskPriorityPill} ${styles.taskPriorityPillWarn}`}>
-              异常未到场 {metricAvailability.bookings ? noShowBookingCount : '--'} 单
-            </span>
-            <span className={`${styles.taskPriorityPill} ${styles.taskPriorityPillWarn}`}>
-              已取消 {metricAvailability.bookings ? cancelledBookingCount : '--'} 单
-            </span>
             <span className={`${styles.taskPriorityPill} ${styles.taskPriorityPillCalm}`}>
               今日执行 {todayCourses.length} 项
             </span>
@@ -577,6 +650,7 @@ export default function DashboardPage() {
               icon={iconMap[item.icon]}
               compact={item.compact}
               emphasis={item.emphasis}
+              subtle={item.subtle}
             />
           ))}
         </div>

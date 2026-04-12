@@ -22,6 +22,11 @@
   box-shadow: 0 16px 30px color-mix(in srgb, var(--stat-accent, var(--mint)) 12%, rgba(18, 38, 63, 0.09));
 }
 
+.subtle {
+  box-shadow: 0 8px 18px rgba(18, 38, 63, 0.05);
+  border-color: color-mix(in srgb, var(--surface-border) 86%, transparent);
+}
+
 .card:hover {
   border-color: var(--stat-accent-border, color-mix(in srgb, var(--mint) 18%, transparent));
   background: var(--bg-surface-strong);
@@ -84,4 +89,12 @@
   width: 46px;
   height: 46px;
   font-size: var(--font-size-md);
+}
+
+.subtle .value {
+  color: color-mix(in srgb, var(--stat-accent, var(--text-heading)) 82%, var(--text-heading));
+}
+
+.subtle .hint {
+  color: var(--text-tertiary);
 }

@@ -11,6 +11,7 @@ type Props = {
   tone?: AccentTone;
   compact?: boolean;
   emphasis?: 'default' | 'high';
+  subtle?: boolean;
 };
 
 const StatCard: FC<Props> = ({
@@ -21,12 +22,13 @@ const StatCard: FC<Props> = ({
   tone = 'mint',
   compact = false,
   emphasis = 'default',
+  subtle = false,
 }) => {
   const colors = getToneColor(tone);
 
   return (
     <div
-      className={`${cls.card} ${compact ? cls.compact : ''} ${emphasis === 'high' ? cls.highEmphasis : ''}`}
+      className={`${cls.card} ${compact ? cls.compact : ''} ${emphasis === 'high' ? cls.highEmphasis : ''} ${subtle ? cls.subtle : ''}`}
       style={{
         ['--stat-accent' as string]: colors.text,
         ['--stat-accent-border' as string]: colors.border,

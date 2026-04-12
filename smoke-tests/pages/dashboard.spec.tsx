@@ -79,7 +79,8 @@ describe('DashboardPage smoke test', () => {
 
     await waitFor(() => {
       expect(screen.getByText('今日执行队列')).toBeInTheDocument();
-      expect(screen.getByText(/最高优先：待确认/)).toBeInTheDocument();
+      expect(screen.getByText('异常优先处理')).toBeInTheDocument();
+      expect(screen.getByText('待确认排队')).toBeInTheDocument();
       expect(screen.getByText('会员概览')).toBeInTheDocument();
       expect(screen.getByText('训练节奏')).toBeInTheDocument();
       expect(screen.getByText('近期排程')).toBeInTheDocument();
