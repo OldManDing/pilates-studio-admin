@@ -105,9 +105,9 @@ export default function FinancePage() {
   const [financeBar, setFinanceBar] = useState<Array<{ month: string; revenue: number }>>([]);
   const [stats, setStats] = useState({
     totalRevenue: 0,
-    totalExpense: 0,
-    netProfit: 0,
-    profitMargin: '-', // 后端暂无支出数据
+    refundedAmount: 0,
+    pendingAmount: 0,
+    netRevenue: 0,
   });
 
   const fetchTransactions = useCallback(async (page = 1, pageSize = 100) => {
@@ -123,11 +123,13 @@ export default function FinancePage() {
       setTransactionList(txRes.data);
 
       const totalRevenue = summaryRes.totalRevenueCents / 100;
+      const refundedAmount = summaryRes.refundedAmountCents / 100;
+      const pendingAmount = summaryRes.pendingAmountCents / 100;
       setStats({
         totalRevenue,
-        totalExpense: 0,
-        netProfit: 0,
-        profitMargin: '待接入',
+        refundedAmount,
+        pendingAmount,
+        netRevenue: totalRevenue - refundedAmount,
       });
 
       // Build pie chart data from reports
@@ -217,10 +219,34 @@ export default function FinancePage() {
   }, [filteredTransactions, searchValue, showAllTransactions, statusFilter, kindFilter]);
 
   const financeStats = useMemo(() => [
-    { title: '本月营收', value: formatCurrency(stats.totalRevenue), hint: '月度环比待接入', tone: 'mint' as const, icon: 'wallet' as const },
-    { title: '本月支出', value: '待接入', hint: '后端暂未提供支出汇总', tone: 'orange' as const, icon: 'pay' as const },
-    { title: '净利润', value: '待接入', hint: '需接入真实支出后计算', tone: 'violet' as const, icon: 'line' as const },
-    { title: '利润率', value: stats.profitMargin, hint: '需接入真实支出后计算', tone: 'pink' as const, icon: 'pie' as const },
+    {
+      title: '累计营收',
+      value: formatCurrency(stats.totalRevenue),
+      hint: '来源：交易汇总',
+      tone: 'mint' as const,
+      icon: 'wallet' as const,
+    },
+    {
+      title: '待处理金额',
+      value: formatCurrency(stats.pendingAmount),
+      hint: '待结算交易',
+      tone: 'orange' as const,
+      icon: 'pay' as const,
+    },
+    {
+      title: '净营收',
+      value: formatCurrency(stats.netRevenue),
+      hint: '营收 - 退款',
+      tone: 'violet' as const,
+      icon: 'line' as const,
+    },
+    {
+      title: '退款占比',
+      value: stats.totalRevenue > 0 ? `${((stats.refundedAmount / stats.totalRevenue) * 100).toFixed(1)}%` : '0%',
+      hint: '退款监控',
+      tone: 'pink' as const,
+      icon: 'pie' as const,
+    },
   ], [stats]);
 
   const transactionFilterLabels = [
@@ -411,7 +437,7 @@ export default function FinancePage() {
       {contextHolder}
       <PageHeader
         title="财务报表"
-        subtitle="查看营收、支出与门店财务分析。"
+        subtitle="聚焦最近交易、营收趋势与构成，便于门店做日常财务核对与导出。"
         extra={<ActionButton icon={<DownloadOutlined />} onClick={handleExportReport}>导出报表</ActionButton>}
       />
 
@@ -440,7 +466,7 @@ export default function FinancePage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className={widgetCls.smallText}>利润、利润率和支出指标待后端接入真实成本数据后开放。</div>
+          <div className={widgetCls.smallText}>成本、利润与利润率指标将在真实支出数据接入后再补充到财务工作台。</div>
         </SectionCard>
 
         <SectionCard title="营收构成" subtitle="按会员类型分类">
@@ -507,7 +533,7 @@ export default function FinancePage() {
               />
             </div>
             <div className={pageCls.toolbarRight}>
-              <ActionButton icon={<FilterOutlined />} ghost onClick={openFilterModal}>筛选</ActionButton>
+              <ActionButton icon={<FilterOutlined />} ghost onClick={openFilterModal}>筛选条件</ActionButton>
               <ActionButton icon={<DownloadOutlined />} ghost onClick={handleExportVisibleTransactions}>导出</ActionButton>
               <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增交易</ActionButton>
             </div>
@@ -617,12 +643,10 @@ export default function FinancePage() {
       </Modal>
 
       <Modal
-        title="筛选交易"
+        title="筛选条件"
         open={isFilterOpen}
         onCancel={() => setIsFilterOpen(false)}
         onOk={applyFilters}
-        okText="应用筛选"
-        cancelText="取消"
         destroyOnHidden
         footer={<FilterModalFooter onReset={resetFilters} onCancel={() => setIsFilterOpen(false)} onApply={applyFilters} />}
       >

@@ -55,8 +55,8 @@ describe('FinancePage smoke test', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: '财务报表' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /新增交易/ })).toBeInTheDocument();
-      expect(screen.getByText('本月营收')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /导出报表/ })).toBeInTheDocument();
+      expect(screen.getByText('累计营收')).toBeInTheDocument();
     }, { timeout: 10000 });
   }, 15000);
 });
