@@ -7,7 +7,7 @@ import AppSidebar from '@/components/AppSidebar';
 import cls from '@/styles/layout.module.css';
 import { MOBILE_SIDEBAR_DRAWER_WIDTH } from '@/styles/dimensions';
 import { authApi, clearTokens } from '@/services/auth';
-import { getSafeRedirectPath } from '@/utils/mockAuth';
+import { getSafeRedirectPath } from '@/utils/safeRedirect';
 
 const AppLayout: FC<PropsWithChildren> = ({ children }) => {
   const location = useLocation();

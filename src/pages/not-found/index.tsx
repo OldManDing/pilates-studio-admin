@@ -2,12 +2,11 @@ import { CompassOutlined, HomeOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
-import { isDemoAuthed } from '@/utils/mockAuth';
 import cls from './index.module.css';
 
 export default function NotFoundPage() {
   const navigate = useNavigate();
-  const authed = isDemoAuthed();
+  const authed = typeof window !== 'undefined' && Boolean(localStorage.getItem('pilates_access_token'));
 
   return (
     <div className={cls.shell}>

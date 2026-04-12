@@ -5,7 +5,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
 import { authApi, setTokens, type AuthResponse, type LoginMfaChallenge } from '@/services/auth';
 import { getErrorMessage } from '@/utils/errors';
-import { getSafeRedirectPath } from '@/utils/mockAuth';
+import { getSafeRedirectPath } from '@/utils/safeRedirect';
 import cls from './index.module.css';
 
 type LoginValues = {

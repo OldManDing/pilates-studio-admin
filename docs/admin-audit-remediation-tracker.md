@@ -73,8 +73,8 @@
 
 | ID | Page/Module | Current Data Source | Problem | Risk | Priority | Status | Notes |
 |---|---|---|---|---|---|---|---|
-| API-01 | `src/mock/index.ts` | Local mock file | Large demo dataset still exists in repo | Future accidental reuse can reintroduce fake data | P1 | pending | Phase 4 / hygiene |
-| API-02 | `src/utils/mockAuth.ts` | Local demo auth helper | Demo auth utility still exists | Future accidental reuse can corrupt real auth behavior | P1 | pending | Phase 4 / hygiene |
+| API-01 | `src/mock/index.ts` | Local mock file | Large demo dataset still exists in repo | Future accidental reuse can reintroduce fake data | P1 | done | Removed unused mock dataset module from frontend runtime |
+| API-02 | `src/utils/mockAuth.ts` | Local demo auth helper | Demo auth utility still exists | Future accidental reuse can corrupt real auth behavior | P1 | done | Extracted safe redirect helper and removed demo-auth/session helpers |
 | API-03 | Members | `/members` + local filtering | Search/filter not pushed to backend | Incomplete results with larger datasets | P1 | done | Added backend search/status/plan filters and wired frontend to use them |
 | API-04 | Bookings | `/bookings` + local period/status filter | Current list still depends on local filtering workaround | Dataset scale and correctness risks | P1 | done | Added backend search/status/date filters and wired bookings page to server-side pagination |
 | API-05 | Coaches | `/coaches` | No pagination contract | Performance and UX degrade with larger data | P1 | done | Added paginated `/coaches` contract with search/status support and frontend pagination |
