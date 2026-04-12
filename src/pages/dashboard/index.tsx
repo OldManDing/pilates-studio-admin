@@ -3,6 +3,7 @@ import { Spin, message } from 'antd';
 import { CalendarOutlined, RiseOutlined, TeamOutlined, WalletOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '@/components/PageHeader';
+import SectionCard from '@/components/SectionCard';
 import StatCard from '@/components/StatCard';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
@@ -118,7 +119,6 @@ const deriveMembershipSummary = (
   recentBookingCount: number,
 ): MembershipOverviewViewModel => {
   const activityRate = stats.totalMembers > 0 ? Math.round((stats.activeMembers / stats.totalMembers) * 100) : 0;
-  const remainingDaysEstimate = Math.max(7, 30 - Math.min(stats.newMembersThisMonth * 2, 22));
 
   return {
     tierLabel: stats.activeMembers > 120 ? '高活跃' : '运营中',
@@ -320,10 +320,15 @@ export default function DashboardPage() {
       />
 
       {partialFailures.length ? (
-        <div className={`${pageCls.surface} ${pageCls.surfaceTopSpace} ${pageCls.centeredStateTop}`}>
-          <div className={widgetCls.detailTitle}>部分数据加载失败</div>
-          <div className={widgetCls.smallText}>当前未成功加载：{partialFailures.join('、')}。其余模块数据已正常展示。</div>
-        </div>
+        <SectionCard
+          title="部分数据加载失败"
+          subtitle={`当前未成功加载：${partialFailures.join('、')}。其余模块数据已正常展示。`}
+        >
+          <div className={styles.partialFailureWrap}>
+            <span className={styles.partialFailurePill}>已降级展示</span>
+            <span className={widgetCls.smallText}>建议稍后刷新，首页其余模块仍可继续使用。</span>
+          </div>
+        </SectionCard>
       ) : null}
 
       <div className={pageCls.dashboardHeroGrid}>
@@ -351,7 +356,7 @@ export default function DashboardPage() {
           <TrainingSummaryCard {...trainingSummary} />
         </div>
 
-        <div className={styles.bottomGrid}>
+        <div className={styles.bottomGridSingle}>
           <UpcomingBookingsPanel
             items={upcomingBookings}
             onViewAll={() => go('/bookings')}
