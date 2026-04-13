@@ -1,4 +1,3 @@
-import { Button } from 'antd';
 import EmptyState from '@/components/EmptyState';
 import SectionCard from '@/components/SectionCard';
 import StatusTag from '@/components/StatusTag';
@@ -20,7 +19,6 @@ export type TodayCourseItem = {
 export type TodayCoursePanelProps = {
   items: TodayCourseItem[];
   anomalyCount?: number;
-  onViewAll?: () => void;
   onViewDetail?: (id: string) => void;
 };
 
@@ -41,20 +39,12 @@ const deriveTaskPriority = (statusText?: string): { label: string; tone: 'critic
 export default function TodayCoursePanel({
   items,
   anomalyCount = 0,
-  onViewAll,
   onViewDetail,
 }: TodayCoursePanelProps) {
   return (
     <SectionCard
       title="今日执行队列"
       subtitle={`${new Date().toLocaleDateString('zh-CN')} · 先确认，再签到，再回访`}
-      extra={
-        onViewAll ? (
-          <Button type="text" className={styles.sectionAction} onClick={onViewAll}>
-            去预约管理
-          </Button>
-        ) : null
-      }
     >
       {anomalyCount > 0 ? (
         <div className={styles.todayAlertBar}>存在异常任务 {anomalyCount} 项，建议优先处理回访与补位。</div>

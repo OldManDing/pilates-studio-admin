@@ -1,4 +1,3 @@
-import { Button } from 'antd';
 import EmptyState from '@/components/EmptyState';
 import SectionCard from '@/components/SectionCard';
 import StatusTag from '@/components/StatusTag';
@@ -16,22 +15,14 @@ export type UpcomingBookingItem = {
 
 export type UpcomingBookingsPanelProps = {
   items: UpcomingBookingItem[];
-  onViewAll?: () => void;
   onViewDetail?: (id: string) => void;
 };
 
-export default function UpcomingBookingsPanel({ items, onViewAll, onViewDetail }: UpcomingBookingsPanelProps) {
+export default function UpcomingBookingsPanel({ items, onViewDetail }: UpcomingBookingsPanelProps) {
   return (
     <SectionCard
       title="近期排程"
       subtitle="未来 1-3 天排班预览，用于场地与教练准备。"
-      extra={
-        onViewAll ? (
-          <Button type="text" className={styles.sectionAction} onClick={onViewAll}>
-            去预约管理
-          </Button>
-        ) : null
-      }
     >
       {items.length > 0 ? (
         <div className={styles.upcomingList}>
