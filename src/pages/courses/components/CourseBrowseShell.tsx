@@ -12,7 +12,7 @@ type CourseBrowseFilterOption = {
 };
 
 export type CourseBrowseShellProps = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   subtitle: string;
   resultCountText: string;
@@ -56,7 +56,7 @@ export default function CourseBrowseShell({
     <section className={`${pageCls.surface} ${styles.courseBrowseShell}`}>
       <div className={styles.courseBrowseHeader}>
         <div>
-          <div className={styles.courseEyebrow}>{eyebrow}</div>
+          {eyebrow ? <div className={styles.courseEyebrow}>{eyebrow}</div> : null}
           <div className={styles.courseBrowseTitleRow}>
             <h2 className={styles.courseBrowseTitle}>{title}</h2>
             <span className={styles.courseBrowseCount}>{resultCountText}</span>

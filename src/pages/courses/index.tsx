@@ -38,6 +38,7 @@ export default function CoursesPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm<CourseFormValues>();
   const [courseList, setCourseList] = useState<Course[]>([]);
+  const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState('');
@@ -60,7 +61,7 @@ export default function CoursesPage() {
   const fetchCourses = useCallback(async (page = 1) => {
     try {
       setLoading(true);
-      const [coursesResponse, coachesData, reportsData] = await Promise.all([
+      const [coursesResponse, allCoursesData, coachesData, reportsData] = await Promise.all([
           coursesApi.getPaged({
             page,
             pageSize,
@@ -68,6 +69,7 @@ export default function CoursesPage() {
             type: typeFilter === '全部' ? undefined : typeFilter,
             level: levelFilter === '全部' ? undefined : levelFilter,
           }),
+          coursesApi.getAll(),
           coachesApi.getAll(),
           reportsApi.getBookings(
             new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -76,6 +78,7 @@ export default function CoursesPage() {
         ]);
         const coursesData = coursesResponse.data;
         setCourseList(coursesData);
+        setAllCourses(allCoursesData);
         setCurrentPage(coursesResponse.meta.page);
         setTotal(coursesResponse.meta.total);
         setCoaches(coachesData);
@@ -110,45 +113,57 @@ export default function CoursesPage() {
     void fetchCourses(currentPage);
   }, [currentPage, fetchCourses]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchValue, typeFilter, levelFilter]);
-
   const courseTypeOptions = useMemo(
-    () => Array.from(new Set(courseList.map((course) => course.type))),
-    [courseList]
+    () => Array.from(new Set(allCourses.map((course) => course.type))),
+    [allCourses]
   );
 
   const courseLevelOptions = useMemo(
-    () => Array.from(new Set(courseList.map((course) => course.level))),
-    [courseList]
+    () => Array.from(new Set(allCourses.map((course) => course.level))),
+    [allCourses]
   );
 
   const resetFilters = () => {
     setSearchValue('');
     setTypeFilter('全部');
     setLevelFilter('全部');
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchValue(value);
+    setCurrentPage(1);
+  };
+
+  const handleTypeChange = (value: string) => {
+    setTypeFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleLevelChange = (value: string) => {
+    setLevelFilter(value);
+    setCurrentPage(1);
   };
 
   const courseStats = useMemo(() => [
-    { title: '课程总数', value: String(stats.totalCourses), hint: '覆盖常规课程', tone: 'mint' as const, icon: 'calendar' as const },
-    { title: '本周课程', value: String(stats.weeklySessions), hint: '已排期课时', tone: 'violet' as const, icon: 'app' as const },
+    { title: '课程总数', value: String(stats.totalCourses), hint: '当前课程池', tone: 'mint' as const, icon: 'calendar' as const },
+    { title: '本周课程', value: String(stats.weeklySessions), hint: '本周排期课时', tone: 'violet' as const, icon: 'app' as const },
     { title: '平均上座率', value: stats.avgOccupancy, hint: '当前排班摘要', tone: 'orange' as const, icon: 'percent' as const },
-    { title: '最受欢迎', value: stats.popularCourse, hint: '满座率最高', tone: 'pink' as const, icon: 'star' as const },
+    { title: '重点课程', value: stats.popularCourse, hint: '优先关注排期', tone: 'pink' as const, icon: 'star' as const },
   ], [stats]);
 
   const courseBrowseSubtitle =
     searchValue.trim().length > 0 || typeFilter !== '全部' || levelFilter !== '全部'
       ? '已按条件筛选。'
-      : '按课程名称、类型与难度查看。';
+      : '查看课程与排期概况。';
 
   const courseCardItems: CourseListCardProps[] = courseList.map((course) => ({
     id: course.id,
     codeText: course.courseCode || 'COURSE',
     name: course.name,
     summaryText: course.isActive
-      ? '当前可继续排期。'
-      : '当前已停用。',
+      ? '可继续排期与维护。'
+      : '当前已停用，保留档案。',
     typeLabel: course.type,
     levelLabel: course.level,
     statusLabel: course.isActive ? '正常开课' : '已停用',
@@ -214,14 +229,18 @@ export default function CoursesPage() {
         messageApi.success('课程已创建');
       }
 
-      const refreshed = await coursesApi.getPaged({
-        page: currentPage,
-        pageSize,
-        search: searchValue.trim() || undefined,
-        type: typeFilter === '全部' ? undefined : typeFilter,
-        level: levelFilter === '全部' ? undefined : levelFilter,
-      });
+      const [refreshed, refreshedAllCourses] = await Promise.all([
+        coursesApi.getPaged({
+          page: currentPage,
+          pageSize,
+          search: searchValue.trim() || undefined,
+          type: typeFilter === '全部' ? undefined : typeFilter,
+          level: levelFilter === '全部' ? undefined : levelFilter,
+        }),
+        coursesApi.getAll(),
+      ]);
       setCourseList(refreshed.data);
+      setAllCourses(refreshedAllCourses);
       setTotal(refreshed.meta.total);
 
       const totalCourses = refreshed.meta.total;
@@ -253,14 +272,18 @@ export default function CoursesPage() {
   const handleDeleteCourse = async (course: Course) => {
     try {
       await coursesApi.delete(course.id);
-      const refreshed = await coursesApi.getPaged({
-        page: currentPage,
-        pageSize,
-        search: searchValue.trim() || undefined,
-        type: typeFilter === '全部' ? undefined : typeFilter,
-        level: levelFilter === '全部' ? undefined : levelFilter,
-      });
+      const [refreshed, refreshedAllCourses] = await Promise.all([
+        coursesApi.getPaged({
+          page: currentPage,
+          pageSize,
+          search: searchValue.trim() || undefined,
+          type: typeFilter === '全部' ? undefined : typeFilter,
+          level: levelFilter === '全部' ? undefined : levelFilter,
+        }),
+        coursesApi.getAll(),
+      ]);
       setCourseList(refreshed.data);
+      setAllCourses(refreshedAllCourses);
       setTotal(refreshed.meta.total);
 
       const totalCourses = refreshed.meta.total;
@@ -316,8 +339,7 @@ export default function CoursesPage() {
       </div>
 
       <CourseBrowseShell
-        eyebrow="课程工作台"
-        title="课程列表"
+        title="课程工作台"
         subtitle={courseBrowseSubtitle}
         resultCountText={`共 ${total} 门`}
         searchValue={searchValue}
@@ -330,9 +352,9 @@ export default function CoursesPage() {
         emptyTitle="暂无符合条件的课程"
         emptyDescription="修改搜索词或筛选条件后再试。"
         courses={courseCardItems}
-        onSearchChange={setSearchValue}
-        onTypeChange={setTypeFilter}
-        onLevelChange={setLevelFilter}
+        onSearchChange={handleSearchChange}
+        onTypeChange={handleTypeChange}
+        onLevelChange={handleLevelChange}
         onReset={resetFilters}
       />
       {courseList.length ? (

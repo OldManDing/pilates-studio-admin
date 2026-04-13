@@ -39,7 +39,9 @@ export type CoursesQueryParams = {
 
 export const coursesApi = {
   getAll: () =>
-    api.get<Course[]>('/courses'),
+    requestWithMeta<Course[]>('/courses', {
+      params: { page: 1, pageSize: 500 },
+    }).then((response) => response.data),
 
   getPaged: (params?: CoursesQueryParams) =>
     requestWithMeta<Course[]>('/courses', { params }).then((response) => ({
