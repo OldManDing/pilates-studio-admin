@@ -354,10 +354,9 @@ export default function NotificationsPage() {
     channelFilter !== 'ALL' ? `渠道：${channelLabelMap[channelFilter]}` : null,
   ].filter(Boolean);
 
-  const notificationCountText = `当前共 ${total} 条通知`;
   const notificationResultSummary = notificationFilterLabels.length
     ? `已按${notificationFilterLabels.join('、')}筛选，当前匹配 ${total} 条通知。`
-    : `当前共 ${total} 条通知，可连续查看待发送、已发送与已读记录并快速跟进。`;
+    : `当前共 ${total} 条通知，按待发送、已发送、已读三个阶段跟进。`;
 
   const openComposerModal = () => {
     composerForm.setFieldsValue({
@@ -477,13 +476,15 @@ export default function NotificationsPage() {
         ))}
       </div>
 
-      <SectionCard
-        title="通知队列"
-      >
+      <SectionCard title="通知队列">
         <div className={pageCls.sectionContentStack}>
           <div className={pageCls.sectionSummaryRow}>
             <div className={pageCls.sectionSummaryText}>{notificationResultSummary}</div>
-            <span className={pageCls.sectionMetaPill}>{notificationCountText}</span>
+            <div className={pageCls.statusMetaWrap}>
+              <span className={pageCls.sectionMetaPill}>待发送</span>
+              <span className={pageCls.sectionMetaPill}>已发送</span>
+              <span className={pageCls.sectionMetaPill}>已读</span>
+            </div>
           </div>
 
           <div className={pageCls.toolbar}>
@@ -712,7 +713,7 @@ export default function NotificationsPage() {
                 <div>
                   <span className={styles.typePill}>{detailNotification.type}</span>
                   <h2 className={styles.overviewTitle}>{detailNotification.title}</h2>
-                  <div className={styles.overviewSubtitle}>查看通知状态与接收对象。</div>
+                  <div className={styles.overviewSubtitle}>核对当前通知所处阶段与接收对象。</div>
                 </div>
                 <StatusTag status={statusLabelMap[detailNotification.status]} />
               </div>
@@ -737,21 +738,18 @@ export default function NotificationsPage() {
               </div>
             </div>
 
-            <SectionCard title="通知内容" subtitle="保留标题、正文与基础投递信息，方便管理员快速核对。">
+            <SectionCard title="通知内容">
               <div className={styles.contentBlock}>
                 <div className={styles.contentLabel}>正文</div>
                 <div className={styles.contentText}>{detailNotification.content}</div>
               </div>
             </SectionCard>
 
-            <SectionCard title="通知元数据" subtitle="展示后端记录返回的关联 ID 与时间字段。">
+            <SectionCard title="投递状态">
               <Descriptions column={1} size="small" bordered>
-                <Descriptions.Item label="通知 ID">{detailNotification.id}</Descriptions.Item>
-                <Descriptions.Item label="会员 ID">{detailNotification.memberId || '-'}</Descriptions.Item>
-                <Descriptions.Item label="小程序用户 ID">{detailNotification.miniUserId || '-'}</Descriptions.Item>
-                <Descriptions.Item label="管理员 ID">{detailNotification.adminUserId || '-'}</Descriptions.Item>
                 <Descriptions.Item label="发送时间">{formatDateTime(detailNotification.sentAt)}</Descriptions.Item>
                 <Descriptions.Item label="更新时间">{formatDateTime(detailNotification.updatedAt)}</Descriptions.Item>
+                <Descriptions.Item label="当前状态">{statusLabelMap[detailNotification.status]}</Descriptions.Item>
               </Descriptions>
             </SectionCard>
           </div>

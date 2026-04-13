@@ -512,7 +512,11 @@ export default function FinancePage() {
         <div className={pageCls.sectionContentStack}>
           <div className={pageCls.sectionSummaryRow}>
             <div className={pageCls.sectionSummaryText}>{transactionResultSummary}</div>
-            <span className={pageCls.sectionMetaPill}>{transactionCountText}</span>
+            <div className={pageCls.statusMetaWrap}>
+              {stats.pendingAmount > 0 ? <span className={pageCls.sectionMetaPill}>待处理 ¥{stats.pendingAmount.toLocaleString('zh-CN')}</span> : null}
+              {stats.refundedAmount > 0 ? <span className={pageCls.sectionMetaPill}>退款 ¥{stats.refundedAmount.toLocaleString('zh-CN')}</span> : null}
+              <span className={pageCls.sectionMetaPill}>{transactionCountText}</span>
+            </div>
           </div>
 
           <div className={`${pageCls.toolbar} ${pageCls.toolbarCompact}`}>
@@ -570,11 +574,11 @@ export default function FinancePage() {
                   </div>
 
                   <div className={`${pageCls.actionRowWrap} ${pageCls.actionRowWrapEnd}`}>
-                    <Button type="primary" size="large" className={pageCls.cardActionHalf} icon={<EyeOutlined />} onClick={() => setDetailTransaction(item)}>详情</Button>
-                    <Button size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={() => openEditModal(item)}>编辑</Button>
+                      <Button type="primary" size="large" className={pageCls.cardActionHalf} icon={<EyeOutlined />} onClick={() => setDetailTransaction(item)}>核对详情</Button>
+                      <Button size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={() => openEditModal(item)}>调整记录</Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           ) : (
             <div className={pageCls.sectionEmptyState}>
@@ -678,7 +682,7 @@ export default function FinancePage() {
         onClose={() => setDetailTransaction(null)}
         extra={detailTransaction ? (
           <div className={pageCls.drawerActionGroup}>
-            <Button icon={<EditOutlined />} onClick={() => openEditModal(detailTransaction)}>编辑</Button>
+            <Button icon={<EditOutlined />} onClick={() => openEditModal(detailTransaction)}>调整记录</Button>
           </div>
         ) : null}
       >
@@ -712,15 +716,17 @@ export default function FinancePage() {
               </div>
             </div>
 
-            <Descriptions column={1} size="small" bordered>
-              <Descriptions.Item label="会员姓名">{detailTransaction.member?.name || '-'}</Descriptions.Item>
-              <Descriptions.Item label="交易编号">{detailTransaction.transactionCode}</Descriptions.Item>
-              <Descriptions.Item label="交易类型">{kindMap[detailTransaction.kind] || detailTransaction.kind}</Descriptions.Item>
-              <Descriptions.Item label="交易状态">{statusMap[detailTransaction.status] || detailTransaction.status}</Descriptions.Item>
-              <Descriptions.Item label="交易日期">{new Date(detailTransaction.happenedAt).toLocaleDateString('zh-CN')}</Descriptions.Item>
-              <Descriptions.Item label="交易金额">{formatCurrency(detailTransaction.amountCents / 100)}</Descriptions.Item>
-              <Descriptions.Item label="备注">{detailTransaction.notes || '-'}</Descriptions.Item>
-            </Descriptions>
+            <SectionCard title="交易信息">
+              <Descriptions column={1} size="small" bordered className={pageCls.detailDescriptions}>
+                <Descriptions.Item label="会员姓名">{detailTransaction.member?.name || '-'}</Descriptions.Item>
+                <Descriptions.Item label="交易编号">{detailTransaction.transactionCode}</Descriptions.Item>
+                <Descriptions.Item label="交易类型">{kindMap[detailTransaction.kind] || detailTransaction.kind}</Descriptions.Item>
+                <Descriptions.Item label="交易状态">{statusMap[detailTransaction.status] || detailTransaction.status}</Descriptions.Item>
+                <Descriptions.Item label="交易日期">{new Date(detailTransaction.happenedAt).toLocaleDateString('zh-CN')}</Descriptions.Item>
+                <Descriptions.Item label="交易金额">{formatCurrency(detailTransaction.amountCents / 100)}</Descriptions.Item>
+                <Descriptions.Item label="备注">{detailTransaction.notes || '-'}</Descriptions.Item>
+              </Descriptions>
+            </SectionCard>
           </div>
         ) : null}
       </Drawer>
