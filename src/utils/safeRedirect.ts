@@ -1,10 +1,5 @@
 const SAFE_REDIRECTS = new Set([
   '/dashboard',
-  '/dashboard/bookings',
-  '/dashboard/courses',
-  '/dashboard/schedule',
-  '/dashboard/growth',
-  '/dashboard/finance-trend',
   '/members',
   '/courses',
   '/bookings',
