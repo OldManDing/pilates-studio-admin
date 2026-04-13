@@ -172,6 +172,7 @@ export default function CoursesPage() {
     durationText: `${course.durationMinutes} 分钟`,
     capacityText: `${course.capacity} 人`,
     sessionCountText: `已排 ${course._count?.sessions || 0} 节`,
+    primaryActionLabel: course.isActive ? '调整排期' : '恢复设置',
     onEdit: () => openEditModal(course),
     onViewDetail: () => setDetailCourse(course),
   }));

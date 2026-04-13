@@ -17,6 +17,7 @@ export type CourseListCardProps = {
   durationText: string;
   capacityText: string;
   sessionCountText: string;
+  primaryActionLabel: string;
   onEdit: () => void;
   onViewDetail: () => void;
 };
@@ -33,6 +34,7 @@ export default function CourseListCard({
   durationText,
   capacityText,
   sessionCountText,
+  primaryActionLabel,
   onEdit,
   onViewDetail,
 }: CourseListCardProps) {
@@ -79,7 +81,7 @@ export default function CourseListCard({
             icon={<EditOutlined />}
             onClick={onEdit}
           >
-            编辑课程
+            {primaryActionLabel}
           </Button>
           <Button
             size="large"
