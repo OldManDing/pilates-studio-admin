@@ -120,12 +120,31 @@
 
 .roleActions {
   display: grid;
-  grid-template-columns: 1fr 1.2fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
 .roleActionButton {
   width: 100%;
+}
+
+.permissionModuleMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+}
+
+.permissionMetaAction {
+  border: none;
+  background: transparent;
+  color: var(--text-mint);
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+  font-weight: inherit;
 }
 
 @media (max-width: 1024px) {

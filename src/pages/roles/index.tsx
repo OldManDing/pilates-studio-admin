@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, SaveOutlined } from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, SaveOutlined, SearchOutlined } from '@ant-design/icons';
 import {
   App,
   Col,
@@ -110,6 +110,7 @@ export default function RolesPage() {
   const [detailRole, setDetailRole] = useState<Role | null>(null);
   const [editingPermissionRole, setEditingPermissionRole] = useState<Role | null>(null);
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([]);
+  const [permissionSearch, setPermissionSearch] = useState('');
 
   const fetchData = useCallback(async () => {
     try {
@@ -142,6 +143,25 @@ export default function RolesPage() {
     });
     return Array.from(groupMap.entries());
   }, [permissions]);
+
+  const filteredPermissionGroups = useMemo(() => {
+    const keyword = permissionSearch.trim().toLowerCase();
+    if (!keyword) {
+      return groupedPermissions;
+    }
+
+    return groupedPermissions
+      .map(([moduleName, permissionList]) => [
+        moduleName,
+        permissionList.filter((permission) => {
+          const moduleLabel = moduleNameMap[permission.module] || permission.module;
+          const actionLabel = actionLabelMap[permission.action] || permission.action;
+          const text = `${moduleLabel} ${actionLabel} ${permission.description || ''}`.toLowerCase();
+          return text.includes(keyword);
+        }),
+      ] as [string, Permission[]])
+      .filter(([, permissionList]) => permissionList.length > 0);
+  }, [groupedPermissions, permissionSearch]);
 
   const openCreateModal = () => {
     form.setFieldsValue({
@@ -179,6 +199,7 @@ export default function RolesPage() {
   const openPermissionEditor = (role: Role) => {
     setEditingPermissionRole(role);
     setSelectedPermissionIds(role.permissions.map((rp) => rp.permission.id));
+    setPermissionSearch('');
   };
 
   const handlePermissionToggle = (permissionId: string, checked: boolean) => {
@@ -203,6 +224,15 @@ export default function RolesPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSelectModulePermissions = (permissionIds: string[], checked: boolean) => {
+    setSelectedPermissionIds((current) => {
+      if (checked) {
+        return Array.from(new Set([...current, ...permissionIds]));
+      }
+      return current.filter((id) => !permissionIds.includes(id));
+    });
   };
 
   const handleDeleteRole = (role: Role) => {
@@ -362,9 +392,28 @@ export default function RolesPage() {
         )}
       >
         <div className={pageCls.rolePermissionPanel}>
-          {groupedPermissions.map(([moduleName, permissionList]) => (
+          <Input
+            className={`${pageCls.settingsInput} ${pageCls.bottomSpaceMd}`}
+            prefix={<SearchOutlined />}
+            placeholder="搜索权限模块、动作或说明"
+            value={permissionSearch}
+            onChange={(event) => setPermissionSearch(event.target.value)}
+          />
+
+          {filteredPermissionGroups.map(([moduleName, permissionList]) => {
+            const modulePermissionIds = permissionList.map((permission) => permission.id);
+            const selectedCount = modulePermissionIds.filter((permissionId) => selectedPermissionIds.includes(permissionId)).length;
+
+            return (
             <div key={moduleName} className={pageCls.rolePermissionBlock}>
-              <div className={pageCls.rolePermissionTitle}>{moduleNameMap[moduleName] || moduleName}</div>
+              <div className={pageCls.rowBetween}>
+                <div className={pageCls.rolePermissionTitle}>{moduleNameMap[moduleName] || moduleName}</div>
+                <div className={roleCss.permissionModuleMeta}>
+                  <span>{selectedCount}/{modulePermissionIds.length}</span>
+                  <button type="button" className={roleCss.permissionMetaAction} onClick={() => handleSelectModulePermissions(modulePermissionIds, true)}>全选</button>
+                  <button type="button" className={roleCss.permissionMetaAction} onClick={() => handleSelectModulePermissions(modulePermissionIds, false)}>清空</button>
+                </div>
+              </div>
               <div className={pageCls.rolePermissionList}>
               {permissionList.map((permission) => {
                 const checked = selectedPermissionIds.includes(permission.id);
@@ -382,7 +431,7 @@ export default function RolesPage() {
               })}
             </div>
             </div>
-          ))}
+          );})}
         </div>
       </Drawer>
 
