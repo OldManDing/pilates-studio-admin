@@ -1,5 +1,5 @@
 import { HeartOutlined, RiseOutlined, SmileOutlined } from '@ant-design/icons';
-import { Progress, Spin, message } from 'antd';
+import { Progress, Select, Spin, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { createChartTooltip } from '@/components/ChartTooltip';
@@ -26,6 +26,7 @@ export default function AnalyticsPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
+  const [rangeKey, setRangeKey] = useState<'7d' | '30d' | '90d'>('30d');
   const [stats, setStats] = useState({
     goalAchievement: '0%',
     retentionRate: '0%',
@@ -40,7 +41,8 @@ export default function AnalyticsPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const dayCount = rangeKey === '7d' ? 7 : rangeKey === '90d' ? 90 : 30;
+        const from = new Date(Date.now() - dayCount * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
         const to = new Date().toISOString().split('T')[0];
 
         const [overview, bookingDistributionData, retentionTrend] = await Promise.all([
@@ -68,19 +70,20 @@ export default function AnalyticsPage() {
     };
 
     fetchData();
-  }, [messageApi]);
+  }, [messageApi, rangeKey]);
 
   const analyticsStats = useMemo(
     () => [
       { title: '目标达成率', value: stats.goalAchievement, hint: '基于营收目标达成率', tone: 'mint' as const, icon: 'target' as const },
       { title: '会员留存率', value: stats.retentionRate, hint: '续费会员 / 到期会员', tone: 'violet' as const, icon: 'retention' as const },
       { title: '平均上座率', value: stats.avgOccupancy, hint: '确认预约占比', tone: 'orange' as const, icon: 'seat' as const },
-      { title: '整体满意度', value: stats.satisfaction, hint: '待接入课程评价数据', tone: 'pink' as const, icon: 'smile' as const },
+      { title: '整体满意度', value: stats.satisfaction, hint: '课程反馈', tone: 'pink' as const, icon: 'smile' as const },
     ],
     [stats]
   );
 
-  const analyticsScopeText = '分析范围：近 30 天交易与预约分布，外加近 6 个月会员留存趋势。';
+  const analyticsScopeText = `分析范围：近 ${rangeKey === '7d' ? '7' : rangeKey === '90d' ? '90' : '30'} 天交易与预约分布，外加近 6 个月会员留存趋势。`;
+  const rangeLabel = rangeKey === '7d' ? '近 7 天' : rangeKey === '90d' ? '近 90 天' : '近 30 天';
 
   const TrendTooltipRenderer = createChartTooltip({
     labelMap: {
@@ -102,7 +105,10 @@ export default function AnalyticsPage() {
     return (
       <div className={`${pageCls.page} ${styles.analyticsPage}`}>
         <PageHeader title="数据分析" />
-        <div className={`${pageCls.centeredState} ${pageCls.centeredStateShort}`}><Spin size="large" /></div>
+        <div className={`${pageCls.centeredState} ${pageCls.centeredStateShort}`}>
+          <Spin size="large" />
+          <div className={pageCls.centeredStateText}>正在加载分析数据…</div>
+        </div>
       </div>
     );
   }
@@ -110,7 +116,22 @@ export default function AnalyticsPage() {
   return (
     <div className={`${pageCls.page} ${styles.analyticsPage}`}>
       {contextHolder}
-      <PageHeader title="数据分析" />
+      <PageHeader
+        title="数据分析"
+        subtitle={analyticsScopeText}
+        extra={
+          <Select
+            value={rangeKey}
+            className={`${pageCls.settingsInput} ${pageCls.toolbarSelect}`}
+            options={[
+              { label: '近 7 天', value: '7d' },
+              { label: '近 30 天', value: '30d' },
+              { label: '近 90 天', value: '90d' },
+            ]}
+            onChange={(value: '7d' | '30d' | '90d') => setRangeKey(value)}
+          />
+        }
+      />
 
       <div className={pageCls.heroGrid}>
         {analyticsStats.map((item) => (
@@ -121,8 +142,8 @@ export default function AnalyticsPage() {
       <SectionCard title="分析总览">
         <div className={styles.analyticsSummaryCard}>
           <div className={styles.analyticsSummaryRow}>
-            <div className={styles.analyticsSummaryText}>{analyticsScopeText}</div>
-            <span className={styles.analyticsScopePill}>固定分析窗口</span>
+            <div className={styles.analyticsSummaryText}>聚焦当前时间窗口内的交易热度、预约分布与会员留存。</div>
+            <span className={styles.analyticsScopePill}>可切换时间窗口</span>
           </div>
           <div className={styles.analyticsProgressCard}>
             <div className={styles.analyticsProgressItem}>
@@ -142,7 +163,7 @@ export default function AnalyticsPage() {
       </SectionCard>
 
       <div className={pageCls.twoCol}>
-        <SectionCard title="交易类型热度" subtitle="按交易类型统计近 30 天发生次数">
+        <SectionCard title="交易类型热度" subtitle={`按交易类型统计 ${rangeLabel} 发生次数`}>
           <div className={styles.analyticsChartCard}>
             <div className={styles.analyticsLegend}>
               <span className={styles.analyticsLegendItem}><span className={styles.analyticsLegendDot} style={{ background: 'var(--mint)' }} />交易次数</span>
@@ -161,7 +182,7 @@ export default function AnalyticsPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="预约时段分布" subtitle="按真实预约时段聚合最近 30 天热度">
+        <SectionCard title="预约时段分布" subtitle={`按真实预约时段聚合 ${rangeLabel} 热度`}>
           <div className={styles.analyticsChartCard}>
             <div className={styles.analyticsLegend}>
               <span className={styles.analyticsLegendItem}><span className={styles.analyticsLegendDot} style={{ background: 'var(--orange)' }} />预约热度</span>
