@@ -418,23 +418,6 @@ export default function RolesPage() {
               </div>
             </div>
 
-            <SectionCard title="角色信息" subtitle="仅保留角色识别与职责说明，避免与上方摘要重复。">
-              <div className={widgetCls.metricGrid}>
-                <div className={widgetCls.metricCard}>
-                  <div className={widgetCls.metricLabel}>角色类型</div>
-                  <div className={widgetCls.metricValue}>{roleCodeLabel[detailRole.code as RoleCode] || detailRole.code}</div>
-                </div>
-                <div className={widgetCls.metricCard}>
-                  <div className={widgetCls.metricLabel}>角色名称</div>
-                  <div className={widgetCls.metricValue}>{detailRole.name}</div>
-                </div>
-                <div className={widgetCls.metricCard}>
-                  <div className={widgetCls.metricLabel}>职责说明</div>
-                  <div className={widgetCls.metricValue}>{detailRole.description || '暂无角色说明'}</div>
-                </div>
-              </div>
-            </SectionCard>
-
             <SectionCard title="权限摘要" subtitle="展示当前角色已关联的权限项，便于快速核对覆盖范围。">
               {detailRole.permissions.length ? (
                 <div className={pageCls.rolePermissionList}>
