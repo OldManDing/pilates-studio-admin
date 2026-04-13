@@ -1,4 +1,4 @@
-import { api } from '@/utils/request';
+import { api, requestWithMeta } from '@/utils/request';
 import type { CoachStatus } from '@/types';
 import type { PaginatedResponse } from './members';
 
@@ -41,8 +41,10 @@ export type CoachesQueryParams = {
 
 export const coachesApi = {
   getAll: async () => {
-    const res = await api.get<any[]>('/coaches');
-    return (res || []).map(mapCoach);
+    const res = await requestWithMeta<any[]>('/coaches', {
+      params: { page: 1, pageSize: 500 },
+    });
+    return (res.data || []).map(mapCoach);
   },
 
   getPaged: async (params?: CoachesQueryParams) => {

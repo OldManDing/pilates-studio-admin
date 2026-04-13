@@ -93,64 +93,71 @@ export default function CoachesPage() {
     totalCoaches: 0,
     activeCoaches: 0,
     avgRating: '4.8',
-    totalSessions: 0,
+    ratedCoaches: 0,
+    profileReadyCount: 0,
   });
+
+  const syncCoachStats = useCallback((matchingCoaches: Coach[], totalCount: number) => {
+    const activeCoaches = matchingCoaches.filter((coach) => coach.status === 'ACTIVE').length;
+    const avgRating = matchingCoaches.length > 0
+      ? (matchingCoaches.reduce((sum, coach) => sum + (coach.rating || 0), 0) / matchingCoaches.length).toFixed(1)
+      : '0.0';
+    const ratedCoaches = matchingCoaches.filter((coach) => (coach.rating || 0) > 0).length;
+    const profileReadyCount = matchingCoaches.filter((coach) => Boolean(coach.experience) && Boolean(coach.specialties?.length)).length;
+
+    setStats({
+      totalCoaches: totalCount,
+      activeCoaches,
+      avgRating,
+      ratedCoaches,
+      profileReadyCount,
+    });
+  }, []);
 
   const fetchCoaches = useCallback(async (page = 1) => {
     try {
       setLoading(true);
-      const response = await coachesApi.getPaged({
-        page,
-        pageSize,
-        search: searchValue.trim() || undefined,
-        status: statusFilter === '全部' ? undefined : statusFilter,
-      });
+      const [response, allCoaches] = await Promise.all([
+        coachesApi.getPaged({
+          page,
+          pageSize,
+          search: searchValue.trim() || undefined,
+          status: statusFilter === '全部' ? undefined : statusFilter,
+        }),
+        coachesApi.getAll(),
+      ]);
       const coachesData = response.data;
       setCoachList(coachesData);
       setCurrentPage(response.meta.page);
       setTotal(response.meta.total);
 
-      const activeCoaches = coachesData.filter(c => c.status === 'ACTIVE').length;
-      const avgRating = coachesData.length > 0
-        ? (coachesData.reduce((sum, c) => sum + (c.rating || 0), 0) / coachesData.length).toFixed(1)
-        : '0.0';
-
-      let totalSessions = 0;
-      if (coachesData.length > 0) {
-        try {
-          const firstStats = await coachesApi.getStats(coachesData[0].id);
-          totalSessions = firstStats.stats.totalSessions;
-        } catch {
-          // 后端接口可能不可用
-        }
-      }
-
-      setStats({
-        totalCoaches: response.meta.total,
-        activeCoaches,
-        avgRating,
-        totalSessions,
+      const keyword = searchValue.trim();
+      const matchingCoaches = allCoaches.filter((coach) => {
+        const matchesSearch = !keyword
+          || coach.name.includes(keyword)
+          || coach.phone.includes(keyword)
+          || (coach.email || '').includes(keyword);
+        const matchesStatus = statusFilter === '全部' || coach.status === statusFilter;
+        return matchesSearch && matchesStatus;
       });
+
+      syncCoachStats(matchingCoaches, response.meta.total);
     } catch (err) {
       messageApi.error('获取教练数据失败');
     } finally {
       setLoading(false);
     }
-  }, [messageApi, pageSize, searchValue, statusFilter]);
+  }, [messageApi, pageSize, searchValue, statusFilter, syncCoachStats]);
 
   useEffect(() => {
     void fetchCoaches(currentPage);
   }, [currentPage, fetchCoaches]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchValue, statusFilter]);
-
   const coachStats = useMemo(() => [
     { title: '教练总数', value: String(stats.totalCoaches), hint: `在职 ${stats.activeCoaches} / 休假 ${stats.totalCoaches - stats.activeCoaches}`, tone: 'mint' as const, icon: 'team' as const },
     { title: '平均评分', value: stats.avgRating, hint: '基于学员评价', tone: 'violet' as const, icon: 'star' as const },
-    { title: '本周课程', value: String(stats.totalSessions), hint: '人均排课', tone: 'orange' as const, icon: 'calendar' as const },
-    { title: '学员满意度', value: '96%', hint: '↑ 1.9% 环比', tone: 'pink' as const, icon: 'heart' as const },
+    { title: '已评分教练', value: String(stats.ratedCoaches), hint: '已有学员反馈', tone: 'orange' as const, icon: 'calendar' as const },
+    { title: '档案完整', value: String(stats.profileReadyCount), hint: '含经验与专长', tone: 'pink' as const, icon: 'heart' as const },
   ], [stats]);
 
   const openCreateModal = () => {
@@ -217,8 +224,21 @@ export default function CoachesPage() {
         search: searchValue.trim() || undefined,
         status: statusFilter === '全部' ? undefined : statusFilter,
       });
+      const allMatchingCoaches = await coachesApi.getAll();
       setCoachList(refreshed.data);
       setTotal(refreshed.meta.total);
+      syncCoachStats(
+        allMatchingCoaches.filter((coach) => {
+          const keyword = searchValue.trim();
+          const matchesSearch = !keyword
+            || coach.name.includes(keyword)
+            || coach.phone.includes(keyword)
+            || (coach.email || '').includes(keyword);
+          const matchesStatus = statusFilter === '全部' || coach.status === statusFilter;
+          return matchesSearch && matchesStatus;
+        }),
+        refreshed.meta.total,
+      );
 
       if (detailCoach && editingCoach) {
         const updated = refreshed.data.find((c) => c.id === detailCoach.id) || null;
@@ -236,6 +256,7 @@ export default function CoachesPage() {
     try {
       setCoachList((current) => current.filter((item) => item.id !== coach.id));
       await coachesApi.delete(coach.id);
+      await fetchCoaches(currentPage);
 
       if (detailCoach?.id === coach.id) {
         setDetailCoach(null);
@@ -286,6 +307,7 @@ export default function CoachesPage() {
 
   const applyFilters = () => {
     setStatusFilter(filterDraft.status);
+    setCurrentPage(1);
     setIsFilterOpen(false);
   };
 
@@ -294,6 +316,12 @@ export default function CoachesPage() {
     setFilterDraft(nextDraft);
     setStatusFilter(nextDraft.status);
     setIsFilterOpen(false);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchValue(value);
+    setCurrentPage(1);
   };
 
   if (loading && coachList.length === 0) {
@@ -342,7 +370,7 @@ export default function CoachesPage() {
                 value={searchValue}
                 prefix={<SearchOutlined />}
                 placeholder="按教练姓名、电话或邮箱搜索"
-                onChange={(event) => setSearchValue(event.target.value)}
+                onChange={(event) => handleSearchChange(event.target.value)}
               />
             </div>
             <div className={pageCls.toolbarRight}>
@@ -360,7 +388,6 @@ export default function CoachesPage() {
                     coachCodeText={coach.coachCode || 'COACH'}
                     statusLabel={coachStatusLabels[coach.status] || coach.status}
                     experienceText={coach.experience || '经验信息待补充'}
-                    emailText={coach.email || '-'}
                     phoneText={coach.phone}
                     ratingText={formatCoachRating(coach.rating)}
                     specialtiesText={getDisplayListText(coach.specialties, '待补充擅长方向', 2)}

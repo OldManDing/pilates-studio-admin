@@ -12,7 +12,6 @@ export type CoachRecordCardProps = {
   coachCodeText: string;
   statusLabel: string;
   experienceText: string;
-  emailText: string;
   phoneText: string;
   ratingText: string;
   specialtiesText: string;
@@ -26,7 +25,6 @@ export default function CoachRecordCard({
   coachCodeText,
   statusLabel,
   experienceText,
-  emailText,
   phoneText,
   ratingText,
   specialtiesText,
@@ -46,7 +44,6 @@ export default function CoachRecordCard({
               <span className={styles.coachCodeBadge}>{coachCodeText}</span>
             </div>
             <div className={widgetCls.recordSub}>{experienceText}</div>
-            <div className={styles.coachRecordSubtext}>{emailText}</div>
           </div>
         </div>
 
