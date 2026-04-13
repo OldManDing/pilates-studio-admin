@@ -10,10 +10,11 @@ type Props = {
   actionText?: string;
   onAction?: () => void;
   size?: 'default' | 'compact';
+  surface?: boolean;
 };
 
-const EmptyState: FC<Props> = ({ title, description, image, actionText, onAction, size = 'default' }) => (
-  <div className={`${cls.wrapper} ${size === 'compact' ? cls.compact : ''}`}>
+const EmptyState: FC<Props> = ({ title, description, image, actionText, onAction, size = 'default', surface = true }) => (
+  <div className={`${cls.wrapper} ${size === 'compact' ? cls.compact : ''} ${surface ? '' : cls.bare}`.trim()}>
     <Empty
       image={image}
       description={

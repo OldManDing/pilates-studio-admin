@@ -19,16 +19,13 @@
   padding: var(--space-6) var(--space-5);
 }
 
-.wrapper :global(.ant-empty) {
-  margin: 0;
-}
-
-.wrapper :global(.ant-empty-image) {
-  margin-bottom: var(--space-5);
-}
-
-.wrapper :global(.ant-empty-description) {
-  color: inherit;
+.bare {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  backdrop-filter: none;
 }
 
 .title {

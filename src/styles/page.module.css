@@ -2,6 +2,35 @@
   padding: var(--space-5) var(--space-7) var(--space-8);
 }
 
+.authShell,
+.errorShell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  position: relative;
+}
+
+.authShell {
+  overflow: auto;
+}
+
+.authPanel,
+.errorPanel {
+  position: relative;
+  width: min(520px, 100%);
+  padding: 28px;
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface-strong);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--surface-shadow);
+  backdrop-filter: var(--surface-backdrop);
+}
+
+.errorPanel {
+  width: min(680px, 100%);
+}
+
 .heroGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1045,6 +1074,29 @@
 .detailContentStack {
   display: grid;
   gap: 16px;
+}
+
+.detailDescriptions :global(.ant-descriptions-view) {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border-color: var(--control-border) !important;
+  background: var(--bg-surface-strong);
+  box-shadow: var(--surface-shadow);
+}
+
+.detailDescriptions :global(.ant-descriptions-item-label) {
+  width: 152px;
+  background: color-mix(in srgb, var(--mint-soft) 46%, white) !important;
+  color: var(--text-secondary) !important;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.detailDescriptions :global(.ant-descriptions-item-content) {
+  background: rgba(255, 255, 255, 0.82) !important;
+  color: var(--text-main) !important;
 }
 
 .detailContentStackSpacious {
