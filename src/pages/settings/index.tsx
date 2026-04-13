@@ -1,9 +1,7 @@
-import { SaveOutlined } from '@ant-design/icons';
 import { App, Button, Cascader, Col, Descriptions, Drawer, Form, Input, Row, Select, Spin, Switch, TimePicker, message as antdMessage } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
-import ActionButton from '@/components/ActionButton';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import StatusTag from '@/components/StatusTag';
@@ -650,32 +648,28 @@ export default function SettingsPage() {
       <SettingsOverviewCard
         eyebrow={SETTINGS_OVERVIEW_EYEBROW}
         title={storeInfo.studioName || PLACEHOLDER_STORE_INFO.studioName}
-        summary={storeChanged
-          ? '存在未保存修改。'
-          : '查看门店档案、通知配置与安全状态。'}
+        summary={storeChanged ? '存在未保存修改。' : '门店、通知与安全配置。'}
         statusLabel={storeChanged ? '处理中' : '正常'}
         savedBadgeText={storeSavedLabel}
         metaItems={settingsOverviewMetaItems}
         metrics={settingsOverviewMetrics}
-        primaryActionLabel="保存门店信息"
+        primaryActionLabel="保存"
         primaryActionDisabled={!storeChanged}
         onPrimaryAction={handleSaveStoreInfo}
       />
 
       <SectionCard title="门店信息" subtitle={`${storeSavedLabel}${storeChanged ? ' · 有未保存修改' : ''}`}>
         <div className={styles.settingsSectionStack}>
-          <div className={styles.settingsSectionSummary}>
-            <div className={styles.settingsSectionSummaryText}>
-              维护门店基础档案、联系方式与营业时间。
-            </div>
+          <div className={styles.settingsSectionSummaryCompact}>
             <span className={styles.settingsSectionPill}>{storeChanged ? '待保存修改' : '信息已同步'}</span>
+            <span className={styles.settingsSectionHintCompact}>修改后使用页首主按钮保存</span>
           </div>
 
           <Form form={storeForm} className={pageCls.settingsForm} layout="vertical">
             <div className={styles.settingsFormSectionGrid}>
               <div className={styles.settingsFormSectionCard}>
                 <h3 className={styles.settingsFormSectionTitle}>基础档案</h3>
-                <p className={styles.settingsFormSectionHint}>门店基础档案。</p>
+                <p className={styles.settingsFormSectionHint}>门店名称与联系方式。</p>
                 <Row gutter={18}>
                   <Col span={24}>
                     <Form.Item label="门店名称" name="studioName" rules={[{ required: true, message: '请输入门店名称' }]}>
@@ -697,7 +691,7 @@ export default function SettingsPage() {
 
               <div className={styles.settingsFormSectionCard}>
                 <h3 className={styles.settingsFormSectionTitle}>营业与地址</h3>
-                <p className={styles.settingsFormSectionHint}>营业时间与地址。</p>
+                <p className={styles.settingsFormSectionHint}>营业时间与位置。</p>
                 <Row gutter={18}>
                   <Col span={24}>
                     <Form.Item label="营业时间" name="hours" rules={[{ required: true, message: '请选择营业时间' }]}>
@@ -733,9 +727,6 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className={styles.settingsPrimaryActionRow}>
-              <ActionButton icon={<SaveOutlined />} onClick={handleSaveStoreInfo}>保存更改</ActionButton>
-            </div>
           </Form>
         </div>
       </SectionCard>
@@ -745,13 +736,13 @@ export default function SettingsPage() {
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>通知设置</h3>
-              <div className={widgetCls.smallText}>通知开关与入口</div>
+              <div className={widgetCls.smallText}>通知开关</div>
             </div>
           </div>
           <div className={pageCls.settingsSectionList}>
             <SettingsActionRow
               title="通知管理"
-                description="查看记录并发送通知。"
+                description="查看通知记录与发送入口。"
               statusLabel="正常"
               onClick={handleGoToNotifications}
             />
@@ -773,7 +764,7 @@ export default function SettingsPage() {
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>系统信息</h3>
-              <div className={widgetCls.smallText}>版本与运行状态</div>
+              <div className={widgetCls.smallText}>运行状态</div>
             </div>
           </div>
           <div className={styles.settingsUtilityGrid}>
@@ -799,7 +790,7 @@ export default function SettingsPage() {
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>安全设置</h3>
-              <div className={widgetCls.smallText}>账户安全与权限</div>
+              <div className={widgetCls.smallText}>账户安全</div>
             </div>
           </div>
           <div className={pageCls.settingsSectionList}>
@@ -824,7 +815,7 @@ export default function SettingsPage() {
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>数据管理</h3>
-              <div className={widgetCls.smallText}>备份、导出与恢复</div>
+              <div className={widgetCls.smallText}>备份与恢复</div>
             </div>
           </div>
           <div className={pageCls.settingsSectionList}>
