@@ -534,7 +534,7 @@ export default function CoachesPage() {
             <CoachProfileStats items={detailCoachStatItems} />
 
             <SectionCard title="教练档案">
-              <Descriptions column={1} size="small" bordered>
+              <Descriptions column={1} size="small" bordered className={pageCls.detailDescriptions}>
                 <Descriptions.Item label="教练编号">{detailCoach.coachCode || '-'}</Descriptions.Item>
                 <Descriptions.Item label="教练姓名">{detailCoach.name}</Descriptions.Item>
                 <Descriptions.Item label="状态">{coachStatusLabels[detailCoach.status] || detailCoach.status}</Descriptions.Item>
