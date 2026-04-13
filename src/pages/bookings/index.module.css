@@ -115,7 +115,7 @@
 .bookingPeriodLabel {
   color: var(--text-heading);
   font-size: var(--font-size-lg);
-  font-weight: 300;
+  font-weight: var(--font-black);
   line-height: 1.2;
 }
 
