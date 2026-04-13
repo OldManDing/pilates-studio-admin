@@ -20,7 +20,7 @@ export default function NotFoundPage() {
         />
         <div className={cls.actions}>
           <ActionButton ghost onClick={() => navigate('/login', { replace: true })}>前往登录页</ActionButton>
-          <ActionButton icon={<HomeOutlined />} onClick={() => navigate('/dashboard', { replace: true })}>返回首页</ActionButton>
+          <ActionButton icon={<HomeOutlined />} onClick={() => navigate('/dashboard', { replace: true })}>返回仪表盘</ActionButton>
         </div>
       </div>
     </div>

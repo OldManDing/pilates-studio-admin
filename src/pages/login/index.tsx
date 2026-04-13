@@ -100,7 +100,6 @@ export default function LoginPage() {
           className={cls.form}
           layout="vertical"
           onFinish={mfaChallenge ? handleVerifyTwoFactor : handleFinish}
-          initialValues={{ email: 'owner@pilates.com' }}
         >
           {!mfaChallenge ? (
             <>
