@@ -478,7 +478,7 @@ export default function NotificationsPage() {
       </div>
 
       <SectionCard
-        title="通知列表"
+        title="通知队列"
       >
         <div className={pageCls.sectionContentStack}>
           <div className={pageCls.sectionSummaryRow}>
@@ -712,7 +712,7 @@ export default function NotificationsPage() {
                 <div>
                   <span className={styles.typePill}>{detailNotification.type}</span>
                   <h2 className={styles.overviewTitle}>{detailNotification.title}</h2>
-                  <div className={styles.overviewSubtitle}>查看通知渠道、接收对象与阅读状态，方便管理员快速核对通知执行情况。</div>
+                  <div className={styles.overviewSubtitle}>查看通知状态与接收对象。</div>
                 </div>
                 <StatusTag status={statusLabelMap[detailNotification.status]} />
               </div>

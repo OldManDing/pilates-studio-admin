@@ -169,8 +169,10 @@ export default function FinancePage() {
         revenue: Math.round(values.revenue),
       }));
       setFinanceBar(barData);
+      return txRes.data;
     } catch (err) {
       messageApi.error('获取财务数据失败');
+      return [] as Transaction[];
     } finally {
       setLoading(false);
     }
@@ -345,10 +347,10 @@ export default function FinancePage() {
         messageApi.success('交易记录已创建');
       }
 
-      await fetchTransactions();
+      const refreshedTransactions = await fetchTransactions();
 
       if (detailTransaction && editingTransaction) {
-        const updated = transactionList.find((t) => t.id === detailTransaction.id) || null;
+        const updated = refreshedTransactions.find((t) => t.id === detailTransaction.id) || null;
         setDetailTransaction(updated);
       }
 
@@ -446,7 +448,7 @@ export default function FinancePage() {
       </div>
 
       <div className={pageCls.financeTwoCol}>
-        <SectionCard title="营收趋势" subtitle="过去 7 个月真实营收变化">
+        <SectionCard title="营收趋势" subtitle="过去 7 个月营收变化">
           <div className={pageCls.chartPanelTall}>
             <ResponsiveContainer>
               <BarChart data={financeBar} margin={{ top: 18, right: 8, left: 0, bottom: 0 }}>
@@ -464,10 +466,10 @@ export default function FinancePage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className={widgetCls.smallText}>成本相关指标后续补充。</div>
+          <div className={widgetCls.smallText}>当前先保留营收侧数据。</div>
         </SectionCard>
 
-        <SectionCard title="营收构成" subtitle="按会员类型分类">
+        <SectionCard title="营收构成" subtitle="按交易类型拆分">
           <div className={pageCls.chartPanelTall}>
             <ResponsiveContainer>
               <PieChart>
@@ -504,7 +506,7 @@ export default function FinancePage() {
       </div>
 
       <SectionCard
-        title="最近交易"
+        title="交易工作台"
         extra={<Button type="text" className={pageCls.textAction} onClick={handleViewAll}>{viewAllLabel}</Button>}
       >
         <div className={pageCls.sectionContentStack}>
