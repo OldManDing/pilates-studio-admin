@@ -456,10 +456,8 @@ export default function MembersPage() {
                     id={member.id}
                     name={member.name}
                     phone={member.phone}
-                    email={member.email || '-'}
                     planName={member.plan?.name || '-'}
-                    joinedDateText={formatDate(member.joinedAt)}
-                    remainingCreditsText={`剩余课时 ${member.remainingCredits} 节`}
+                    remainingCreditsText={`${member.remainingCredits} 节`}
                     memberCodeText={member.memberCode || 'MEMBER'}
                     statusLabel={memberStatusLabels[member.status]}
                     tone={getToneFromName(member.name)}

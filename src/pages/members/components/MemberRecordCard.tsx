@@ -10,9 +10,7 @@ export type MemberRecordCardProps = {
   id: string;
   name: string;
   phone: string;
-  email: string;
   planName: string;
-  joinedDateText: string;
   remainingCreditsText: string;
   memberCodeText: string;
   statusLabel: string;
@@ -24,9 +22,7 @@ export type MemberRecordCardProps = {
 export default function MemberRecordCard({
   name,
   phone,
-  email,
   planName,
-  joinedDateText,
   remainingCreditsText,
   memberCodeText,
   statusLabel,
@@ -45,7 +41,6 @@ export default function MemberRecordCard({
             <span className={pageCls.memberCodePill}>{memberCodeText}</span>
           </div>
           <div className={widgetCls.recordSub}>{phone}</div>
-          <div className={pageCls.membersSubtext}>{email}</div>
         </div>
       </div>
 
@@ -53,10 +48,6 @@ export default function MemberRecordCard({
         <div className={pageCls.memberRecordField}>
           <div className={pageCls.memberRecordLabel}>会籍类型</div>
           <div className={pageCls.memberRecordValue}>{planName}</div>
-        </div>
-        <div className={pageCls.memberRecordField}>
-          <div className={pageCls.memberRecordLabel}>加入日期</div>
-          <div className={pageCls.memberRecordValue}>{joinedDateText}</div>
         </div>
         <div className={pageCls.memberRecordField}>
           <div className={pageCls.memberRecordLabel}>剩余课时</div>
