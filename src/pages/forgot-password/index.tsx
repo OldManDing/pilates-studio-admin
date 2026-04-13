@@ -2,6 +2,7 @@ import { MailOutlined, UndoOutlined } from '@ant-design/icons';
 import { App, Form, Input } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
+import pageCls from '@/styles/page.module.css';
 import cls from './index.module.css';
 
 type ForgotValues = {
@@ -22,16 +23,16 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className={cls.shell}>
+    <div className={pageCls.authShell}>
       <div className={cls.backdrop} />
-      <div className={cls.panel}>
+      <div className={pageCls.authPanel}>
         <div className={cls.brand}>普拉提工作室</div>
         <h1 className={cls.title}>找回登录密码</h1>
-        <p className={cls.subtitle}>输入邮箱或手机号后提交找回申请，由管理员协助重置密码。</p>
+        <p className={cls.subtitle}>输入账号后提交申请，由管理员协助重置密码。</p>
 
-        <Form<ForgotValues> className={cls.form} layout="vertical" onFinish={handleFinish} initialValues={{ account: 'admin@pilates.com' }}>
+        <Form<ForgotValues> className={cls.form} layout="vertical" onFinish={handleFinish}>
           <Form.Item label="账号" name="account" rules={[{ required: true, message: '请输入账号' }]}>
-            <Input size="large" prefix={<MailOutlined />} className={cls.input} placeholder="请输入邮箱或手机号" />
+            <Input size="large" prefix={<MailOutlined />} className={cls.input} placeholder="邮箱或手机号" />
           </Form.Item>
 
           <div className={cls.actions}>
