@@ -31,7 +31,7 @@
   border-color: var(--stat-accent-border, color-mix(in srgb, var(--mint) 18%, transparent));
   background: var(--bg-surface-strong);
   box-shadow: var(--surface-shadow-hover);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .top {
