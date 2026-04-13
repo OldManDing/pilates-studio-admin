@@ -3,6 +3,7 @@ import { App, Form, Input } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
+import pageCls from '@/styles/page.module.css';
 import { authApi, setTokens, type AuthResponse, type LoginMfaChallenge } from '@/services/auth';
 import { getErrorMessage } from '@/utils/errors';
 import { getSafeRedirectPath } from '@/utils/safeRedirect';
@@ -88,12 +89,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className={cls.shell}>
+    <div className={pageCls.authShell}>
       <div className={cls.backdrop} />
-      <div className={cls.panel}>
+      <div className={pageCls.authPanel}>
         <div className={cls.brand}>普拉提工作室</div>
-        <h1 className={cls.title}>欢迎登录门店管理后台</h1>
-        <p className={cls.subtitle}>{mfaChallenge ? '请输入动态验证码完成登录。' : '请使用管理员账号密码登录。'}</p>
+        <h1 className={cls.title}>门店管理后台</h1>
+        <p className={cls.subtitle}>{mfaChallenge ? '输入动态验证码完成登录。' : '使用管理员账号登录。'}</p>
 
         <Form<LoginValues>
           form={form}
@@ -112,7 +113,7 @@ export default function LoginPage() {
                   size="large"
                   prefix={<UserOutlined />}
                   className={cls.input}
-                  placeholder="请输入邮箱"
+                 placeholder="邮箱"
                 />
               </Form.Item>
 
@@ -125,7 +126,7 @@ export default function LoginPage() {
                   size="large"
                   prefix={<LockOutlined />}
                   className={cls.input}
-                  placeholder="请输入密码"
+                 placeholder="密码"
                 />
               </Form.Item>
 
@@ -151,7 +152,7 @@ export default function LoginPage() {
                   size="large"
                   prefix={<SafetyCertificateOutlined />}
                   className={cls.input}
-                  placeholder="请输入 6 位动态验证码"
+                  placeholder="6 位动态验证码"
                   maxLength={6}
                 />
               </Form.Item>

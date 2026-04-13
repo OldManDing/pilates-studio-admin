@@ -21,7 +21,7 @@ describe('LoginPage smoke test', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('heading', { name: '欢迎登录门店管理后台' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '门店管理后台' })).toBeInTheDocument();
     expect(screen.getByLabelText('邮箱')).toBeInTheDocument();
     expect(screen.getByLabelText('密码')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /进入管理后台/ })).toBeInTheDocument();
