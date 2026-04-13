@@ -13,9 +13,7 @@ import { reportsApi } from '@/services/reports';
 import { transactionsApi } from '@/services/transactions';
 import { getErrorMessage } from '@/utils/errors';
 import {
-  MembershipOverviewCard,
   TodayCoursePanel,
-  TrainingSummaryCard,
   UpcomingBookingsPanel,
 } from './components';
 import styles from './index.module.css';
@@ -25,18 +23,6 @@ type DashboardStats = {
   activeMembers: number;
   newMembersThisMonth: number;
   monthlyRevenue: number;
-};
-
-type MembershipOverviewViewModel = {
-  tierLabel: string;
-  planName: string;
-  conclusionText: string;
-  supportMetricOneLabel: string;
-  supportMetricOneText: string;
-  supportMetricTwoLabel: string;
-  supportMetricTwoText: string;
-  progressPercent?: number;
-  progressText: string;
 };
 
 type TodayCourseViewModel = {
@@ -49,14 +35,6 @@ type TodayCourseViewModel = {
   statusText?: string;
   queueHintText?: string;
   actionText?: string;
-};
-
-type TrainingSummaryViewModel = {
-  sessionCountText: string;
-  hoursText: string;
-  streakDaysText: string;
-  goalPercent?: number;
-  goalLabel?: string;
 };
 
 type UpcomingBookingViewModel = {
@@ -182,66 +160,6 @@ const formatDurationText = (minutes?: number) => {
   return `${minutes} min`;
 };
 
-const deriveMembershipSummary = (
-  stats: DashboardStats,
-  monthlyRevenue: number,
-  recentBookingCount: number,
-  options: {
-    memberStatsAvailable: boolean;
-    revenueAvailable: boolean;
-    bookingsAvailable: boolean;
-  },
-): MembershipOverviewViewModel => {
-  if (!options.memberStatsAvailable) {
-    const revenueText = options.revenueAvailable
-      ? `¥${monthlyRevenue.toLocaleString('zh-CN')}`
-      : '交易汇总暂不可用';
-
-    return {
-      tierLabel: '数据受限',
-      planName: '会员统计暂不可用',
-      conclusionText: '会员统计未完成同步，建议先排查统计服务后再判断运营动作。',
-      supportMetricOneLabel: '建议动作',
-      supportMetricOneText: '检查会员统计服务状态',
-      supportMetricTwoLabel: '可用营收',
-      supportMetricTwoText: revenueText,
-      progressPercent: 0,
-      progressText: '活跃率暂不可计算',
-    };
-  }
-
-  const activityRate = stats.totalMembers > 0 ? Math.round((stats.activeMembers / stats.totalMembers) * 100) : 0;
-  const conclusionText = activityRate >= 72
-    ? '会员活跃稳定，可优先推进新增会员转化。'
-    : activityRate >= 50
-      ? '活跃率有提升空间，建议优先跟进沉默会员。'
-      : '活跃率偏低，建议先处理会员唤醒与到课跟进。';
-
-  const supportMetricTwoLabel = options.bookingsAvailable
-    ? '近期预约'
-    : options.revenueAvailable
-      ? '月度营收'
-      : '业务补充';
-
-  const supportMetricTwoText = options.bookingsAvailable
-    ? `${recentBookingCount} 单`
-    : options.revenueAvailable
-      ? `¥${monthlyRevenue.toLocaleString('zh-CN')}`
-      : '预约与交易数据暂不可用';
-
-  return {
-    tierLabel: stats.activeMembers > 120 ? '高活跃' : '运营中',
-    planName: `活跃会员 ${stats.activeMembers} / 总会员 ${stats.totalMembers || 0}`,
-    conclusionText,
-    supportMetricOneLabel: '本月新增',
-    supportMetricOneText: stats.newMembersThisMonth > 0 ? `${stats.newMembersThisMonth} 位` : '暂无新增',
-    supportMetricTwoLabel,
-    supportMetricTwoText,
-    progressPercent: activityRate,
-    progressText: `活跃率 ${activityRate}%`,
-  };
-};
-
 const mapTodayCourses = (bookings: Booking[], courses: Course[]): TodayCourseViewModel[] => {
   const now = new Date();
   const sortedBookings = [...bookings].sort((left, right) => {
@@ -286,25 +204,6 @@ const mapTodayCourses = (bookings: Booking[], courses: Course[]): TodayCourseVie
     queueHintText: '当前暂无可用预约队列，建议先校对课程启停与教练排班。',
     actionText: '前往课程管理',
   }));
-};
-
-const deriveTrainingSummary = (
-  courses: Course[],
-  coaches: Coach[],
-  totalMembers: number,
-): TrainingSummaryViewModel => {
-  const totalSessions = courses.reduce((sum, item) => sum + (item._count?.sessions || 0), 0);
-  const estimatedHours = courses.reduce((sum, item) => sum + ((item._count?.sessions || 0) * item.durationMinutes), 0) / 60;
-  const streakDays = Math.min(7, Math.max(1, coaches.filter((coach) => coach.status === 'ACTIVE').length || 1));
-  const goalPercent = totalMembers > 0 ? Math.min(100, Math.round((totalSessions / totalMembers) * 100)) : 0;
-
-  return {
-    sessionCountText: `${totalSessions || 0} 次`,
-    hoursText: `${estimatedHours > 0 ? estimatedHours.toFixed(1) : '0.0'} h`,
-    streakDaysText: `${streakDays} d`,
-    goalPercent,
-    goalLabel: totalSessions > 0 ? `月度课节完成 ${goalPercent}%` : '当前暂无可计算的课节完成度',
-  };
 };
 
 const mapUpcomingBookings = (items: Booking[]): UpcomingBookingViewModel[] => {
@@ -460,16 +359,6 @@ export default function DashboardPage() {
     [noShowBookingCount, cancelledBookingCount, pendingBookingCount],
   );
 
-  const membershipSummary = useMemo(
-    () =>
-      deriveMembershipSummary(stats, stats.monthlyRevenue, bookingList.length, {
-        memberStatsAvailable: metricAvailability.memberStats,
-        revenueAvailable: metricAvailability.revenue,
-        bookingsAvailable: metricAvailability.bookings,
-      }),
-    [stats, bookingList.length, metricAvailability],
-  );
-
   const todayCourses = useMemo(
     () => mapTodayCourses(bookingList, courseList),
     [bookingList, courseList],
@@ -520,12 +409,33 @@ export default function DashboardPage() {
     [stats, bookingList, metricAvailability, todayCourses.length],
   );
 
-  const trainingSummary = useMemo(
-    () => deriveTrainingSummary(courseList, coachList, stats.totalMembers),
-    [courseList, coachList, stats.totalMembers],
-  );
-
   const upcomingBookings = useMemo(() => mapUpcomingBookings(bookingList), [bookingList]);
+
+  const operationalMetrics = useMemo(
+    () => [
+      {
+        label: '总会员',
+        value: metricAvailability.memberStats ? `${stats.totalMembers} 位` : '--',
+        hint: metricAvailability.memberStats ? `活跃 ${stats.activeMembers} 位` : '会员统计暂不可用',
+      },
+      {
+        label: '本月新增',
+        value: metricAvailability.memberStats ? `${stats.newMembersThisMonth} 位` : '--',
+        hint: metricAvailability.memberStats ? '关注新会员转化' : '会员统计暂不可用',
+      },
+      {
+        label: '可排课程',
+        value: metricAvailability.courses ? `${courseList.filter((item) => item.isActive).length} 门` : '--',
+        hint: metricAvailability.courses ? `在岗教练 ${coachList.filter((item) => item.status === 'ACTIVE').length} 位` : '课程与教练数据暂不可用',
+      },
+      {
+        label: '本月营收',
+        value: metricAvailability.revenue ? `¥${stats.monthlyRevenue.toLocaleString('zh-CN')}` : '--',
+        hint: metricAvailability.revenue ? '来源：交易汇总' : '交易汇总暂不可用',
+      },
+    ],
+    [stats, metricAvailability, courseList, coachList],
+  );
 
   if (loading) {
     return (
@@ -648,13 +558,17 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        <div className={styles.supportGrid}>
-          <TrainingSummaryCard {...trainingSummary} />
-          <MembershipOverviewCard
-            {...membershipSummary}
-            onViewDetail={() => go('/members')}
-          />
-        </div>
+        <SectionCard title="运营总览" subtitle="门店规模、供给与营收摘要。">
+          <div className={styles.operationalMetricsGrid}>
+            {operationalMetrics.map((item) => (
+              <div key={item.label} className={styles.operationalMetricCard}>
+                <div className={styles.operationalMetricLabel}>{item.label}</div>
+                <div className={styles.operationalMetricValue}>{item.value}</div>
+                <div className={styles.operationalMetricHint}>{item.hint}</div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
       </div>
     </div>
   );

@@ -223,10 +223,40 @@
   opacity: 0.94;
 }
 
-.supportGrid {
+.operationalMetricsGrid {
   display: grid;
-  grid-template-columns: minmax(260px, 0.88fr) minmax(0, 1.12fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-3);
+}
+
+.operationalMetricCard {
+  padding: 16px 18px;
+  border-radius: var(--radius-md);
+  background: var(--control-surface);
+  border: 1px solid var(--control-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+.operationalMetricLabel {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.operationalMetricValue {
+  margin-top: 8px;
+  color: var(--text-heading);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-black);
+}
+
+.operationalMetricHint {
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
 }
 
 .bottomGrid {
@@ -711,7 +741,7 @@
 @media (max-width: 1200px) {
   .anomalyPriorityGrid,
   .taskPanelsGrid,
-  .supportGrid,
+  .operationalMetricsGrid,
   .bottomGrid {
     grid-template-columns: 1fr;
   }
