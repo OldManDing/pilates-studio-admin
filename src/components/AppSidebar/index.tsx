@@ -22,7 +22,6 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
   const { message } = App.useApp();
   const [accountOpen, setAccountOpen] = useState(false);
   const [user, setUser] = useState<{ displayName: string; email: string; role: { code: string } } | null>(null);
-  const [loginTime] = useState(() => new Date().toISOString());
   const accountWrapRef = useRef<HTMLDivElement | null>(null);
   const accountButtonRef = useRef<HTMLButtonElement | null>(null);
   const settingsActionRef = useRef<HTMLButtonElement | null>(null);
@@ -113,19 +112,6 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
     onNavigate('/login');
   };
 
-  const formatLoginTime = (loginAt: string) => {
-    try {
-      return new Intl.DateTimeFormat('zh-CN', {
-        month: 'numeric',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }).format(new Date(loginAt));
-    } catch {
-      return loginAt;
-    }
-  };
-
   return (
     <div className={cls.wrapper}>
       <div className={cls.brand}>
@@ -195,7 +181,7 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
             </div>
             <div className={cls.userMetaRowCompact}>
               <div className={cls.userMeta}>{user?.email ?? 'admin@pilates.com'}</div>
-              <div className={cls.userLoginMeta}>登录 {formatLoginTime(loginTime)}</div>
+              <div className={cls.userLoginMeta}>当前会话</div>
             </div>
           </div>
           <span className={cls.chevron}><DownOutlined /></span>

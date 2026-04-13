@@ -54,7 +54,7 @@ interface DataActionState {
 type SecurityDrawerKey = SecurityActionTitle | null;
 type DataDrawerKey = DataActionTitle | null;
 
-const SETTINGS_OVERVIEW_EYEBROW = 'SETTINGS OVERVIEW';
+const SETTINGS_OVERVIEW_EYEBROW = '系统总览';
 
 const formatStoreAddress = (info: Pick<StoreInfoValues, 'province' | 'city' | 'district' | 'address'>) => {
   const prefix = [info.province, info.city, info.district].filter(Boolean).join('');
@@ -216,18 +216,18 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [storeInfo, setStoreInfo] = useState<StoreInfoValues>(defaultStoreInfo);
   const [savedStoreInfo, setSavedStoreInfo] = useState<StoreInfoValues>(defaultStoreInfo);
-  const [storeSavedAt, setStoreSavedAt] = useState('今天 09:20');
+  const [storeSavedAt, setStoreSavedAt] = useState('');
   const [notifications, setNotifications] = useState<NotificationSetting[]>([]);
-  const [notificationSavedAt, setNotificationSavedAt] = useState('今天 09:30');
+  const [notificationSavedAt, setNotificationSavedAt] = useState('');
   const [securityState, setSecurityState] = useState<Record<SecurityActionTitle, SecurityActionState>>({
-    修改密码: { title: '修改密码', description: '定期更新管理员账号密码', status: '正常', detail: '可通过此功能修改密码' },
-    两步验证: { title: '两步验证', description: '为核心账号开启短信或邮箱二次验证', status: '待激活', detail: '点击设置两步验证' },
-    权限管理: { title: '权限管理', description: '配置前台、店长和财务的页面权限', status: '正常', detail: '可在"角色权限"页面配置' }
+    修改密码: { title: '修改密码', description: '定期更新管理员账号密码', status: '正常', detail: '可在此更新密码' },
+    两步验证: { title: '两步验证', description: '为核心账号开启短信或邮箱二次验证', status: '待激活', detail: '可在此启用两步验证' },
+    权限管理: { title: '权限管理', description: '配置前台、店长和财务的页面权限', status: '正常', detail: '进入角色权限页面调整' }
   });
   const [dataState, setDataState] = useState<Record<DataActionTitle, DataActionState>>({
-    数据备份: { title: '数据备份', description: '每日自动备份课程、预约和交易数据', status: '正常', detail: '可通过导出功能手动备份' },
-    导出数据: { title: '导出数据', description: '按时间范围导出经营与会员报表', status: '正常', detail: '点击导出按钮开始' },
-    数据恢复: { title: '数据恢复', description: '从最近一次备份恢复门店数据', status: '正常', detail: '点击上传备份文件恢复' }
+    数据备份: { title: '数据备份', description: '每日自动备份课程、预约和交易数据', status: '正常', detail: '支持手动导出备份' },
+    导出数据: { title: '导出数据', description: '按时间范围导出经营与会员报表', status: '正常', detail: '导出经营数据' },
+    数据恢复: { title: '数据恢复', description: '从最近一次备份恢复门店数据', status: '正常', detail: '上传备份文件恢复' }
   });
   const [passwordDraft, setPasswordDraft] = useState({ current: '', next: '', confirm: '' });
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
@@ -235,8 +235,8 @@ export default function SettingsPage() {
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [disablePassword, setDisablePassword] = useState('');
   const [exportRange, setExportRange] = useState('近 30 天');
-  const [systemVersion] = useState('v2.6.1');
-  const [lastUpdated] = useState('2026-03-28');
+  const [systemVersion] = useState('v1.0.0');
+  const [lastUpdated] = useState('待同步');
   const [systemStatus, setSystemStatus] = useState<'稳定' | '检查中'>('稳定');
   const [openSecurityDrawer, setOpenSecurityDrawer] = useState<SecurityDrawerKey>(null);
   const [openDataDrawer, setOpenDataDrawer] = useState<DataDrawerKey>(null);
@@ -360,6 +360,8 @@ export default function SettingsPage() {
   };
 
   const storeChanged = JSON.stringify(normalizeStoreFormValues(watchedStoreInfo)) !== JSON.stringify(normalizeStoreFormValues(savedStoreInfo));
+  const storeSavedLabel = storeSavedAt ? `最近保存 ${storeSavedAt}` : '尚未记录';
+  const notificationSavedLabel = notificationSavedAt ? `最近保存 ${notificationSavedAt}` : '尚未记录';
 
   const settingsOverviewMetaItems = useMemo<SettingsOverviewMetaItem[]>(() => [
     {
@@ -370,20 +372,20 @@ export default function SettingsPage() {
     {
       label: '营业时间',
       value: storeInfo.businessHours || '待设置营业时间',
-      hint: `基础信息最近保存于 ${storeSavedAt}`,
+      hint: storeSavedLabel,
     },
     {
       label: '门店地址',
       value: formatStoreAddress(storeInfo),
       hint: '用于后台展示与门店基础档案维护',
     },
-  ], [storeInfo, storeSavedAt]);
+  ], [storeInfo, storeSavedLabel]);
 
   const settingsOverviewMetrics = useMemo<SettingsOverviewMetric[]>(() => [
     {
       label: '已启用通知',
       value: `${enabledNotificationCount}/${notifications.length || 0}`,
-      hint: `最近通知保存于 ${notificationSavedAt}`,
+      hint: notificationSavedLabel,
       tone: 'mint',
     },
     {
@@ -395,10 +397,10 @@ export default function SettingsPage() {
     {
       label: '数据任务',
       value: `${dataHealthyCount}/${dataActionsList.length}`,
-      hint: dataHealthyCount === dataActionsList.length ? '备份与恢复入口可用' : '存在待处理的数据任务',
+      hint: dataHealthyCount === dataActionsList.length ? '备份与恢复入口可用' : '存在待处理项',
       tone: 'orange',
     },
-  ], [dataHealthyCount, enabledNotificationCount, notificationSavedAt, notifications.length, securityHealthyCount]);
+  ], [dataHealthyCount, enabledNotificationCount, notificationSavedLabel, notifications.length, securityHealthyCount]);
 
   const securityActionRows = useMemo(
     () => securityActionsList.map((item) => ({
@@ -635,6 +637,7 @@ export default function SettingsPage() {
         <PageHeader title="系统设置" />
         <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
           <Spin size="large" />
+          <div className={widgetCls.smallText}>正在加载系统设置…</div>
         </div>
       </div>
     );
@@ -648,10 +651,10 @@ export default function SettingsPage() {
         eyebrow={SETTINGS_OVERVIEW_EYEBROW}
         title={storeInfo.studioName || PLACEHOLDER_STORE_INFO.studioName}
         summary={storeChanged
-          ? '当前门店基础信息存在未保存修改，可在完成核对后直接保存并同步到系统设置。'
-          : '统一查看门店档案、通知配置与安全状态，保持后台运营设置与门店信息一致。'}
+          ? '存在未保存修改。'
+          : '查看门店档案、通知配置与安全状态。'}
         statusLabel={storeChanged ? '处理中' : '正常'}
-        savedBadgeText={`最近保存 ${storeSavedAt}`}
+        savedBadgeText={storeSavedLabel}
         metaItems={settingsOverviewMetaItems}
         metrics={settingsOverviewMetrics}
         primaryActionLabel="保存门店信息"
@@ -659,7 +662,7 @@ export default function SettingsPage() {
         onPrimaryAction={handleSaveStoreInfo}
       />
 
-      <SectionCard title="门店信息" subtitle={`基础信息与营业时间 · 最近保存 ${storeSavedAt}${storeChanged ? ' · 有未保存修改' : ''}`}>
+      <SectionCard title="门店信息" subtitle={`${storeSavedLabel}${storeChanged ? ' · 有未保存修改' : ''}`}>
         <div className={styles.settingsSectionStack}>
           <div className={styles.settingsSectionSummary}>
             <div className={styles.settingsSectionSummaryText}>
@@ -742,13 +745,13 @@ export default function SettingsPage() {
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>通知设置</h3>
-              <div className={widgetCls.smallText}>查看通知开关与入口。</div>
+              <div className={widgetCls.smallText}>通知开关与入口</div>
             </div>
           </div>
           <div className={pageCls.settingsSectionList}>
             <SettingsActionRow
               title="通知管理"
-              description="查看发送记录、筛选状态，并向会员、管理员或小程序用户手动发送通知。"
+                description="查看记录并发送通知。"
               statusLabel="正常"
               onClick={handleGoToNotifications}
             />
@@ -770,7 +773,7 @@ export default function SettingsPage() {
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>系统信息</h3>
-              <div className={widgetCls.smallText}>当前版本和更新状态</div>
+              <div className={widgetCls.smallText}>版本与运行状态</div>
             </div>
           </div>
           <div className={styles.settingsUtilityGrid}>
@@ -796,7 +799,7 @@ export default function SettingsPage() {
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>安全设置</h3>
-              <div className={widgetCls.smallText}>账户安全和权限管理</div>
+              <div className={widgetCls.smallText}>账户安全与权限</div>
             </div>
           </div>
           <div className={pageCls.settingsSectionList}>
@@ -821,7 +824,7 @@ export default function SettingsPage() {
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>数据管理</h3>
-              <div className={widgetCls.smallText}>备份、导出与恢复数据</div>
+              <div className={widgetCls.smallText}>备份、导出与恢复</div>
             </div>
           </div>
           <div className={pageCls.settingsSectionList}>
@@ -951,9 +954,8 @@ export default function SettingsPage() {
                       options={['近 7 天', '近 30 天', '本季度'].map((item) => ({ label: item, value: item }))}
                       onChange={setExportRange}
                     />
-                    <div className={`${widgetCls.smallText} ${pageCls.topSpaceSm}`}>当前导出范围仅作为前端选择项展示，后端暂未区分范围导出。</div>
                   </div>
-                <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleExportData}>记录导出</Button>
+                <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleExportData}>导出并下载</Button>
               </div>
             ) : null}
 
@@ -972,9 +974,7 @@ export default function SettingsPage() {
       {!loading && notifications.length === 0 ? (
         <div className={`${pageCls.surface} ${widgetCls.detailCard} ${pageCls.topSpaceMd}`}>
           <div className={widgetCls.detailTitle}>通知设置暂无内容</div>
-          <div className={`${widgetCls.smallText} ${pageCls.topSpaceSm}`}>
-            初始化通知模板失败，请点击下方按钮重新初始化通知配置。
-          </div>
+            <div className={`${widgetCls.smallText} ${pageCls.topSpaceSm}`}>请重新初始化通知配置。</div>
           <div className={pageCls.topSpaceMd}>
             <Button
               className={pageCls.cardActionSecondary}
