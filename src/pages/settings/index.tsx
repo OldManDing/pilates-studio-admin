@@ -82,7 +82,7 @@ function dayjsToHoursString(hours: [dayjs.Dayjs, dayjs.Dayjs]): string {
 const PLACEHOLDER_STORE_INFO: StoreInfoValues = {
   studioName: '普拉提工作室',
   phone: '400-820-8899',
-  email: 'hello@pilates.com',
+  email: 'service@studio.cn',
   businessHours: '06:00-22:00',
   province: '',
   city: '',
@@ -658,15 +658,13 @@ export default function SettingsPage() {
         savedBadgeText={storeSavedLabel}
         metaItems={settingsOverviewMetaItems}
         metrics={settingsOverviewMetrics}
-        primaryActionLabel="保存"
-        primaryActionDisabled={!storeChanged}
-        onPrimaryAction={handleSaveStoreInfo}
       />
 
       <SectionCard title="门店信息" subtitle={`${storeSavedLabel}${storeChanged ? ' · 有未保存修改' : ''}`}>
         <div className={styles.settingsSectionStack}>
           <div className={styles.settingsSectionSummaryCompact}>
             <span className={styles.settingsSectionPill}>{storeChanged ? '待保存修改' : '信息已同步'}</span>
+            <Button type="primary" className={`${pageCls.cardActionPrimary} ${styles.settingsInlineSaveButton}`} onClick={handleSaveStoreInfo} disabled={!storeChanged}>保存</Button>
           </div>
 
           <Form form={storeForm} className={pageCls.settingsForm} layout="vertical">
@@ -872,7 +870,7 @@ export default function SettingsPage() {
                     ) : (
                       <div>
                         <div className={widgetCls.recordTitle}>验证密钥</div>
-                        <div className={`${widgetCls.smallText} ${pageCls.bottomSpaceMd}`}>请使用验证器应用（如 Google Authenticator）扫描或手动输入以下密钥：</div>
+                        <div className={`${widgetCls.smallText} ${pageCls.bottomSpaceMd}`}>请使用验证器应用扫描或手动输入以下密钥：</div>
                         <Input.TextArea
                           value={twoFactorSecret}
                           readOnly

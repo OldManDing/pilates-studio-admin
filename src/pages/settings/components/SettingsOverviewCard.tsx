@@ -27,9 +27,9 @@ export type SettingsOverviewCardProps = {
   savedBadgeText: string;
   metaItems: SettingsOverviewMetaItem[];
   metrics: SettingsOverviewMetric[];
-  primaryActionLabel: string;
+  primaryActionLabel?: string;
   primaryActionDisabled?: boolean;
-  onPrimaryAction: () => void;
+  onPrimaryAction?: () => void;
 };
 
 const metricToneClassNameMap: Record<SettingsOverviewMetricTone, string> = {
@@ -68,13 +68,15 @@ export default function SettingsOverviewCard({
         </div>
 
         <div className={styles.settingsOverviewAction}>
-          <ActionButton
-            icon={<SaveOutlined />}
-            onClick={onPrimaryAction}
-            disabled={primaryActionDisabled}
-          >
-            {primaryActionLabel}
-          </ActionButton>
+          {primaryActionLabel && onPrimaryAction ? (
+            <ActionButton
+              icon={<SaveOutlined />}
+              onClick={onPrimaryAction}
+              disabled={primaryActionDisabled}
+            >
+              {primaryActionLabel}
+            </ActionButton>
+          ) : null}
         </div>
       </div>
 
