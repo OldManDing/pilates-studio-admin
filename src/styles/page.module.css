@@ -792,6 +792,19 @@
   color: var(--button-text-secondary-hover) !important;
 }
 
+.cardActionWarning {
+  border-color: color-mix(in srgb, var(--orange) 26%, transparent) !important;
+  background: color-mix(in srgb, var(--orange) 10%, white) !important;
+  color: var(--text-orange) !important;
+  box-shadow: var(--control-shadow) !important;
+}
+
+.cardActionWarning:hover {
+  border-color: color-mix(in srgb, var(--orange) 38%, transparent) !important;
+  background: color-mix(in srgb, var(--orange) 16%, white) !important;
+  color: var(--text-orange) !important;
+}
+
 .cardActionPrimary :global(.anticon),
 .cardActionSecondary :global(.anticon),
 .cardActionHalf :global(.anticon),

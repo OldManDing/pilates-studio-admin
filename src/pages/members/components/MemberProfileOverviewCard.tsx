@@ -65,12 +65,10 @@ export default function MemberProfileOverviewCard({
         <div>
           <div className={styles.profileMetaLabel}>加入时间</div>
           <div className={styles.profileMetaValue}>{joinedDateText}</div>
-          <div className={styles.profileMetaSub}>用于识别会员生命周期阶段</div>
         </div>
         <div>
           <div className={styles.profileMetaLabel}>课时权益</div>
           <div className={styles.profileMetaValue}>{remainingCreditsText}</div>
-          <div className={styles.profileMetaSub}>剩余可预约课时</div>
         </div>
       </div>
 

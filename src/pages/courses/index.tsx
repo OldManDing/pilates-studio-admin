@@ -159,7 +159,7 @@ export default function CoursesPage() {
 
   const courseCardItems: CourseListCardProps[] = courseList.map((course) => ({
     id: course.id,
-    codeText: course.courseCode || 'COURSE',
+    codeText: course.courseCode || '未设置编号',
     name: course.name,
     summaryText: course.isActive
       ? '可继续排期与维护。'
@@ -448,8 +448,8 @@ export default function CoursesPage() {
         extra={detailCourse ? (
           <div className={pageCls.drawerActionGroup}>
             <Button className={pageCls.courseDrawerAction} icon={<EditOutlined />} onClick={() => openEditModal(detailCourse)}>编辑</Button>
-            <Popconfirm title="确认删除该课程吗？" okText="删除" cancelText="取消" onConfirm={() => handleDeleteCourse(detailCourse)}>
-              <Button className={pageCls.courseDrawerAction} danger icon={<DeleteOutlined />}>删除</Button>
+            <Popconfirm title="确认删除该课程吗？" okText="删除" cancelText="取消" okButtonProps={{ danger: true }} onConfirm={() => handleDeleteCourse(detailCourse)}>
+              <Button className={`${pageCls.courseDrawerAction} ${pageCls.cardActionWarning}`} icon={<DeleteOutlined />}>删除</Button>
             </Popconfirm>
           </div>
         ) : null}
@@ -457,7 +457,7 @@ export default function CoursesPage() {
         {detailCourse ? (
           <div className={pageCls.detailContentStack}>
             <CourseDetailOverviewCard
-              eyebrow={detailCourse.courseCode || 'COURSE'}
+              eyebrow={detailCourse.courseCode || '未设置编号'}
               name={detailCourse.name}
               summaryText={detailCourse.isActive
                 ? `当前已排 ${detailCourse._count?.sessions || 0} 节，可继续维护课程设置与排期关系。`

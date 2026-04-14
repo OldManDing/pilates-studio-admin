@@ -225,10 +225,6 @@ export default function BookingsPage() {
     fetchData();
   }, [currentPage, loadBookingsData, messageApi]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [periodFilter, searchValue, statusFilter]);
-
   const bookingStats = useMemo(() => [
     {
       key: 'today',
@@ -287,8 +283,8 @@ export default function BookingsPage() {
 
   const bookingCountText = `当前共 ${total} 条预约`;
   const bookingResultSummary = bookingFilterLabels.length > 1
-    ? `已按${bookingFilterLabels.join('、')}筛选，当前匹配 ${total} 条预约。`
-    : `当前展示${periodFilter}范围内的 ${total} 条预约，可继续处理状态与查看详情。`;
+    ? `已按${bookingFilterLabels.join('、')}筛选。`
+    : `当前展示${periodFilter}范围内的预约记录，可继续处理状态与查看详情。`;
 
   const openCreateModal = () => {
     setEditingBooking(null);
@@ -383,6 +379,7 @@ export default function BookingsPage() {
 
   const applyFilters = () => {
     setStatusFilter(filterDraft.status);
+    setCurrentPage(1);
     setIsFilterOpen(false);
   };
 
@@ -390,7 +387,18 @@ export default function BookingsPage() {
     const nextDraft: BookingFilterDraft = { status: '全部' };
     setFilterDraft(nextDraft);
     setStatusFilter(nextDraft.status);
+    setCurrentPage(1);
     setIsFilterOpen(false);
+  };
+
+  const handlePeriodChange = (period: BookingPeriod) => {
+    setPeriodFilter(period);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchValue(value);
+    setCurrentPage(1);
   };
 
   const handlePageChange = (page: number) => {
@@ -423,15 +431,14 @@ export default function BookingsPage() {
       <BookingHeroStats items={bookingStats} />
 
       <BookingPeriodSelector
-        eyebrow="预约"
         title="预约日程"
         subtitle={bookingSelectorSubtitle}
         resultCountText={bookingCountText}
         periods={bookingPeriodItems}
         searchValue={searchValue}
         searchPlaceholder="按会员、课程、编号搜索预约"
-        onPeriodChange={(period) => setPeriodFilter(period as BookingPeriod)}
-        onSearchChange={setSearchValue}
+        onPeriodChange={(period) => handlePeriodChange(period as BookingPeriod)}
+        onSearchChange={handleSearchChange}
         onOpenFilter={openFilterModal}
       />
 
@@ -586,8 +593,8 @@ export default function BookingsPage() {
           <div className={pageCls.drawerActionGroup}>
             <Button icon={<EditOutlined />} onClick={() => openEditModal(detailBooking)}>编辑</Button>
             <Button icon={<EyeOutlined />} onClick={() => handleStatusAdvance(detailBooking)}>{getStatusActionLabel(detailBooking.status)}</Button>
-            <Popconfirm title="确认删除该预约吗？" okText="删除" cancelText="取消" onConfirm={() => handleDeleteBooking(detailBooking)}>
-              <Button danger icon={<DeleteOutlined />}>删除</Button>
+            <Popconfirm title="确认删除该预约吗？" okText="删除" cancelText="取消" okButtonProps={{ danger: true }} onConfirm={() => handleDeleteBooking(detailBooking)}>
+              <Button className={pageCls.cardActionWarning} icon={<DeleteOutlined />}>删除</Button>
             </Popconfirm>
           </div>
         ) : null}
@@ -624,7 +631,7 @@ export default function BookingsPage() {
 
             <Descriptions column={1} size="small" bordered>
               <Descriptions.Item label="会员姓名">{detailBooking.member?.name || '-'}</Descriptions.Item>
-              <Descriptions.Item label="会员电话">{detailBooking.member?.phone || '-'}</Descriptions.Item>
+              <Descriptions.Item label="手机号">{detailBooking.member?.phone || '-'}</Descriptions.Item>
               <Descriptions.Item label="预约编号">{detailBooking.bookingCode}</Descriptions.Item>
               <Descriptions.Item label="预约课程">{detailBooking.session?.course?.name || '-'}</Descriptions.Item>
               <Descriptions.Item label="授课教练">{detailBooking.session?.coach?.name || '-'}</Descriptions.Item>

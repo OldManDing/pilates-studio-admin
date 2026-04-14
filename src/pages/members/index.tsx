@@ -209,8 +209,8 @@ export default function MembersPage() {
 
   const membersCountText = `当前共 ${total} 位会员`;
   const membersResultSummary = memberFilterLabels.length
-    ? `已按${memberFilterLabels.join('、')}筛选，当前匹配 ${total} 位会员。`
-    : `当前共 ${total} 位会员，可继续查看档案、编辑资料或导出当前结果。`;
+    ? `已按${memberFilterLabels.join('、')}筛选。`
+    : '可继续查看档案、编辑资料或导出当前结果。';
 
   const openCreateModal = () => {
     setEditingMember(null);
@@ -360,10 +360,10 @@ export default function MembersPage() {
   const formatCurrency = (amountCents: number) => `¥${(amountCents / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const getMemberTierLabel = (member: Member) => {
-    if (member.plan?.name?.includes('金')) return 'GOLD';
-    if (member.plan?.name?.includes('年')) return 'ANNUAL';
-    if (member.remainingCredits >= 20) return 'PREMIUM';
-    return 'ACTIVE';
+    if (member.plan?.name?.includes('金')) return '金卡';
+    if (member.plan?.name?.includes('年')) return '年卡';
+    if (member.remainingCredits >= 20) return '高频会员';
+    return '活跃会员';
   };
 
   const getMemberProgressPercent = (member: Member) => {
@@ -458,7 +458,7 @@ export default function MembersPage() {
                     phone={member.phone}
                     planName={member.plan?.name || '-'}
                     remainingCreditsText={`${member.remainingCredits} 节`}
-                    memberCodeText={member.memberCode || 'MEMBER'}
+                    memberCodeText={member.memberCode || '未设置编号'}
                     statusLabel={memberStatusLabels[member.status]}
                     tone={getToneFromName(member.name)}
                     onEdit={() => openEditModal(member)}
@@ -585,8 +585,8 @@ export default function MembersPage() {
         extra={detailMember ? (
           <div className={pageCls.drawerActionGroup}>
             <Button icon={<EditOutlined />} onClick={() => openEditModal(detailMember)}>编辑</Button>
-            <Popconfirm title="确认删除该会员吗？" okText="删除" cancelText="取消" onConfirm={() => handleDeleteMember(detailMember)}>
-              <Button danger icon={<DeleteOutlined />}>删除</Button>
+            <Popconfirm title="确认删除该会员吗？" okText="删除" cancelText="取消" okButtonProps={{ danger: true }} onConfirm={() => handleDeleteMember(detailMember)}>
+              <Button className={pageCls.cardActionWarning} icon={<DeleteOutlined />}>删除</Button>
             </Popconfirm>
           </div>
         ) : null}
@@ -597,7 +597,7 @@ export default function MembersPage() {
               name={detailMember.name}
               phone={detailMember.phone}
               email={detailMember.email || '-'}
-              memberCodeText={detailMember.memberCode || 'MEMBER'}
+              memberCodeText={detailMember.memberCode || '未设置编号'}
               tierLabel={getMemberTierLabel(detailMember)}
               planName={detailMember.plan?.name || '未分配会籍'}
               statusLabel={memberStatusLabels[detailMember.status]}

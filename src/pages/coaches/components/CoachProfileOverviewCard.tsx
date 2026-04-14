@@ -37,7 +37,7 @@ export default function CoachProfileOverviewCard({
           <MemberAvatar name={name} tone={tone} />
           <div>
             <div className={styles.coachProfileBadges}>
-              <span className={styles.coachProfileEyebrow}>COACH PROFILE</span>
+              <span className={styles.coachProfileEyebrow}>教练档案</span>
               <StatusTag status={statusLabel} />
             </div>
             <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>{name}</div>
@@ -56,12 +56,10 @@ export default function CoachProfileOverviewCard({
         <div className={styles.coachProfileMetaCard}>
           <div className={styles.coachMetaLabel}>教练经验</div>
           <div className={styles.coachMetaValue}>{experienceText}</div>
-          <div className={styles.coachMetaSub}>用于排课与教练档案维护</div>
         </div>
         <div className={styles.coachProfileMetaCard}>
           <div className={styles.coachMetaLabel}>学员评分</div>
           <div className={styles.coachMetaValue}>{ratingText}</div>
-          <div className={styles.coachMetaSub}>用于辅助排课与服务质量判断</div>
         </div>
       </div>
 

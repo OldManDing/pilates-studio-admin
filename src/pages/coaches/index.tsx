@@ -297,8 +297,8 @@ export default function CoachesPage() {
 
   const coachCountText = `当前共 ${total} 位教练`;
   const coachResultSummary = coachFilterLabels.length
-    ? `已按${coachFilterLabels.join('、')}筛选，当前匹配 ${total} 位教练。`
-    : `当前共 ${total} 位教练，可继续查看详情、编辑资料或调整状态。`;
+    ? `已按${coachFilterLabels.join('、')}筛选。`
+    : '可继续查看详情、编辑资料或调整状态。';
 
   const openFilterModal = () => {
     setFilterDraft({ status: statusFilter });
@@ -385,7 +385,7 @@ export default function CoachesPage() {
                   <CoachRecordCard
                     key={coach.id}
                     name={coach.name}
-                    coachCodeText={coach.coachCode || 'COACH'}
+                    coachCodeText={coach.coachCode || '未设置编号'}
                     statusLabel={coachStatusLabels[coach.status] || coach.status}
                     experienceText={coach.experience || '经验信息待补充'}
                     phoneText={coach.phone}
@@ -510,8 +510,8 @@ export default function CoachesPage() {
         extra={detailCoach ? (
           <div className={pageCls.drawerActionGroup}>
             <Button icon={<EditOutlined />} onClick={() => openEditModal(detailCoach)}>编辑</Button>
-            <Popconfirm title="确认删除该教练吗？" okText="删除" cancelText="取消" onConfirm={() => handleDeleteCoach(detailCoach)}>
-              <Button danger icon={<DeleteOutlined />}>删除</Button>
+            <Popconfirm title="确认删除该教练吗？" okText="删除" cancelText="取消" okButtonProps={{ danger: true }} onConfirm={() => handleDeleteCoach(detailCoach)}>
+              <Button className={pageCls.cardActionWarning} icon={<DeleteOutlined />}>删除</Button>
             </Popconfirm>
           </div>
       ) : null}
@@ -520,7 +520,7 @@ export default function CoachesPage() {
           <div className={pageCls.detailContentStack}>
             <CoachProfileOverviewCard
               name={detailCoach.name}
-              coachCodeText={detailCoach.coachCode || 'COACH'}
+              coachCodeText={detailCoach.coachCode || '未设置编号'}
               statusLabel={coachStatusLabels[detailCoach.status] || detailCoach.status}
               phoneText={detailCoach.phone}
               emailText={detailCoach.email || '-'}
@@ -538,7 +538,7 @@ export default function CoachesPage() {
                 <Descriptions.Item label="教练编号">{detailCoach.coachCode || '-'}</Descriptions.Item>
                 <Descriptions.Item label="教练姓名">{detailCoach.name}</Descriptions.Item>
                 <Descriptions.Item label="状态">{coachStatusLabels[detailCoach.status] || detailCoach.status}</Descriptions.Item>
-                <Descriptions.Item label="电话">{detailCoach.phone}</Descriptions.Item>
+                <Descriptions.Item label="手机号">{detailCoach.phone}</Descriptions.Item>
                 <Descriptions.Item label="邮箱">{detailCoach.email || '-'}</Descriptions.Item>
                 <Descriptions.Item label="经验">{detailCoach.experience || '-'}</Descriptions.Item>
                 <Descriptions.Item label="评分">{formatCoachRating(detailCoach.rating)}</Descriptions.Item>
