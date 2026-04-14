@@ -325,7 +325,7 @@ export default function RolesPage() {
                     <ActionButton
                       size="large"
                       ghost
-                      className={roleCss.roleActionButton}
+                      className={`${roleCss.roleActionButton} ${pageCls.cardActionWarning}`}
                       icon={<DeleteOutlined />}
                       onClick={() => handleDeleteRole(item)}
                     >
@@ -467,7 +467,7 @@ export default function RolesPage() {
               </div>
             </div>
 
-            <SectionCard title="权限摘要" subtitle="展示当前角色已关联的权限项，便于快速核对覆盖范围。">
+            <SectionCard title="权限摘要">
               {detailRole.permissions.length ? (
                 <div className={pageCls.rolePermissionList}>
                   {detailRole.permissions.map(({ permission }) => {
@@ -484,7 +484,7 @@ export default function RolesPage() {
                   })}
                 </div>
               ) : (
-                <EmptyState title="暂无权限项" description="该角色尚未分配权限，可在“编辑权限”中补充。" />
+                <EmptyState title="暂无权限项" description="可在编辑权限中补充。" />
               )}
             </SectionCard>
           </div>

@@ -12,7 +12,7 @@ export type BookingPeriodSelectorItem = {
 };
 
 export type BookingPeriodSelectorProps = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   subtitle: string;
   resultCountText: string;
@@ -40,7 +40,7 @@ export default function BookingPeriodSelector({
     <section className={`${pageCls.surface} ${styles.bookingSelectorCard}`}>
       <div className={styles.bookingSelectorHeader}>
         <div>
-          <div className={styles.bookingSelectorEyebrow}>{eyebrow}</div>
+          {eyebrow ? <div className={styles.bookingSelectorEyebrow}>{eyebrow}</div> : null}
           <div className={styles.bookingSelectorTitleRow}>
             <h2 className={styles.bookingSelectorTitle}>{title}</h2>
             <span className={styles.bookingSelectorCount}>{resultCountText}</span>
