@@ -410,8 +410,12 @@ export default function RolesPage() {
                 <div className={pageCls.rolePermissionTitle}>{moduleNameMap[moduleName] || moduleName}</div>
                 <div className={roleCss.permissionModuleMeta}>
                   <span>{selectedCount}/{modulePermissionIds.length}</span>
-                  <button type="button" className={roleCss.permissionMetaAction} onClick={() => handleSelectModulePermissions(modulePermissionIds, true)}>全选</button>
-                  <button type="button" className={roleCss.permissionMetaAction} onClick={() => handleSelectModulePermissions(modulePermissionIds, false)}>清空</button>
+                  {modulePermissionIds.length > 1 ? (
+                    <>
+                      <button type="button" className={roleCss.permissionMetaAction} onClick={() => handleSelectModulePermissions(modulePermissionIds, true)}>全选</button>
+                      <button type="button" className={roleCss.permissionMetaAction} onClick={() => handleSelectModulePermissions(modulePermissionIds, false)}>清空</button>
+                    </>
+                  ) : null}
                 </div>
               </div>
               <div className={pageCls.rolePermissionList}>

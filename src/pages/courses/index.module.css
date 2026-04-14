@@ -31,10 +31,10 @@
 .courseBrowseTitle {
   margin: 0;
   color: var(--text-heading);
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-black);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-bold);
   line-height: 1.15;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
 .courseBrowseCount,
