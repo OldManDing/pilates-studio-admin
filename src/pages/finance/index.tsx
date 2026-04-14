@@ -397,10 +397,10 @@ export default function FinancePage() {
 
   const transactionCountText = `当前共 ${filteredTransactions.length} 笔交易`;
   const transactionResultSummary = transactionFilterLabels.length
-    ? `已按${transactionFilterLabels.join('、')}筛选，当前匹配 ${filteredTransactions.length} 笔交易。`
+    ? `已按${transactionFilterLabels.join('、')}筛选。`
     : showAllTransactions
-      ? `当前展示全部 ${filteredTransactions.length} 笔最近交易，支持继续筛选、编辑与查看详情。`
-      : `默认展示最近 4 笔交易，可展开查看全部 ${filteredTransactions.length} 笔。`;
+      ? '当前展示全部最近交易，支持继续筛选、编辑与查看详情。'
+      : '默认展示最近交易，可展开查看全部。';
   const viewAllLabel = searchValue.trim().length > 0 || statusFilter !== '全部' || kindFilter !== '全部'
     ? '查看全部'
     : showAllTransactions
@@ -466,7 +466,6 @@ export default function FinancePage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className={widgetCls.smallText}>当前先保留营收侧数据。</div>
         </SectionCard>
 
         <SectionCard title="营收构成" subtitle="按交易类型拆分">

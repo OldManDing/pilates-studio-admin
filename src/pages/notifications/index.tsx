@@ -713,7 +713,6 @@ export default function NotificationsPage() {
                 <div>
                   <span className={styles.typePill}>{detailNotification.type}</span>
                   <h2 className={styles.overviewTitle}>{detailNotification.title}</h2>
-                  <div className={styles.overviewSubtitle}>核对当前通知所处阶段与接收对象。</div>
                 </div>
                 <StatusTag status={statusLabelMap[detailNotification.status]} />
               </div>
