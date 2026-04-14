@@ -55,7 +55,7 @@ export class SettingsController {
   async exportData(@Res() res: Response) {
     const data = await this.settingsService.exportAllData();
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const fileName = `pilates-backup-${timestamp}.json`;
+    const fileName = `门店备份-${timestamp}.json`;
     
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
@@ -81,14 +81,14 @@ export class SettingsController {
   })
   async restoreData(@UploadedFile() file: { buffer: Buffer } | undefined) {
     if (!file) {
-      return { success: false, message: 'No file uploaded' };
+      return { success: false, message: '未上传备份文件' };
     }
     try {
       const backupData = JSON.parse(file.buffer.toString('utf-8'));
       const result = await this.settingsService.restoreFromBackup(backupData);
       return result;
     } catch (error) {
-      return { success: false, message: 'Invalid backup file format' };
+      return { success: false, message: '备份文件格式无效' };
     }
   }
 }

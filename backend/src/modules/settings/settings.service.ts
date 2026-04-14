@@ -8,13 +8,21 @@ import { BookingStatus, CoachStatus, MembershipPlanCategory, NotificationChannel
 export class SettingsService {
   constructor(private prisma: PrismaService) {}
 
+  private readonly defaultNotificationSettings = [
+    { key: 'booking_confirmation', title: '预约确认', channel: 'MINI_PROGRAM', description: '会员预约成功后发送确认通知' },
+    { key: 'booking_cancelled', title: '预约取消', channel: 'MINI_PROGRAM', description: '预约取消后发送提醒通知' },
+    { key: 'booking_reminder', title: '开课提醒', channel: 'MINI_PROGRAM', description: '课程开始前发送提醒通知' },
+    { key: 'attendance_checked_in', title: '签到成功', channel: 'INTERNAL', description: '会员完成签到后记录通知' },
+    { key: 'membership_expiry', title: '会籍到期', channel: 'SMS', description: '会员卡即将到期时发送通知' },
+    { key: 'payment_receipt', title: '支付凭证', channel: 'EMAIL', description: '支付成功后发送电子收据' },
+  ] as const;
+
   async getStudioSettings() {
     const settings = await this.prisma.studioSetting.findFirst();
 
     if (!settings) {
-      // Return default settings if none exist
       return {
-        studioName: 'Pilates Studio',
+        studioName: '普拉提工作室',
         phone: '',
         email: '',
         businessHours: '',
@@ -41,8 +49,26 @@ export class SettingsService {
   }
 
   async getNotificationSettings() {
-    return this.prisma.notificationSetting.findMany({
+    const settings = await this.prisma.notificationSetting.findMany({
       orderBy: { createdAt: 'asc' },
+    });
+
+    const localizedMap = new Map<string, (typeof this.defaultNotificationSettings)[number]>(
+      this.defaultNotificationSettings.map((item) => [item.key, item]),
+    );
+
+    return settings.map((setting) => {
+      const localized = localizedMap.get(setting.key);
+      if (!localized) {
+        return setting;
+      }
+
+      return {
+        ...setting,
+        title: localized.title,
+        description: localized.description,
+        channel: localized.channel as NotificationChannel,
+      };
     });
   }
 
@@ -52,7 +78,7 @@ export class SettingsService {
     });
 
     if (!setting) {
-      throw new NotFoundException('Notification setting not found');
+      throw new NotFoundException('通知设置不存在');
     }
 
     return this.prisma.notificationSetting.update({
@@ -65,16 +91,7 @@ export class SettingsService {
   }
 
   async initializeDefaultSettings() {
-    const defaultSettings = [
-        { key: 'booking_confirmation', title: '预约确认', channel: 'MINI_PROGRAM', description: '会员预约成功后发送确认通知' },
-        { key: 'booking_cancelled', title: '预约取消', channel: 'MINI_PROGRAM', description: '预约取消后发送提醒通知' },
-        { key: 'booking_reminder', title: '开课提醒', channel: 'MINI_PROGRAM', description: '课程开始前发送提醒通知' },
-        { key: 'attendance_checked_in', title: '签到成功', channel: 'INTERNAL', description: '会员完成签到后记录通知' },
-        { key: 'membership_expiry', title: '会籍到期', channel: 'SMS', description: '会员卡即将到期时发送通知' },
-        { key: 'payment_receipt', title: '支付凭证', channel: 'EMAIL', description: '支付成功后发送电子收据' },
-      ];
-
-    for (const setting of defaultSettings) {
+    for (const setting of this.defaultNotificationSettings) {
       const existing = await this.prisma.notificationSetting.findUnique({
         where: { key: setting.key },
       });
@@ -82,6 +99,15 @@ export class SettingsService {
       if (!existing) {
         await this.prisma.notificationSetting.create({
           data: setting as any,
+        });
+      } else {
+        await this.prisma.notificationSetting.update({
+          where: { key: setting.key },
+          data: {
+            title: setting.title,
+            description: setting.description,
+            channel: setting.channel as NotificationChannel,
+          },
         });
       }
     }
@@ -147,7 +173,7 @@ export class SettingsService {
   async restoreFromBackup(backupData: any) {
     // Validate backup format
     if (!backupData.data || !backupData.version) {
-      return { success: false, message: 'Invalid backup format' };
+      return { success: false, message: '备份文件格式无效' };
     }
 
     const { data } = backupData;
@@ -261,10 +287,10 @@ export class SettingsService {
         }
       });
 
-      return { success: true, message: 'Data restored successfully' };
+      return { success: true, message: '数据恢复成功' };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown restore error';
-      return { success: false, message: `Restore failed: ${message}` };
+      const message = error instanceof Error ? error.message : '未知恢复错误';
+      return { success: false, message: `恢复失败：${message}` };
     }
   }
 
@@ -323,27 +349,27 @@ export class SettingsService {
 
   private ensureArrayPayload(value: unknown, field: string) {
     if (value !== undefined && !Array.isArray(value)) {
-      throw new BadRequestException(`${field} must be an array when provided`);
+      throw new BadRequestException(`${field} 在提供时必须为数组`);
     }
   }
 
   private ensureRequired(record: Record<string, any>, fields: string[], context: string) {
     fields.forEach((field) => {
       if (record?.[field] === undefined || record?.[field] === null || record?.[field] === '') {
-        throw new BadRequestException(`${context}.${field} is required`);
+        throw new BadRequestException(`${context}.${field} 为必填项`);
       }
     });
   }
 
   private ensureEnumValue<T extends Record<string, string>>(value: string, enumType: T, context: string) {
     if (!Object.values(enumType).includes(value)) {
-      throw new BadRequestException(`${context} contains invalid enum value`);
+      throw new BadRequestException(`${context} 包含无效枚举值`);
     }
   }
 
   private ensureNumber(value: unknown, context: string) {
     if (typeof value !== 'number' || Number.isNaN(value)) {
-      throw new BadRequestException(`${context} must be a valid number`);
+      throw new BadRequestException(`${context} 必须为有效数字`);
     }
   }
 }
