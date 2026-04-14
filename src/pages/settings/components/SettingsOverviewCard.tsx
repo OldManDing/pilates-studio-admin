@@ -20,7 +20,7 @@ export type SettingsOverviewMetaItem = {
 };
 
 export type SettingsOverviewCardProps = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   summary: string;
   statusLabel: '正常' | '处理中';
@@ -55,7 +55,7 @@ export default function SettingsOverviewCard({
       <div className={styles.settingsOverviewTop}>
         <div className={styles.settingsOverviewContent}>
           <div className={styles.settingsOverviewBadges}>
-            <span className={styles.settingsOverviewEyebrow}>{eyebrow}</span>
+            {eyebrow ? <span className={styles.settingsOverviewEyebrow}>{eyebrow}</span> : null}
             <StatusTag status={statusLabel} />
           </div>
 

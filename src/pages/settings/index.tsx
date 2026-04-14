@@ -52,8 +52,6 @@ interface DataActionState {
 type SecurityDrawerKey = SecurityActionTitle | null;
 type DataDrawerKey = DataActionTitle | null;
 
-const SETTINGS_OVERVIEW_EYEBROW = '系统总览';
-
 const formatStoreAddress = (info: Pick<StoreInfoValues, 'province' | 'city' | 'district' | 'address'>) => {
   const prefix = [info.province, info.city, info.district].filter(Boolean).join('');
 
@@ -82,7 +80,7 @@ function dayjsToHoursString(hours: [dayjs.Dayjs, dayjs.Dayjs]): string {
 }
 
 const PLACEHOLDER_STORE_INFO: StoreInfoValues = {
-  studioName: 'Pilates Studio',
+  studioName: '普拉提工作室',
   phone: '400-820-8899',
   email: 'hello@pilates.com',
   businessHours: '06:00-22:00',
@@ -210,7 +208,7 @@ const provinceCityDistrictData = [
 export default function SettingsPage() {
   const navigate = useNavigate();
   const [storeForm] = Form.useForm<StoreInfoValues>();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [loading, setLoading] = useState(true);
   const [storeInfo, setStoreInfo] = useState<StoreInfoValues>(defaultStoreInfo);
   const [savedStoreInfo, setSavedStoreInfo] = useState<StoreInfoValues>(defaultStoreInfo);
@@ -581,7 +579,7 @@ export default function SettingsPage() {
       const link = document.createElement('a');
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       link.href = url;
-      link.download = `pilates-backup-${timestamp}.json`;
+      link.download = `门店备份-${timestamp}.json`;
       link.click();
       URL.revokeObjectURL(url);
 
@@ -598,32 +596,40 @@ export default function SettingsPage() {
 
   const handleRestoreData = async () => {
     try {
-      // Create a file input element
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.json';
-      input.onchange = async (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (!file) return;
+      modal.confirm({
+        title: '确认恢复数据',
+        content: '恢复操作会覆盖现有数据，请确认后继续。',
+        okText: '继续恢复',
+        cancelText: '取消',
+        okButtonProps: { danger: true },
+        onOk: async () => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.json';
+          input.onchange = async (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (!file) return;
 
-        try {
-          const res = await settingsApi.restoreData(file);
-          if (res.success) {
-            const timestamp = todayText();
-            setDataState((current) => ({
-              ...current,
-              数据恢复: { ...current.数据恢复, status: '正常', detail: `最近恢复于 ${timestamp}` }
-            }));
-            message.success('数据恢复成功');
-            setOpenDataDrawer(null);
-          } else {
-            message.error(res.message || '恢复失败');
-          }
-        } catch (err) {
-          message.error(getErrorMessage(err, '恢复失败'));
-        }
-      };
-      input.click();
+            try {
+              const res = await settingsApi.restoreData(file);
+              if (res.success) {
+                const timestamp = todayText();
+                setDataState((current) => ({
+                  ...current,
+                  数据恢复: { ...current.数据恢复, status: '正常', detail: `最近恢复于 ${timestamp}` }
+                }));
+                message.success('数据恢复成功');
+                setOpenDataDrawer(null);
+              } else {
+                message.error(res.message || '恢复失败');
+              }
+            } catch (err) {
+              message.error(getErrorMessage(err, '恢复失败'));
+            }
+          };
+          input.click();
+        },
+      });
     } catch (err) {
       message.error(getErrorMessage(err, '恢复失败'));
     }
@@ -646,7 +652,6 @@ export default function SettingsPage() {
       <PageHeader title="系统设置" />
 
       <SettingsOverviewCard
-        eyebrow={SETTINGS_OVERVIEW_EYEBROW}
         title={storeInfo.studioName || PLACEHOLDER_STORE_INFO.studioName}
         summary={storeChanged ? '存在未保存修改。' : '门店、通知与安全配置。'}
         statusLabel={storeChanged ? '处理中' : '正常'}
@@ -662,14 +667,12 @@ export default function SettingsPage() {
         <div className={styles.settingsSectionStack}>
           <div className={styles.settingsSectionSummaryCompact}>
             <span className={styles.settingsSectionPill}>{storeChanged ? '待保存修改' : '信息已同步'}</span>
-            <span className={styles.settingsSectionHintCompact}>修改后使用页首主按钮保存</span>
           </div>
 
           <Form form={storeForm} className={pageCls.settingsForm} layout="vertical">
             <div className={styles.settingsFormSectionGrid}>
               <div className={styles.settingsFormSectionCard}>
                 <h3 className={styles.settingsFormSectionTitle}>基础档案</h3>
-                <p className={styles.settingsFormSectionHint}>门店名称与联系方式。</p>
                 <Row gutter={18}>
                   <Col span={24}>
                     <Form.Item label="门店名称" name="studioName" rules={[{ required: true, message: '请输入门店名称' }]}>
@@ -691,7 +694,6 @@ export default function SettingsPage() {
 
               <div className={styles.settingsFormSectionCard}>
                 <h3 className={styles.settingsFormSectionTitle}>营业与地址</h3>
-                <p className={styles.settingsFormSectionHint}>营业时间与位置。</p>
                 <Row gutter={18}>
                   <Col span={24}>
                     <Form.Item label="营业时间" name="hours" rules={[{ required: true, message: '请选择营业时间' }]}>
@@ -900,7 +902,7 @@ export default function SettingsPage() {
                       value={disablePassword}
                       onChange={(e) => setDisablePassword(e.target.value)}
                     />
-                    <Button danger className={`${pageCls.cardActionPrimary} ${pageCls.topSpaceLg}`} size="large" onClick={handleSaveTwoFactor}>关闭两步验证</Button>
+                    <Button className={`${pageCls.cardActionWarning} ${pageCls.topSpaceLg}`} size="large" onClick={handleSaveTwoFactor}>关闭两步验证</Button>
                   </div>
                 )}
               </div>
@@ -910,7 +912,7 @@ export default function SettingsPage() {
               <div className={pageCls.settingsDetailDrawerBody}>
                 <Descriptions column={1} size="small" bordered>
                   <Descriptions.Item label="当前状态">{securityState.权限管理.detail}</Descriptions.Item>
-                  <Descriptions.Item label="权限来源">角色页权限矩阵已通过后端接口保存并实时生效</Descriptions.Item>
+                  <Descriptions.Item label="权限来源">角色权限页面维护</Descriptions.Item>
                 </Descriptions>
                 <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleSyncPermissions}>记录本次核对</Button>
               </div>
@@ -953,9 +955,9 @@ export default function SettingsPage() {
             {openDataDrawer === '数据恢复' ? (
               <div className={pageCls.settingsDetailForm}>
                 <div className={`${widgetCls.smallText} ${pageCls.bottomSpaceSm}`}>
-                  请上传之前导出的备份文件（.json 格式）。恢复操作会覆盖现有数据，请谨慎操作。
+                  恢复会覆盖现有数据，请谨慎操作。
                 </div>
-                <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleRestoreData}>上传备份文件</Button>
+                <Button className={pageCls.cardActionWarning} size="large" onClick={handleRestoreData}>上传备份文件</Button>
               </div>
             ) : null}
           </div>
