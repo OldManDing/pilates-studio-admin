@@ -553,7 +553,6 @@ export default function FinancePage() {
                         <StatusTag status={statusMap[item.status] || item.status} />
                       </div>
                       <div className={widgetCls.recordSub}>{kindMap[item.kind] || item.kind}</div>
-                      <div className={pageCls.membersSubtext}>{new Date(item.happenedAt).toLocaleDateString('zh-CN')}</div>
                     </div>
                   </div>
 
@@ -563,8 +562,8 @@ export default function FinancePage() {
                       <div className={pageCls.memberRecordValue}>{formatCurrency(item.amountCents / 100)}</div>
                     </div>
                     <div className={pageCls.memberRecordField}>
-                      <div className={pageCls.memberRecordLabel}>交易状态</div>
-                      <div className={`${pageCls.memberRecordValue} ${widgetCls.detailOverviewStatValueLarge}`}>{statusMap[item.status] || item.status}</div>
+                      <div className={pageCls.memberRecordLabel}>交易类型</div>
+                      <div className={`${pageCls.memberRecordValue} ${widgetCls.detailOverviewStatValueLarge}`}>{kindMap[item.kind] || item.kind}</div>
                     </div>
                     <div className={pageCls.memberRecordField}>
                       <div className={pageCls.memberRecordLabel}>交易日期</div>
@@ -696,7 +695,6 @@ export default function FinancePage() {
                     <StatusTag status={statusMap[detailTransaction.status] || detailTransaction.status} />
                   </div>
                   <div className={widgetCls.recordSub}>{kindMap[detailTransaction.kind] || detailTransaction.kind}</div>
-                  <div className={widgetCls.recordSub}>{new Date(detailTransaction.happenedAt).toLocaleDateString('zh-CN')}</div>
                 </div>
               </div>
               <div className={widgetCls.detailOverviewStatGrid}>

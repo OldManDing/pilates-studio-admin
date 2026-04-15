@@ -44,7 +44,7 @@ export default function MemberRecordCard({
         </div>
       </div>
 
-      <div className={pageCls.memberRecordGrid}>
+      <div className={pageCls.memberRecordGrid} style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
         <div className={pageCls.memberRecordField}>
           <div className={pageCls.memberRecordLabel}>会籍类型</div>
           <div className={pageCls.memberRecordValue}>{planName}</div>

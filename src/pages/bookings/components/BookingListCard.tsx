@@ -65,8 +65,8 @@ export default function BookingListCard({
 
           <div className={styles.bookingMetaGrid}>
             <div className={styles.bookingMetaCard}>
-              <div className={styles.bookingMetaLabel}>开课日期</div>
-              <div className={styles.bookingMetaValue}>{sessionDateText}</div>
+              <div className={styles.bookingMetaLabel}>预约时间</div>
+              <div className={styles.bookingMetaValue}>{bookedAtText}</div>
             </div>
             <div className={styles.bookingMetaCard}>
               <div className={styles.bookingMetaLabel}>授课教练</div>
