@@ -39,9 +39,24 @@ export type CoursesQueryParams = {
 
 export const coursesApi = {
   getAll: () =>
-    requestWithMeta<Course[]>('/courses', {
-      params: { page: 1, pageSize: 500 },
-    }).then((response) => response.data),
+    (async () => {
+      const pageSize = 100;
+      const firstPage = await requestWithMeta<Course[]>('/courses', {
+        params: { page: 1, pageSize },
+      });
+
+      const totalPages = firstPage.meta?.totalPages || 1;
+      let allItems = firstPage.data || [];
+
+      for (let page = 2; page <= totalPages; page += 1) {
+        const nextPage = await requestWithMeta<Course[]>('/courses', {
+          params: { page, pageSize },
+        });
+        allItems = [...allItems, ...(nextPage.data || [])];
+      }
+
+      return allItems;
+    })(),
 
   getPaged: (params?: CoursesQueryParams) =>
     requestWithMeta<Course[]>('/courses', { params }).then((response) => ({

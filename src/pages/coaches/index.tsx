@@ -485,7 +485,7 @@ export default function CoachesPage() {
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="bio" label="个人简介">
-                <Input className={pageCls.settingsInput} placeholder="请输入个人简介" />
+                <TextArea className={pageCls.settingsInput} rows={4} placeholder="请输入个人简介" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>

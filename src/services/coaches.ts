@@ -41,10 +41,22 @@ export type CoachesQueryParams = {
 
 export const coachesApi = {
   getAll: async () => {
-    const res = await requestWithMeta<any[]>('/coaches', {
-      params: { page: 1, pageSize: 500 },
+    const pageSize = 100;
+    const firstPage = await requestWithMeta<any[]>('/coaches', {
+      params: { page: 1, pageSize },
     });
-    return (res.data || []).map(mapCoach);
+
+    const totalPages = firstPage.meta?.totalPages || 1;
+    let allItems = firstPage.data || [];
+
+    for (let page = 2; page <= totalPages; page += 1) {
+      const nextPage = await requestWithMeta<any[]>('/coaches', {
+        params: { page, pageSize },
+      });
+      allItems = [...allItems, ...(nextPage.data || [])];
+    }
+
+    return allItems.map(mapCoach);
   },
 
   getPaged: async (params?: CoachesQueryParams) => {
