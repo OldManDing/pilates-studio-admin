@@ -782,7 +782,7 @@ export default function SettingsPage() {
             </div>
           </div>
           <div className={styles.settingsUtilityActionRow}>
-            <Button className={pageCls.settingsUtilityButton} size="large" onClick={handleCheckUpdate}>检查更新</Button>
+            <Button className={pageCls.settingsUtilityButton} size="large" onClick={handleCheckUpdate}>检查状态</Button>
           </div>
         </div>
       </div>
@@ -940,13 +940,13 @@ export default function SettingsPage() {
             {openDataDrawer === '导出数据' ? (
               <div className={pageCls.settingsDetailForm}>
                 <div>
-                    <div className={`${widgetCls.smallText} ${pageCls.settingsFieldLabel}`}>导出时间范围</div>
-                      <Select
-                        value={exportRange}
-                        className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`}
-                        options={['近 7 天', '近 30 天', '本季度'].map((item) => ({ label: item, value: item }))}
-                        onChange={setExportRange}
-                    />
+                  <div className={`${widgetCls.smallText} ${pageCls.settingsFieldLabel}`}>导出时间范围</div>
+                  <Select
+                    value={exportRange}
+                    className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`}
+                    options={['近 7 天', '近 30 天', '本季度'].map((item) => ({ label: item, value: item }))}
+                    onChange={setExportRange}
+                  />
                   </div>
                 <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleExportData}>导出并下载</Button>
               </div>

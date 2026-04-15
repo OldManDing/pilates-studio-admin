@@ -35,7 +35,7 @@ export default function ForgotPasswordPage() {
 
         {submittedAccount ? (
           <div className={cls.form}>
-            <p className={cls.subtitle}>已记录账号 {submittedAccount} 的找回申请，请联系门店管理员完成密码重置。</p>
+            <p className={cls.subtitle}>已记录账号 {submittedAccount} 的找回申请。请联系门店管理员完成密码重置。</p>
             <div className={cls.actions}>
               <ActionButton ghost icon={<UndoOutlined />} onClick={() => navigate('/login', { replace: true })}>返回登录</ActionButton>
               <ActionButton icon={<MailOutlined />} onClick={() => setSubmittedAccount('')}>重新提交</ActionButton>

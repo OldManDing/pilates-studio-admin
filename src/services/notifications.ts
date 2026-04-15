@@ -65,7 +65,7 @@ export interface QueryNotificationsParams {
 }
 
 export interface CreateNotificationData {
-  channel: Extract<NotificationChannel, 'INTERNAL' | 'MINI_PROGRAM' | 'EMAIL'>;
+  channel: Extract<NotificationChannel, 'INTERNAL' | 'MINI_PROGRAM' | 'EMAIL' | 'SMS'>;
   type: string;
   title: string;
   content: string;
