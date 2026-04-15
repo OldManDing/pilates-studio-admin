@@ -702,14 +702,6 @@ export default function FinancePage() {
                   <div className={widgetCls.detailInsightLabel}>交易金额</div>
                   <div className={widgetCls.detailOverviewStatValue}>{formatCurrency(detailTransaction.amountCents / 100)}</div>
                 </div>
-                <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatViolet}`}>
-                  <div className={widgetCls.detailInsightLabel}>交易状态</div>
-                  <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{statusMap[detailTransaction.status] || detailTransaction.status}</div>
-                </div>
-                <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatOrange}`}>
-                  <div className={widgetCls.detailInsightLabel}>交易日期</div>
-                  <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{new Date(detailTransaction.happenedAt).toLocaleDateString('zh-CN')}</div>
-                </div>
               </div>
             </div>
 

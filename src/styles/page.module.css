@@ -563,6 +563,10 @@
   gap: 12px;
 }
 
+.memberRecordGridCompact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .memberRecordField {
   min-width: 0;
   padding: 12px 14px;
