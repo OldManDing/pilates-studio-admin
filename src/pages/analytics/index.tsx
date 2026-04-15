@@ -3,6 +3,7 @@ import { Progress, Select, Spin, message } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { createChartTooltip } from '@/components/ChartTooltip';
+import EmptyState from '@/components/EmptyState';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import StatCard from '@/components/StatCard';
@@ -59,8 +60,8 @@ export default function AnalyticsPage() {
         });
 
         const popularity = overview.transactionPopularity || [];
-        setCoursePopularity(popularity.length ? popularity : [{ label: '暂无', value: 0 }]);
-        setBookingDistribution(bookingDistributionData.length ? bookingDistributionData : [{ label: '暂无', value: 0 }]);
+        setCoursePopularity(popularity);
+        setBookingDistribution(bookingDistributionData);
         setMemberRetentionTrend(retentionTrend);
       } catch (err) {
         messageApi.error(getErrorMessage(err, '加载数据失败，请稍后重试'));
@@ -169,16 +170,20 @@ export default function AnalyticsPage() {
               <span className={styles.analyticsLegendItem}><span className={styles.analyticsLegendDot} style={{ background: 'var(--mint)' }} />交易次数</span>
             </div>
             <div className={pageCls.chartPanel}>
-            <ResponsiveContainer>
-              <BarChart data={coursePopularity}>
-                <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
-                <XAxis dataKey="label" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} tick={axisTick} />
-                <YAxis axisLine={false} tickLine={false} tick={axisTick} />
-                <Tooltip content={<PopularityTooltipRenderer />} />
-                <Bar dataKey="value" fill="var(--mint)" radius={[10, 10, 0, 0]} barSize={isMobile ? 18 : 28} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+              {coursePopularity.length ? (
+                <ResponsiveContainer>
+                  <BarChart data={coursePopularity}>
+                    <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
+                    <XAxis dataKey="label" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} tick={axisTick} />
+                    <YAxis axisLine={false} tickLine={false} tick={axisTick} />
+                    <Tooltip content={<PopularityTooltipRenderer />} />
+                    <Bar dataKey="value" fill="var(--mint)" radius={[10, 10, 0, 0]} barSize={isMobile ? 18 : 28} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <EmptyState size="compact" title="暂无交易热度数据" description="当前时间范围内没有可展示的交易类型热度。" />
+              )}
+            </div>
           </div>
         </SectionCard>
 
@@ -188,16 +193,20 @@ export default function AnalyticsPage() {
               <span className={styles.analyticsLegendItem}><span className={styles.analyticsLegendDot} style={{ background: 'var(--orange)' }} />预约热度</span>
             </div>
             <div className={pageCls.chartPanel}>
-            <ResponsiveContainer>
-              <LineChart data={bookingDistribution}>
-                <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
-                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={axisTick} />
-                <YAxis axisLine={false} tickLine={false} tick={axisTick} />
-                <Tooltip content={<DistributionTooltipRenderer />} />
-                <Line type="monotone" dataKey="value" stroke="var(--orange)" strokeWidth={3.2} dot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+              {bookingDistribution.length ? (
+                <ResponsiveContainer>
+                  <LineChart data={bookingDistribution}>
+                    <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
+                    <XAxis dataKey="label" axisLine={false} tickLine={false} tick={axisTick} />
+                    <YAxis axisLine={false} tickLine={false} tick={axisTick} />
+                    <Tooltip content={<DistributionTooltipRenderer />} />
+                    <Line type="monotone" dataKey="value" stroke="var(--orange)" strokeWidth={3.2} dot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <EmptyState size="compact" title="暂无预约热度数据" description="当前时间范围内没有可展示的预约时段分布。" />
+              )}
+            </div>
           </div>
         </SectionCard>
       </div>

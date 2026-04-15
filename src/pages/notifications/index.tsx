@@ -54,7 +54,7 @@ type RecipientSelectOption = {
 type ComposerFormValues = {
   recipientType: RecipientType;
   recipientId: string;
-  channel: Extract<NotificationChannel, 'INTERNAL' | 'MINI_PROGRAM' | 'EMAIL'>;
+  channel: Extract<NotificationChannel, 'INTERNAL' | 'MINI_PROGRAM' | 'EMAIL' | 'SMS'>;
   type: string;
   title: string;
   content: string;
@@ -667,6 +667,7 @@ export default function NotificationsPage() {
                 { label: channelLabelMap.INTERNAL, value: 'INTERNAL' },
                 { label: channelLabelMap.MINI_PROGRAM, value: 'MINI_PROGRAM' },
                 { label: channelLabelMap.EMAIL, value: 'EMAIL' },
+                { label: channelLabelMap.SMS, value: 'SMS' },
               ]}
             />
           </Form.Item>
