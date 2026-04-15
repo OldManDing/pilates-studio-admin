@@ -400,7 +400,9 @@ export default function RolesPage() {
             onChange={(event) => setPermissionSearch(event.target.value)}
           />
 
-          {filteredPermissionGroups.map(([moduleName, permissionList]) => {
+          {filteredPermissionGroups.length === 0 ? (
+            <EmptyState title="暂无匹配权限" description="调整搜索条件后再试。" />
+          ) : filteredPermissionGroups.map(([moduleName, permissionList]) => {
             const modulePermissionIds = permissionList.map((permission) => permission.id);
             const selectedCount = modulePermissionIds.filter((permissionId) => selectedPermissionIds.includes(permissionId)).length;
 
