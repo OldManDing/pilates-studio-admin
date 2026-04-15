@@ -1,5 +1,6 @@
 import { MailOutlined, UndoOutlined } from '@ant-design/icons';
 import { App, Form, Input } from 'antd';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
 import pageCls from '@/styles/page.module.css';
@@ -12,6 +13,7 @@ type ForgotValues = {
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
   const { message } = App.useApp();
+  const [submittedAccount, setSubmittedAccount] = useState('');
 
   const handleFinish = ({ account }: ForgotValues) => {
     if (!account.trim()) {
@@ -19,6 +21,7 @@ export default function ForgotPasswordPage() {
       return;
     }
 
+    setSubmittedAccount(account.trim());
     message.success(`已记录账号 ${account} 的找回申请，请联系门店管理员完成密码重置`);
   };
 
@@ -30,16 +33,26 @@ export default function ForgotPasswordPage() {
         <h1 className={cls.title}>找回登录密码</h1>
         <p className={cls.subtitle}>输入账号后提交申请，由管理员协助重置密码。</p>
 
-        <Form<ForgotValues> className={cls.form} layout="vertical" onFinish={handleFinish}>
-          <Form.Item label="账号" name="account" rules={[{ required: true, message: '请输入账号' }]}>
-            <Input size="large" prefix={<MailOutlined />} className={cls.input} placeholder="邮箱或手机号" />
-          </Form.Item>
-
-          <div className={cls.actions}>
-            <ActionButton ghost icon={<UndoOutlined />} onClick={() => navigate('/login', { replace: true })}>返回登录</ActionButton>
-            <ActionButton icon={<MailOutlined />} htmlType="submit">提交找回申请</ActionButton>
+        {submittedAccount ? (
+          <div className={cls.form}>
+            <p className={cls.subtitle}>已记录账号 {submittedAccount} 的找回申请，请联系门店管理员完成密码重置。</p>
+            <div className={cls.actions}>
+              <ActionButton ghost icon={<UndoOutlined />} onClick={() => navigate('/login', { replace: true })}>返回登录</ActionButton>
+              <ActionButton icon={<MailOutlined />} onClick={() => setSubmittedAccount('')}>重新提交</ActionButton>
+            </div>
           </div>
-        </Form>
+        ) : (
+          <Form<ForgotValues> className={cls.form} layout="vertical" onFinish={handleFinish}>
+            <Form.Item label="账号" name="account" rules={[{ required: true, message: '请输入账号' }]}> 
+              <Input size="large" prefix={<MailOutlined />} className={cls.input} placeholder="邮箱或手机号" />
+            </Form.Item>
+
+            <div className={cls.actions}>
+              <ActionButton ghost icon={<UndoOutlined />} onClick={() => navigate('/login', { replace: true })}>返回登录</ActionButton>
+              <ActionButton icon={<MailOutlined />} htmlType="submit">提交找回申请</ActionButton>
+            </div>
+          </Form>
+        )}
       </div>
     </div>
   );
