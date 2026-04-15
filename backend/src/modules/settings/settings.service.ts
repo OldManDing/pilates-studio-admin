@@ -113,7 +113,10 @@ export class SettingsService {
     }
   }
 
-  async exportAllData() {
+  async exportAllData(range?: string) {
+    const dayCount = range === '近 7 天' ? 7 : range === '本季度' ? 90 : 30;
+    const startsAt = new Date(Date.now() - dayCount * 24 * 60 * 60 * 1000);
+
     const [
       members,
       coaches,
@@ -137,9 +140,19 @@ export class SettingsService {
         include: { course: true, coach: true },
       }),
       this.prisma.booking.findMany({
+        where: {
+          bookedAt: {
+            gte: startsAt,
+          },
+        },
         include: { member: true, session: true },
       }),
       this.prisma.transaction.findMany({
+        where: {
+          happenedAt: {
+            gte: startsAt,
+          },
+        },
         include: { member: true },
       }),
       this.prisma.membershipPlan.findMany(),
@@ -157,6 +170,7 @@ export class SettingsService {
     return {
       exportDate: new Date().toISOString(),
       version: '1.0',
+      exportRange: range || '近 30 天',
       data: {
         members,
         coaches,

@@ -34,8 +34,8 @@ export const settingsApi = {
   initialize: () =>
     api.post<{ success: boolean }>('/settings/init', {}),
 
-  exportData: () =>
-    api.get('/settings/export', { responseType: 'blob' }),
+  exportData: (range?: string) =>
+    api.get('/settings/export', { responseType: 'blob', params: range ? { range } : undefined }),
 
   restoreData: (file: File) => {
     const formData = new FormData();

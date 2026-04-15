@@ -98,6 +98,12 @@
   gap: 14px;
 }
 
+.settingsUtilityActionRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
 .settingsOverviewTop {
   display: flex;
   justify-content: space-between;

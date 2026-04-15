@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Body, Post, Res, UploadedFile, UseInterceptors, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Put, Body, Post, Res, UploadedFile, UseInterceptors, HttpCode, HttpStatus, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -52,10 +52,10 @@ export class SettingsController {
   @Get('export')
   @RequirePermissions('MANAGE:SETTINGS')
   @ApiOperation({ summary: 'Export data as JSON' })
-  async exportData(@Res() res: Response) {
-    const data = await this.settingsService.exportAllData();
+  async exportData(@Query('range') range: string | undefined, @Res() res: Response) {
+    const data = await this.settingsService.exportAllData(range);
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const fileName = `门店备份-${timestamp}.json`;
+    const fileName = `门店备份-${range || '全部'}-${timestamp}.json`;
     
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
