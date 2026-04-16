@@ -1,6 +1,7 @@
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, SaveOutlined, SearchOutlined } from '@ant-design/icons';
 import {
   App,
+  Button,
   Col,
   Drawer,
   Form,
@@ -111,6 +112,7 @@ export default function RolesPage() {
   const [editingPermissionRole, setEditingPermissionRole] = useState<Role | null>(null);
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([]);
   const [permissionSearch, setPermissionSearch] = useState('');
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -146,10 +148,6 @@ export default function RolesPage() {
 
   const filteredPermissionGroups = useMemo(() => {
     const keyword = permissionSearch.trim().toLowerCase();
-    if (!keyword) {
-      return groupedPermissions;
-    }
-
     return groupedPermissions
       .map(([moduleName, permissionList]) => [
         moduleName,
@@ -157,11 +155,13 @@ export default function RolesPage() {
           const moduleLabel = moduleNameMap[permission.module] || permission.module;
           const actionLabel = actionLabelMap[permission.action] || permission.action;
           const text = `${moduleLabel} ${actionLabel} ${permission.description || ''}`.toLowerCase();
-          return text.includes(keyword);
+          const matchesKeyword = !keyword || text.includes(keyword);
+          const matchesSelection = !showSelectedOnly || selectedPermissionIds.includes(permission.id);
+          return matchesKeyword && matchesSelection;
         }),
       ] as [string, Permission[]])
       .filter(([, permissionList]) => permissionList.length > 0);
-  }, [groupedPermissions, permissionSearch]);
+  }, [groupedPermissions, permissionSearch, selectedPermissionIds, showSelectedOnly]);
 
   const openCreateModal = () => {
     form.setFieldsValue({
@@ -200,6 +200,7 @@ export default function RolesPage() {
     setEditingPermissionRole(role);
     setSelectedPermissionIds(role.permissions.map((rp) => rp.permission.id));
     setPermissionSearch('');
+    setShowSelectedOnly(false);
   };
 
   const handlePermissionToggle = (permissionId: string, checked: boolean) => {
@@ -277,6 +278,7 @@ export default function RolesPage() {
             {roles.map((item) => {
               const roleTone = (['mint', 'violet', 'orange', 'pink'] as const)[item.code === 'OWNER' ? 0 : item.code === 'FRONTDESK' ? 1 : item.code === 'COACH' ? 2 : 3];
               const initials = item.name.slice(0, 1);
+              const roleStatus = item.permissions.length === 0 ? '待配置' : (item._count?.admins || 0) === 0 ? '未分配' : '正常';
               return (
                 <div key={item.id} className={roleCss.roleCard}>
                   <div className={roleCss.roleCardHeader}>
@@ -286,7 +288,7 @@ export default function RolesPage() {
                     <div className={roleCss.roleInfo}>
                       <div className={roleCss.roleNameRow}>
                         <h3 className={roleCss.roleName}>{item.name}</h3>
-                        <StatusTag status="正常" />
+                        <StatusTag status={roleStatus} />
                       </div>
                       <div className={roleCss.roleSub}>{item.description || '暂无角色说明'}</div>
                     </div>
@@ -399,6 +401,12 @@ export default function RolesPage() {
             value={permissionSearch}
             onChange={(event) => setPermissionSearch(event.target.value)}
           />
+          <div className={pageCls.rowBetween}>
+            <div className={widgetCls.smallText}>已选 {selectedPermissionIds.length} 项</div>
+            <Button type={showSelectedOnly ? 'primary' : 'default'} size="small" className={showSelectedOnly ? pageCls.cardActionPrimary : pageCls.cardActionSecondary} onClick={() => setShowSelectedOnly((current) => !current)}>
+              {showSelectedOnly ? '查看全部' : '仅看已选'}
+            </Button>
+          </div>
 
           {filteredPermissionGroups.length === 0 ? (
             <EmptyState title="暂无匹配权限" description="调整搜索条件后再试。" />

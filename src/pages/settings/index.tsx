@@ -232,8 +232,7 @@ export default function SettingsPage() {
   const [disablePassword, setDisablePassword] = useState('');
   const [exportRange, setExportRange] = useState('近 30 天');
   const [systemVersion] = useState('v1.0.0');
-  const [lastUpdated] = useState('待同步');
-  const [systemStatus, setSystemStatus] = useState<'稳定' | '检查中'>('稳定');
+  const [systemStatus] = useState<'稳定'>('稳定');
   const [openSecurityDrawer, setOpenSecurityDrawer] = useState<SecurityDrawerKey>(null);
   const [openDataDrawer, setOpenDataDrawer] = useState<DataDrawerKey>(null);
   const watchedStoreInfo = Form.useWatch([], storeForm) as Partial<StoreInfoValues> | undefined;
@@ -471,14 +470,6 @@ export default function SettingsPage() {
 
   const handleGoToNotifications = () => {
     navigate('/notifications');
-  };
-
-  const handleCheckUpdate = () => {
-    setSystemStatus('检查中');
-    setTimeout(() => {
-      setSystemStatus('稳定');
-      message.success('当前版本为最新版本');
-    }, 1000);
   };
 
   const handleSavePassword = async () => {
@@ -736,7 +727,6 @@ export default function SettingsPage() {
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>通知设置</h3>
-              <div className={widgetCls.smallText}>通知开关</div>
             </div>
           </div>
           <div className={pageCls.settingsSectionList}>
@@ -764,7 +754,6 @@ export default function SettingsPage() {
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>系统信息</h3>
-              <div className={widgetCls.smallText}>运行状态</div>
             </div>
           </div>
           <div className={styles.settingsUtilityGrid}>
@@ -773,16 +762,9 @@ export default function SettingsPage() {
               <div className={widgetCls.metricValue}>{systemVersion}</div>
             </div>
             <div className={widgetCls.metricCard}>
-              <div className={widgetCls.metricLabel}>最后更新</div>
-              <div className={widgetCls.metricValue}>{lastUpdated}</div>
-            </div>
-            <div className={widgetCls.metricCard}>
               <div className={widgetCls.metricLabel}>运行状态</div>
               <div className={widgetCls.metricValue}>{systemStatus}</div>
             </div>
-          </div>
-          <div className={styles.settingsUtilityActionRow}>
-            <Button className={pageCls.settingsUtilityButton} size="large" onClick={handleCheckUpdate}>检查状态</Button>
           </div>
         </div>
       </div>
@@ -792,7 +774,6 @@ export default function SettingsPage() {
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>安全设置</h3>
-              <div className={widgetCls.smallText}>账户安全</div>
             </div>
           </div>
           <div className={pageCls.settingsSectionList}>
@@ -817,7 +798,6 @@ export default function SettingsPage() {
           <div className={widgetCls.detailHeader}>
             <div>
               <h3 className={widgetCls.detailTitle}>数据管理</h3>
-              <div className={widgetCls.smallText}>备份与恢复</div>
             </div>
           </div>
           <div className={pageCls.settingsSectionList}>
