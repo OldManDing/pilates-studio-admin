@@ -97,7 +97,7 @@ const defaultStoreInfo: StoreInfoValues = {
 
 const securityActionsList: Array<{ title: SecurityActionTitle; description: string }> = [
   { title: '修改密码', description: '定期更新管理员账号密码' },
-  { title: '两步验证', description: '为核心账号开启短信或邮箱二次验证' },
+  { title: '两步验证', description: '为核心账号开启验证器二次校验' },
   { title: '权限管理', description: '配置前台、店长和财务的页面权限' }
 ];
 
@@ -217,7 +217,7 @@ export default function SettingsPage() {
   const [notificationSavedAt, setNotificationSavedAt] = useState('');
   const [securityState, setSecurityState] = useState<Record<SecurityActionTitle, SecurityActionState>>({
     修改密码: { title: '修改密码', description: '定期更新管理员账号密码', status: '正常', detail: '可在此更新密码' },
-    两步验证: { title: '两步验证', description: '为核心账号开启短信或邮箱二次验证', status: '待激活', detail: '可在此启用两步验证' },
+    两步验证: { title: '两步验证', description: '为核心账号开启验证器二次校验', status: '待激活', detail: '可在此启用两步验证' },
     权限管理: { title: '权限管理', description: '配置前台、店长和财务的页面权限', status: '正常', detail: '进入角色权限页面调整' }
   });
   const [dataState, setDataState] = useState<Record<DataActionTitle, DataActionState>>({
@@ -307,7 +307,7 @@ export default function SettingsPage() {
             detail: twoFactorStatus.enabled
               ? '当前账号已开启两步验证'
               : twoFactorStatus.hasSecret
-                ? '已生成密钥，等待输入验证码完成启用'
+                ? '已发起设置，可重新生成密钥完成启用'
                 : '点击设置两步验证',
           },
         }));
@@ -372,7 +372,7 @@ export default function SettingsPage() {
     {
       label: '门店地址',
       value: formatStoreAddress(storeInfo),
-      hint: '用于后台展示与门店基础档案维护',
+      hint: '用于门店档案与前台展示',
     },
   ], [storeInfo, storeSavedLabel]);
 
@@ -386,7 +386,7 @@ export default function SettingsPage() {
     {
       label: '安全策略',
       value: `${securityHealthyCount}/${securityActionsList.length}`,
-      hint: securityHealthyCount === securityActionsList.length ? '全部安全项目状态正常' : '仍有安全项目待跟进',
+      hint: securityHealthyCount === securityActionsList.length ? '安全项状态正常' : '仍有项目待处理',
       tone: 'violet',
     },
     {
@@ -396,6 +396,10 @@ export default function SettingsPage() {
       tone: 'orange',
     },
   ], [dataHealthyCount, enabledNotificationCount, notificationSavedLabel, notifications.length, securityHealthyCount]);
+
+  const notificationSectionLabel = `${enabledNotificationCount}/${notifications.length || 0} 已启用`;
+  const securitySectionLabel = securityHealthyCount === securityActionsList.length ? '状态稳定' : '需要跟进';
+  const dataSectionLabel = dataHealthyCount === dataActionsList.length ? '入口可用' : '待处理';
 
   const securityActionRows = useMemo(
     () => securityActionsList.map((item) => ({
@@ -470,6 +474,14 @@ export default function SettingsPage() {
 
   const handleGoToNotifications = () => {
     navigate('/notifications');
+  };
+
+  const handleInitializeNotifications = async () => {
+    await settingsApi.initialize().catch(() => null);
+    const initialized = await settingsApi.getNotifications().catch(() => []);
+    setNotifications(initialized);
+    setNotificationSavedAt(todayText());
+    message.success('通知模板已初始化');
   };
 
   const handleSavePassword = async () => {
@@ -644,18 +656,27 @@ export default function SettingsPage() {
 
       <SettingsOverviewCard
         title={storeInfo.studioName || PLACEHOLDER_STORE_INFO.studioName}
-        summary={storeChanged ? '存在未保存修改。' : '门店、通知与安全配置。'}
+        summary={storeChanged ? '当前有门店档案修改待保存。' : '集中维护门店档案与关键系统设置。'}
         statusLabel={storeChanged ? '处理中' : '正常'}
         savedBadgeText={storeSavedLabel}
         metaItems={settingsOverviewMetaItems}
         metrics={settingsOverviewMetrics}
+        primaryActionLabel="保存门店信息"
+        primaryActionDisabled={!storeChanged}
+        onPrimaryAction={handleSaveStoreInfo}
       />
 
-      <SectionCard title="门店信息" subtitle={`${storeSavedLabel}${storeChanged ? ' · 有未保存修改' : ''}`}>
+      <SectionCard
+        title="门店信息"
+        subtitle={storeChanged ? '先完成档案更新，再同步其他设置。' : '基础档案与营业信息保持最新。'}
+        extra={<span className={styles.settingsSectionPill}>{storeChanged ? '待保存修改' : '信息已同步'}</span>}
+      >
         <div className={styles.settingsSectionStack}>
           <div className={styles.settingsSectionSummaryCompact}>
-            <span className={styles.settingsSectionPill}>{storeChanged ? '待保存修改' : '信息已同步'}</span>
-            <Button type="primary" className={`${pageCls.cardActionPrimary} ${styles.settingsInlineSaveButton}`} onClick={handleSaveStoreInfo} disabled={!storeChanged}>保存</Button>
+            <div className={styles.settingsSectionSummaryText}>
+              营业时间、联系方式与门店地址会同步到后台基础档案。
+            </div>
+            <div className={styles.settingsSectionSubnote}>{storeSavedLabel}</div>
           </div>
 
           <Form form={storeForm} className={pageCls.settingsForm} layout="vertical">
@@ -723,39 +744,54 @@ export default function SettingsPage() {
       </SectionCard>
 
       <div className={`${pageCls.equalCol} ${pageCls.equalColTopSpace}`}>
-        <div className={pageCls.settingsSectionShell}>
-          <div className={widgetCls.detailHeader}>
-            <div>
-              <h3 className={widgetCls.detailTitle}>通知设置</h3>
+        <SectionCard
+          title="通知设置"
+          subtitle="仅保留日常需要处理的提醒开关。"
+          extra={
+            <div className={styles.settingsSectionExtraStack}>
+              <span className={styles.settingsSectionPill}>{notificationSectionLabel}</span>
+              <Button className={pageCls.cardActionSecondary} onClick={handleGoToNotifications}>进入通知中心</Button>
             </div>
-          </div>
-          <div className={pageCls.settingsSectionList}>
-            <SettingsActionRow
-              title="通知管理"
-                description="查看通知记录与发送入口。"
-              statusLabel="正常"
-              onClick={handleGoToNotifications}
-            />
-            {notifications.map((item) => (
-              <div key={item.key} className={widgetCls.settingRow}>
-                <div>
-                  <div className={widgetCls.recordTitle}>{item.title}</div>
-                  <div className={widgetCls.smallText}>{item.description}</div>
+          }
+        >
+          <div className={styles.settingsSectionStack}>
+            <div className={styles.settingsSectionSummaryCompact}>
+              <div className={styles.settingsSectionSummaryText}>高频提醒保持开启，其余通知按门店节奏调整。</div>
+              <div className={styles.settingsSectionSubnote}>{notificationSavedLabel}</div>
+            </div>
+            {notifications.length > 0 ? (
+              notifications.map((item) => (
+                <div key={item.key} className={widgetCls.settingRow}>
+                  <div>
+                    <div className={widgetCls.recordTitle}>{item.title}</div>
+                    <div className={widgetCls.smallText}>{item.description}</div>
+                  </div>
+                  <span className={pageCls.settingSwitch}>
+                    <Switch checked={item.enabled} onChange={(checked) => handleToggleNotification(item.key, checked)} />
+                  </span>
                 </div>
-                <span className={pageCls.settingSwitch}>
-                  <Switch checked={item.enabled} onChange={(checked) => handleToggleNotification(item.key, checked)} />
-                </span>
+              ))
+            ) : (
+              <div className={styles.settingsEmptyStateCard}>
+                <div>
+                  <div className={widgetCls.recordTitle}>通知设置暂无内容</div>
+                  <div className={widgetCls.smallText}>初始化后即可管理预约、会籍与支付提醒。</div>
+                </div>
+                <Button className={pageCls.cardActionSecondary} onClick={handleInitializeNotifications}>初始化通知模板</Button>
               </div>
-            ))}
+            )}
           </div>
-        </div>
+        </SectionCard>
 
-        <div className={pageCls.settingsSectionShell}>
-          <div className={widgetCls.detailHeader}>
-            <div>
-              <h3 className={widgetCls.detailTitle}>系统信息</h3>
+        <SectionCard
+          title="系统信息"
+          subtitle="查看当前运行版本与基础状态。"
+          extra={<span className={styles.settingsSectionPill}>系统正常</span>}
+        >
+          <div className={styles.settingsSectionStack}>
+            <div className={styles.settingsSectionSummaryCompact}>
+              <div className={styles.settingsSectionSummaryText}>当前页只保留设置判断需要的信息，不再堆叠额外说明。</div>
             </div>
-          </div>
           <div className={styles.settingsUtilityGrid}>
             <div className={widgetCls.metricCard}>
               <div className={widgetCls.metricLabel}>系统版本</div>
@@ -766,17 +802,20 @@ export default function SettingsPage() {
               <div className={widgetCls.metricValue}>{systemStatus}</div>
             </div>
           </div>
-        </div>
+          </div>
+        </SectionCard>
       </div>
 
       <div className={pageCls.equalCol}>
-        <div className={pageCls.settingsSectionShell}>
-          <div className={widgetCls.detailHeader}>
-            <div>
-              <h3 className={widgetCls.detailTitle}>安全设置</h3>
+        <SectionCard
+          title="安全设置"
+          subtitle="密码、两步验证与权限核对集中处理。"
+          extra={<span className={styles.settingsSectionPill}>{securitySectionLabel}</span>}
+        >
+          <div className={styles.settingsSectionStack}>
+            <div className={styles.settingsSectionSummaryCompact}>
+              <div className={styles.settingsSectionSummaryText}>先处理待激活或处理中项目，再做周期性核对。</div>
             </div>
-          </div>
-          <div className={pageCls.settingsSectionList}>
             {securityActionRows.map((item) => (
               <SettingsActionRow
                 key={item.title}
@@ -792,15 +831,17 @@ export default function SettingsPage() {
               />
             ))}
           </div>
-        </div>
+        </SectionCard>
 
-        <div className={pageCls.settingsSectionShell}>
-          <div className={widgetCls.detailHeader}>
-            <div>
-              <h3 className={widgetCls.detailTitle}>数据管理</h3>
+        <SectionCard
+          title="数据管理"
+          subtitle="备份、导出与恢复动作分开处理。"
+          extra={<span className={styles.settingsSectionPill}>{dataSectionLabel}</span>}
+        >
+          <div className={styles.settingsSectionStack}>
+            <div className={styles.settingsSectionSummaryCompact}>
+              <div className={styles.settingsSectionSummaryText}>常用导出保持轻量，恢复操作始终单独确认。</div>
             </div>
-          </div>
-          <div className={pageCls.settingsSectionList}>
             {dataActionRows.map((item) => (
               <SettingsActionRow
                 key={item.title}
@@ -811,55 +852,63 @@ export default function SettingsPage() {
               />
             ))}
           </div>
-        </div>
+        </SectionCard>
       </div>
 
       <Drawer open={openSecurityDrawer !== null} width={SETTINGS_DETAIL_DRAWER_WIDTH} title={openSecurityDrawer ?? '安全设置'} onClose={() => setOpenSecurityDrawer(null)}>
         {openSecurityDrawer ? (
-          <div className={pageCls.settingsDetailDrawerBody}>
-            <div className={widgetCls.detailOverviewPanel}>
+          <div className={styles.settingsDrawerStack}>
+            <div className={`${widgetCls.detailOverviewPanel} ${styles.settingsDrawerOverview}`}>
               <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
                 {securityState[openSecurityDrawer].title}
                 <StatusTag status={securityState[openSecurityDrawer].status} />
               </div>
               <div className={widgetCls.detailOverviewText}>{securityState[openSecurityDrawer].description}</div>
-              <div className={widgetCls.detailOverviewText}>{securityState[openSecurityDrawer].detail}</div>
+              <div className={styles.settingsDrawerLead}>{securityState[openSecurityDrawer].detail}</div>
             </div>
 
             {openSecurityDrawer === '修改密码' ? (
-              <div className={pageCls.settingsDetailForm}>
+              <div className={styles.settingsDrawerPanel}>
+                <div className={styles.settingsDrawerNotice}>建议定期更换密码，并避免与其他后台账号共用。</div>
+                <div className={styles.settingsDrawerFieldStack}>
                 <Input.Password className={pageCls.settingsInput} placeholder="当前密码" value={passwordDraft.current} onChange={(event) => setPasswordDraft((current) => ({ ...current, current: event.target.value }))} />
                 <Input.Password className={pageCls.settingsInput} placeholder="新密码" value={passwordDraft.next} onChange={(event) => setPasswordDraft((current) => ({ ...current, next: event.target.value }))} />
                 <Input.Password className={pageCls.settingsInput} placeholder="确认新密码" value={passwordDraft.confirm} onChange={(event) => setPasswordDraft((current) => ({ ...current, confirm: event.target.value }))} />
+                </div>
+                <div className={styles.settingsDrawerActions}>
                 <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleSavePassword}>更新密码</Button>
+                </div>
               </div>
             ) : null}
 
             {openSecurityDrawer === '两步验证' ? (
-              <div className={pageCls.settingsDetailForm}>
+              <div className={styles.settingsDrawerPanel}>
                 {!twoFactorEnabled ? (
                   <>
                     {!twoFactorSecret ? (
-                      <div>
+                      <div className={styles.settingsDrawerStackCompact}>
+                        <div className={styles.settingsDrawerNotice}>建议为店长与财务等高权限账号开启二次校验。</div>
                         <div className={widgetCls.settingRow}>
                           <div>
                             <div className={widgetCls.recordTitle}>开启两步验证</div>
                             <div className={widgetCls.smallText}>启用后，登录时需要输入验证器生成的验证码。</div>
                           </div>
                         </div>
+                        <div className={styles.settingsDrawerActions}>
                         <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleSaveTwoFactor}>开始设置</Button>
+                        </div>
                       </div>
                     ) : (
-                      <div>
+                      <div className={styles.settingsDrawerStackCompact}>
                         <div className={widgetCls.recordTitle}>验证密钥</div>
-                        <div className={`${widgetCls.smallText} ${pageCls.bottomSpaceMd}`}>请使用验证器应用扫描或手动输入以下密钥：</div>
+                        <div className={widgetCls.smallText}>请使用验证器应用扫描或手动输入以下密钥。</div>
                         <Input.TextArea
                           value={twoFactorSecret}
                           readOnly
                           rows={2}
-                          className={pageCls.bottomSpaceLg}
+                          className={styles.settingsDrawerSecret}
                         />
-                        <div className={`${widgetCls.smallText} ${pageCls.bottomSpaceSm}`}>输入验证器生成的 6 位验证码：</div>
+                        <div className={widgetCls.smallText}>输入验证器生成的 6 位验证码。</div>
                         <Input
                           className={pageCls.settingsInput}
                           placeholder="6 位验证码"
@@ -867,34 +916,41 @@ export default function SettingsPage() {
                           onChange={(e) => setTwoFactorCode(e.target.value)}
                           maxLength={6}
                         />
-                        <Button type="primary" className={`${pageCls.cardActionPrimary} ${pageCls.topSpaceLg}`} size="large" onClick={handleSaveTwoFactor}>验证并开启</Button>
+                        <div className={styles.settingsDrawerActions}>
+                          <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleSaveTwoFactor}>验证并开启</Button>
+                        </div>
                       </div>
                     )}
                   </>
                 ) : (
-                  <div>
-                    <div className={`${widgetCls.recordTitle} ${pageCls.successText} ${pageCls.bottomSpaceSm}`}>两步验证已开启</div>
-                    <div className={`${widgetCls.smallText} ${pageCls.bottomSpaceLg}`}>您的账号已启用两步验证保护。</div>
-                    <div className={`${widgetCls.smallText} ${pageCls.bottomSpaceSm}`}>输入密码以关闭两步验证：</div>
+                  <div className={styles.settingsDrawerStackCompact}>
+                    <div className={`${widgetCls.recordTitle} ${pageCls.successText}`}>两步验证已开启</div>
+                    <div className={styles.settingsDrawerNotice}>关闭前请确认已有其他安全措施可覆盖高权限登录。</div>
+                    <div className={widgetCls.smallText}>输入当前密码后可关闭两步验证。</div>
                     <Input.Password
                       className={pageCls.settingsInput}
                       placeholder="当前密码"
                       value={disablePassword}
                       onChange={(e) => setDisablePassword(e.target.value)}
                     />
-                    <Button className={`${pageCls.cardActionWarning} ${pageCls.topSpaceLg}`} size="large" onClick={handleSaveTwoFactor}>关闭两步验证</Button>
+                    <div className={styles.settingsDrawerActions}>
+                      <Button className={pageCls.cardActionWarning} size="large" onClick={handleSaveTwoFactor}>关闭两步验证</Button>
+                    </div>
                   </div>
                 )}
               </div>
             ) : null}
 
             {openSecurityDrawer === '权限管理' ? (
-              <div className={pageCls.settingsDetailDrawerBody}>
-                <Descriptions column={1} size="small" bordered>
+              <div className={styles.settingsDrawerPanel}>
+                <div className={styles.settingsDrawerNotice}>角色权限在独立页面维护，这里只记录当前核对状态。</div>
+                <Descriptions column={1} size="small" bordered className={pageCls.detailDescriptions}>
                   <Descriptions.Item label="当前状态">{securityState.权限管理.detail}</Descriptions.Item>
                   <Descriptions.Item label="权限来源">角色权限页面维护</Descriptions.Item>
                 </Descriptions>
+                <div className={styles.settingsDrawerActions}>
                 <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleSyncPermissions}>记录本次核对</Button>
+                </div>
               </div>
             ) : null}
           </div>
@@ -903,66 +959,54 @@ export default function SettingsPage() {
 
       <Drawer open={openDataDrawer !== null} width={SETTINGS_DETAIL_DRAWER_WIDTH} title={openDataDrawer ?? '数据管理'} onClose={() => setOpenDataDrawer(null)}>
           {openDataDrawer ? (
-            <div className={pageCls.settingsDetailDrawerBody}>
-            <div className={widgetCls.detailOverviewPanel}>
+            <div className={styles.settingsDrawerStack}>
+            <div className={`${widgetCls.detailOverviewPanel} ${styles.settingsDrawerOverview}`}>
               <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
                 {dataState[openDataDrawer].title}
                 <StatusTag status={dataState[openDataDrawer].status} />
               </div>
               <div className={widgetCls.detailOverviewText}>{dataState[openDataDrawer].description}</div>
-              <div className={widgetCls.detailOverviewText}>{dataState[openDataDrawer].detail}</div>
+              <div className={styles.settingsDrawerLead}>{dataState[openDataDrawer].detail}</div>
             </div>
 
             {openDataDrawer === '数据备份' ? (
-              <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleRunBackup}>立即备份</Button>
+              <div className={styles.settingsDrawerPanel}>
+                <div className={styles.settingsDrawerNotice}>建议在重要数据调整后手动执行一次备份。</div>
+                <div className={styles.settingsDrawerActions}>
+                  <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleRunBackup}>立即备份</Button>
+                </div>
+              </div>
             ) : null}
 
             {openDataDrawer === '导出数据' ? (
-              <div className={pageCls.settingsDetailForm}>
-                <div>
-                  <div className={`${widgetCls.smallText} ${pageCls.settingsFieldLabel}`}>导出时间范围</div>
-                  <Select
-                    value={exportRange}
-                    className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`}
-                    options={['近 7 天', '近 30 天', '本季度'].map((item) => ({ label: item, value: item }))}
-                    onChange={setExportRange}
-                  />
-                  </div>
-                <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleExportData}>导出并下载</Button>
+              <div className={styles.settingsDrawerPanel}>
+                <div className={styles.settingsDrawerFieldStack}>
+                  <div className={widgetCls.smallText}>导出时间范围</div>
+                   <Select
+                     value={exportRange}
+                     className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`}
+                     options={['近 7 天', '近 30 天', '本季度'].map((item) => ({ label: item, value: item }))}
+                     onChange={setExportRange}
+                   />
+                </div>
+                <div className={styles.settingsDrawerActions}>
+                  <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleExportData}>导出并下载</Button>
+                </div>
               </div>
             ) : null}
 
             {openDataDrawer === '数据恢复' ? (
-              <div className={pageCls.settingsDetailForm}>
-                <div className={`${widgetCls.smallText} ${pageCls.bottomSpaceSm}`}>
-                  恢复会覆盖现有数据，请谨慎操作。
+              <div className={styles.settingsDrawerPanel}>
+                <div className={styles.settingsDrawerNotice}>恢复会覆盖现有数据，建议先完成一次最新备份再继续。</div>
+                <div className={styles.settingsDrawerActions}>
+                  <Button className={pageCls.cardActionWarning} size="large" onClick={handleRestoreData}>上传备份文件</Button>
                 </div>
-                <Button className={pageCls.cardActionWarning} size="large" onClick={handleRestoreData}>上传备份文件</Button>
               </div>
             ) : null}
           </div>
         ) : null}
       </Drawer>
 
-      {!loading && notifications.length === 0 ? (
-        <div className={`${pageCls.surface} ${widgetCls.detailCard} ${pageCls.topSpaceMd}`}>
-          <div className={widgetCls.detailTitle}>通知设置暂无内容</div>
-            <div className={`${widgetCls.smallText} ${pageCls.topSpaceSm}`}>请重新初始化通知配置。</div>
-          <div className={pageCls.topSpaceMd}>
-            <Button
-              className={pageCls.cardActionSecondary}
-              onClick={async () => {
-                await settingsApi.initialize().catch(() => null);
-                const initialized = await settingsApi.getNotifications().catch(() => []);
-                setNotifications(initialized);
-                setNotificationSavedAt(todayText());
-              }}
-            >
-              初始化通知模板
-            </Button>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
