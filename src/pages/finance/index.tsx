@@ -99,7 +99,7 @@ export default function FinancePage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
-  const [showAllTransactions, setShowAllTransactions] = useState(false);
+  const [showAllTransactions, setShowAllTransactions] = useState(true);
   const [members, setMembers] = useState<Member[]>([]);
   const [revenueStructure, setRevenueStructure] = useState<Array<{ name: string; value: number; fill: string }>>([]);
   const [financeBar, setFinanceBar] = useState<Array<{ month: string; revenue: number }>>([]);
@@ -379,7 +379,7 @@ export default function FinancePage() {
     setStatusFilter(nextDraft.status);
     setKindFilter(nextDraft.kind);
     setSearchValue('');
-    setShowAllTransactions(false);
+    setShowAllTransactions(true);
     setIsFilterOpen(false);
   };
 
@@ -391,21 +391,13 @@ export default function FinancePage() {
       messageApi.success('已恢复查看全部最近交易');
       return;
     }
-
-    setShowAllTransactions((current) => !current);
   };
 
   const transactionCountText = `当前共 ${filteredTransactions.length} 笔交易`;
   const transactionResultSummary = transactionFilterLabels.length
     ? `已按${transactionFilterLabels.join('、')}筛选。`
-    : showAllTransactions
-      ? '当前展示全部最近交易，支持继续筛选、编辑与查看详情。'
-      : '默认展示最近交易，可展开查看全部。';
-  const viewAllLabel = searchValue.trim().length > 0 || statusFilter !== '全部' || kindFilter !== '全部'
-    ? '查看全部'
-    : showAllTransactions
-      ? '收起列表'
-      : '查看全部';
+    : '当前展示全部最近交易，支持继续筛选、编辑与查看详情。';
+  const viewAllLabel = searchValue.trim().length > 0 || statusFilter !== '全部' || kindFilter !== '全部' ? '查看全部' : '';
 
   const FinanceTrendTooltip = createChartTooltip({
     labelMap: { revenue: '营收' },
@@ -506,7 +498,7 @@ export default function FinancePage() {
 
       <SectionCard
         title="交易工作台"
-        extra={<Button type="text" className={pageCls.textAction} onClick={handleViewAll}>{viewAllLabel}</Button>}
+        extra={viewAllLabel ? <Button type="text" className={pageCls.textAction} onClick={handleViewAll}>{viewAllLabel}</Button> : null}
       >
         <div className={pageCls.sectionContentStack}>
           <div className={pageCls.sectionSummaryRow}>
@@ -560,10 +552,6 @@ export default function FinancePage() {
                     <div className={pageCls.memberRecordField}>
                       <div className={pageCls.memberRecordLabel}>交易金额</div>
                       <div className={pageCls.memberRecordValue}>{formatCurrency(item.amountCents / 100)}</div>
-                    </div>
-                    <div className={pageCls.memberRecordField}>
-                      <div className={pageCls.memberRecordLabel}>交易类型</div>
-                      <div className={`${pageCls.memberRecordValue} ${widgetCls.detailOverviewStatValueLarge}`}>{kindMap[item.kind] || item.kind}</div>
                     </div>
                     <div className={pageCls.memberRecordField}>
                       <div className={pageCls.memberRecordLabel}>交易日期</div>
@@ -694,7 +682,6 @@ export default function FinancePage() {
                     {detailTransaction.member?.name || '未知会员'}
                     <StatusTag status={statusMap[detailTransaction.status] || detailTransaction.status} />
                   </div>
-                  <div className={widgetCls.recordSub}>{kindMap[detailTransaction.kind] || detailTransaction.kind}</div>
                 </div>
               </div>
               <div className={widgetCls.detailOverviewStatGrid}>

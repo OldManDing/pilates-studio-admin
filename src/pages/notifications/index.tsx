@@ -43,6 +43,13 @@ import { getErrorMessage } from '@/utils/errors';
 import styles from './index.module.css';
 
 type RecipientType = 'member' | 'miniUser' | 'admin';
+
+const getMarkAsReadLabel = (status: NotificationStatus) => {
+  if (status === 'READ') return '已读';
+  if (status === 'SENT') return '标记已读';
+  if (status === 'PENDING') return '待发送';
+  return '发送失败';
+};
 type FilterStatus = NotificationStatus | 'ALL';
 type FilterChannel = NotificationChannel | 'ALL';
 type RecipientSelectOption = {
@@ -569,10 +576,10 @@ export default function NotificationsPage() {
                             size="large"
                             className={pageCls.cardActionPrimary}
                             icon={<CheckCircleOutlined />}
-                            disabled={notification.status === 'READ'}
+                            disabled={notification.status !== 'SENT'}
                             onClick={() => handleMarkAsRead(notification)}
                           >
-                            标记已读
+                            {getMarkAsReadLabel(notification.status)}
                           </Button>
                         </div>
                       </div>
@@ -698,10 +705,10 @@ export default function NotificationsPage() {
           <Button
             type="primary"
             icon={<MailOutlined />}
-            disabled={detailNotification.status === 'READ'}
+            disabled={detailNotification.status !== 'SENT'}
             onClick={() => handleMarkAsRead(detailNotification)}
           >
-            标记已读
+            {getMarkAsReadLabel(detailNotification.status)}
           </Button>
         ) : null}
       >
