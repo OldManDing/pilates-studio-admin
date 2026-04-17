@@ -1,18 +1,23 @@
 .dashboardStack {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-5);
 }
 
 .taskFocusSection {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-5);
+  padding: 22px 24px;
   border-radius: var(--radius-lg);
   background: var(--bg-surface-strong);
   border: 1px solid color-mix(in srgb, var(--mint) 16%, var(--surface-border));
   box-shadow: 0 20px 38px color-mix(in srgb, var(--mint) 12%, rgba(18, 38, 63, 0.1));
+}
+
+.taskFocusContent {
+  display: grid;
+  gap: 6px;
 }
 
 .taskFocusHeader {
@@ -32,9 +37,10 @@
 }
 
 .taskFocusTitle {
-  font-size: var(--font-size-lg);
+  font-size: clamp(24px, 2.3vw, 30px);
   line-height: var(--leading-tight);
-  font-weight: var(--font-bold);
+  font-weight: var(--font-black);
+  letter-spacing: -0.03em;
   color: var(--text-heading);
 }
 
@@ -42,13 +48,14 @@
   color: var(--text-secondary);
   font-size: var(--font-size-sm);
   font-weight: var(--font-semibold);
+  line-height: 1.6;
 }
 
 .anomalyPriorityBlock {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-4);
+  padding: 16px 18px;
   border-radius: var(--radius-md);
   border: 1px solid color-mix(in srgb, var(--orange) 18%, transparent);
   background: linear-gradient(180deg, color-mix(in srgb, var(--orange) 10%, transparent) 0%, color-mix(in srgb, var(--pink) 6%, transparent) 100%);
@@ -161,20 +168,21 @@
 }
 
 .taskFocusAction {
-  min-height: 44px;
-  padding-inline: 18px;
+  min-height: 46px;
+  padding-inline: 20px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--control-border-strong);
-  background: var(--control-surface);
-  color: var(--text-heading);
+  border: 1px solid color-mix(in srgb, var(--mint) 22%, transparent);
+  background: linear-gradient(135deg, var(--control-primary-start) 0%, var(--control-primary-end) 100%);
+  color: var(--button-text-primary);
   font-weight: var(--font-bold);
-  box-shadow: var(--control-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  box-shadow: 0 14px 26px rgba(52, 158, 136, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.22);
   width: auto;
 }
 
 .taskFocusAction:hover {
   border-color: color-mix(in srgb, var(--mint) 26%, transparent);
-  background: var(--control-surface-hover);
+  background: linear-gradient(135deg, var(--control-primary-hover-start) 0%, var(--control-primary-hover-end) 100%);
+  color: var(--button-text-primary);
 }
 
 .taskPriorityRow {
@@ -219,22 +227,22 @@
 }
 
 .kpiGrid {
-  margin-bottom: 4px;
-  opacity: 0.94;
+  margin-bottom: 0;
+  opacity: 1;
 }
 
 .operationalMetricsGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 .operationalMetricCard {
-  padding: 16px 18px;
-  border-radius: var(--radius-md);
-  background: var(--control-surface);
-  border: 1px solid var(--control-border);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-strong);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--surface-shadow);
 }
 
 .operationalMetricLabel {
@@ -248,8 +256,10 @@
 .operationalMetricValue {
   margin-top: 8px;
   color: var(--text-heading);
-  font-size: var(--font-size-lg);
+  font-size: clamp(24px, 2.2vw, 30px);
   font-weight: var(--font-black);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
 }
 
 .operationalMetricHint {
@@ -459,12 +469,12 @@
 }
 
 .todayList {
-  gap: 8px;
+  gap: 10px;
 }
 
 .todayItem {
-  min-height: 84px;
-  padding: 10px 12px;
+  min-height: 88px;
+  padding: 12px 14px;
   border-color: color-mix(in srgb, var(--mint) 14%, transparent);
   background: color-mix(in srgb, var(--mint) 6%, transparent);
 }
@@ -479,7 +489,7 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .todayTaskPriorityBadge {
@@ -645,10 +655,10 @@
 
 .upcomingItem {
   display: flex;
-  align-items: center;
-  gap: 18px;
+  align-items: flex-start;
+  gap: 16px;
   width: 100%;
-  padding: 16px 4px;
+  padding: 14px 4px;
   border: none;
   border-bottom: 1px solid var(--border-soft);
   background: transparent;
@@ -723,10 +733,11 @@
 .upcomingMeta {
   color: var(--text-tertiary);
   font-size: var(--font-size-sm);
+  line-height: 1.45;
 }
 
 .upcomingHint {
-  margin-top: var(--space-2);
+  margin-top: 6px;
   color: var(--text-tertiary);
   font-size: var(--font-size-xs);
   line-height: 1.5;
@@ -744,6 +755,20 @@
   .operationalMetricsGrid,
   .bottomGrid {
     grid-template-columns: 1fr;
+  }
+
+  .operationalMetricsGrid {
+    gap: var(--space-3);
+  }
+}
+
+@media (max-width: 1024px) {
+  .dashboardStack {
+    gap: var(--space-4);
+  }
+
+  .taskFocusSection {
+    padding: 18px;
   }
 }
 
@@ -771,6 +796,10 @@
   .membershipMetaGrid,
   .quickActionGrid {
     grid-template-columns: 1fr;
+  }
+
+  .upcomingItem {
+    gap: 12px;
   }
 
   .trainingSplit {

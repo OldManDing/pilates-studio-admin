@@ -103,12 +103,12 @@ const isSameCalendarDay = (left: Date, right: Date) =>
   && left.getDate() === right.getDate();
 
 const deriveExecutionHintText = (status: string) => {
-  if (status === 'PENDING') return '开课前需完成确认与到场提醒。';
-  if (status === 'CONFIRMED') return '已确认，关注签到与到课执行。';
-  if (status === 'NO_SHOW') return '存在未到场记录，建议尽快回访。';
-  if (status === 'COMPLETED') return '已完成，可在预约管理中复盘转化。';
-  if (status === 'CANCELLED') return '已取消，建议关注是否需要补位。';
-  return '建议进入预约管理核对当前预约状态。';
+  if (status === 'PENDING') return '开课前完成确认与到场提醒';
+  if (status === 'CONFIRMED') return '跟进签到与到课执行';
+  if (status === 'NO_SHOW') return '优先安排未到场回访';
+  if (status === 'COMPLETED') return '已完成，可回看复购线索';
+  if (status === 'CANCELLED') return '确认取消原因并检查补位';
+  return '进入预约管理核对当前状态';
 };
 
 const deriveExecutionActionText = (status: string) => {
@@ -121,12 +121,12 @@ const deriveExecutionActionText = (status: string) => {
 };
 
 const deriveScheduleHintText = (status: string) => {
-  if (status === 'PENDING') return '待确认：建议在开课前完成通知。';
-  if (status === 'CONFIRMED') return '已确认：提前准备签到与场地。';
-  if (status === 'NO_SHOW') return '未到场：建议排入回访队列。';
-  if (status === 'COMPLETED') return '已完成：可关注后续复购。';
-  if (status === 'CANCELLED') return '已取消：留意候补需求。';
-  return '建议在预约管理中进一步确认排程状态。';
+  if (status === 'PENDING') return '待确认，建议提前完成通知';
+  if (status === 'CONFIRMED') return '已确认，提前准备场地与签到';
+  if (status === 'NO_SHOW') return '未到场，建议排入回访';
+  if (status === 'COMPLETED') return '已完成，可关注后续复购';
+  if (status === 'CANCELLED') return '已取消，留意候补需求';
+  return '建议继续在预约管理中确认';
 };
 
 const formatTimeRange = (start?: string, end?: string) => {
@@ -252,6 +252,7 @@ export default function DashboardPage() {
       memberStats: !partialFailures.includes('会员统计'),
       bookings: !partialFailures.includes('预约列表'),
       courses: !partialFailures.includes('课程列表'),
+      coaches: !partialFailures.includes('教练列表'),
       revenue: !partialFailures.includes('交易汇总'),
     }),
     [partialFailures],
@@ -411,30 +412,37 @@ export default function DashboardPage() {
 
   const upcomingBookings = useMemo(() => mapUpcomingBookings(bookingList), [bookingList]);
 
+  const activeMemberRate = stats.totalMembers
+    ? `${((stats.activeMembers / stats.totalMembers) * 100).toFixed(1)}%`
+    : '0%';
+
+  const activeCourseCount = courseList.filter((item) => item.isActive).length;
+  const activeCoachCount = coachList.filter((item) => item.status === 'ACTIVE').length;
+
   const operationalMetrics = useMemo(
     () => [
       {
-        label: '总会员',
-        value: metricAvailability.memberStats ? `${stats.totalMembers} 位` : '--',
-        hint: metricAvailability.memberStats ? `活跃 ${stats.activeMembers} 位` : '会员统计暂不可用',
+        label: '异常待跟进',
+        value: metricAvailability.bookings ? `${unresolvedAnomalyCount} 项` : '--',
+        hint: metricAvailability.bookings ? '先处理未到场与取消补位' : '预约列表暂不可用',
+      },
+      {
+        label: '活跃率',
+        value: metricAvailability.memberStats ? activeMemberRate : '--',
+        hint: metricAvailability.memberStats ? `${stats.activeMembers}/${stats.totalMembers} 位会员活跃` : '会员统计暂不可用',
+      },
+      {
+        label: '供给状态',
+        value: metricAvailability.courses && metricAvailability.coaches ? `${activeCourseCount} 门` : '--',
+        hint: metricAvailability.courses && metricAvailability.coaches ? `在岗教练 ${activeCoachCount} 位` : '课程或教练数据暂不可用',
       },
       {
         label: '本月新增',
         value: metricAvailability.memberStats ? `${stats.newMembersThisMonth} 位` : '--',
-        hint: metricAvailability.memberStats ? '关注新会员转化' : '会员统计暂不可用',
-      },
-      {
-        label: '可排课程',
-        value: metricAvailability.courses ? `${courseList.filter((item) => item.isActive).length} 门` : '--',
-        hint: metricAvailability.courses ? `在岗教练 ${coachList.filter((item) => item.status === 'ACTIVE').length} 位` : '课程与教练数据暂不可用',
-      },
-      {
-        label: '本月营收',
-        value: metricAvailability.revenue ? `¥${stats.monthlyRevenue.toLocaleString('zh-CN')}` : '--',
-        hint: metricAvailability.revenue ? '来源：交易汇总' : '交易汇总暂不可用',
+        hint: metricAvailability.memberStats ? '关注新会员首月留存与转化' : '会员统计暂不可用',
       },
     ],
-    [stats, metricAvailability, courseList, coachList],
+    [stats, metricAvailability, unresolvedAnomalyCount, activeMemberRate, activeCourseCount, activeCoachCount],
   );
 
   if (loading) {
@@ -453,7 +461,7 @@ export default function DashboardPage() {
         title="仪表盘"
         subtitle={partialFailures.length
           ? `部分模块暂不可用：${partialFailures.join('、')}`
-          : '先处理今日执行与异常。'}
+          : '运营总览与今日动态。'}
       />
 
       {partialFailures.length ? (
@@ -468,11 +476,30 @@ export default function DashboardPage() {
       ) : null}
 
       <div className={styles.dashboardStack}>
+        <div className={`${pageCls.dashboardHeroGrid} ${styles.kpiGrid}`}>
+          {dashboardStats.map((item) => (
+            <StatCard
+              key={item.title}
+              title={item.title}
+              value={item.value}
+              hint={item.hint}
+              tone={item.tone}
+              icon={iconMap[item.icon]}
+              compact={item.compact}
+              emphasis={item.emphasis}
+              subtle={item.subtle}
+            />
+          ))}
+        </div>
+
         <section className={styles.taskFocusSection}>
           <div className={styles.taskFocusHeader}>
-            <div>
-              <div className={styles.taskFocusEyebrow}>Task First</div>
-              <div className={styles.taskFocusTitle}>今日先执行，后续再排程</div>
+            <div className={styles.taskFocusContent}>
+              <div className={styles.taskFocusEyebrow}>运营焦点</div>
+              <div className={styles.taskFocusTitle}>先清异常，再推进今日执行</div>
+              <div className={styles.taskNorthStar}>
+                今日执行 {todayCourses.length} 项，未来排程 {metricAvailability.bookings ? upcomingBookings.length : 0} 项。
+              </div>
             </div>
             <Button
               type="default"
@@ -516,17 +543,8 @@ export default function DashboardPage() {
                   </div>
                   <div className={styles.anomalyPriorityCardDetail}>{item.detail}</div>
                 </button>
-              ))}
+                ))}
             </div>
-          </div>
-
-          <div className={styles.taskPriorityRow}>
-            <span className={`${styles.taskPriorityPill} ${styles.taskPriorityPillCalm}`}>
-              今日执行 {todayCourses.length} 项
-            </span>
-            <span className={`${styles.taskPriorityPill} ${styles.taskPriorityPillCalm}`}>
-              后续排程 {metricAvailability.bookings ? upcomingBookings.length : '--'} 项
-            </span>
           </div>
 
           <div className={styles.taskPanelsGrid}>
@@ -542,23 +560,7 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <div className={`${pageCls.dashboardHeroGrid} ${styles.kpiGrid}`}>
-          {dashboardStats.map((item) => (
-            <StatCard
-              key={item.title}
-              title={item.title}
-              value={item.value}
-              hint={item.hint}
-              tone={item.tone}
-              icon={iconMap[item.icon]}
-              compact={item.compact}
-              emphasis={item.emphasis}
-              subtle={item.subtle}
-            />
-          ))}
-        </div>
-
-        <SectionCard title="运营总览" subtitle="门店规模、供给与营收摘要。">
+        <SectionCard title="运营诊断" subtitle="只保留需要用于判断优先级的摘要信号。">
           <div className={styles.operationalMetricsGrid}>
             {operationalMetrics.map((item) => (
               <div key={item.label} className={styles.operationalMetricCard}>
