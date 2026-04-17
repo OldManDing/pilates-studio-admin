@@ -22,7 +22,7 @@ export default function UpcomingBookingsPanel({ items, onViewDetail }: UpcomingB
   return (
     <SectionCard
       title="近期排程"
-      subtitle="未来 1-3 天排班预览，用于提前准备。"
+      subtitle="未来 1-3 天预约预览。"
     >
       {items.length > 0 ? (
         <div className={styles.upcomingList}>
@@ -38,17 +38,17 @@ export default function UpcomingBookingsPanel({ items, onViewDetail }: UpcomingB
                 <div className={styles.upcomingWeekday}>{item.weekdayText}</div>
               </div>
               <div className={styles.upcomingDivider} />
-                <div className={styles.upcomingBody}>
-                  <div className={styles.upcomingTitleRow}>
-                    <span className={styles.upcomingTitle}>{item.title}</span>
-                    {item.tagText ? <StatusTag status={item.tagText} /> : null}
-                  </div>
-                  <div className={styles.upcomingMeta}>{item.metaText}</div>
-                  {item.scheduleHintText ? <div className={styles.upcomingHint}>{item.scheduleHintText}</div> : null}
+              <div className={styles.upcomingBody}>
+                <div className={styles.upcomingTitleRow}>
+                  <span className={styles.upcomingTitle}>{item.title}</span>
+                  {item.tagText ? <StatusTag status={item.tagText} /> : null}
                 </div>
-              </button>
+                <div className={styles.upcomingMeta}>{item.metaText}</div>
+                {item.scheduleHintText ? <div className={styles.upcomingHint}>{item.scheduleHintText}</div> : null}
+              </div>
+            </button>
             ))}
-          </div>
+        </div>
       ) : (
         <EmptyState size="compact" title="近期暂无排程" description="未来几天暂无可展示的预约安排。" />
       )}
