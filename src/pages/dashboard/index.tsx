@@ -461,7 +461,7 @@ export default function DashboardPage() {
         title="仪表盘"
         subtitle={partialFailures.length
           ? `部分模块暂不可用：${partialFailures.join('、')}`
-          : '运营总览与今日动态。'}
+          : '运营概览与动态。'}
       />
 
       {partialFailures.length ? (
@@ -496,9 +496,9 @@ export default function DashboardPage() {
           <div className={styles.taskFocusHeader}>
             <div className={styles.taskFocusContent}>
               <div className={styles.taskFocusEyebrow}>运营焦点</div>
-              <div className={styles.taskFocusTitle}>先清异常，再推进今日执行</div>
+              <div className={styles.taskFocusTitle}>清理异常，推进今日执行</div>
               <div className={styles.taskNorthStar}>
-                今日执行 {todayCourses.length} 项，未来排程 {metricAvailability.bookings ? upcomingBookings.length : 0} 项。
+                今日执行 {todayCourses.length} 项 · 未来排程 {metricAvailability.bookings ? upcomingBookings.length : 0} 项
               </div>
             </div>
             <Button

@@ -121,6 +121,14 @@
 .anomalyPriorityCard:hover {
   transform: translateY(-1px);
   box-shadow: 0 8px 18px rgba(38, 57, 84, 0.08);
+  border-color: color-mix(in srgb, var(--mint) 20%, transparent);
+}
+
+.anomalyPriorityCard:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 14%, transparent),
+    var(--shadow-sm);
+  border-color: color-mix(in srgb, var(--mint) 40%, transparent);
 }
 
 .anomalyPriorityCardHead {
@@ -475,13 +483,31 @@
 .todayItem {
   min-height: 88px;
   padding: 12px 14px;
-  border-color: color-mix(in srgb, var(--mint) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--mint) 14%, transparent);
   background: color-mix(in srgb, var(--mint) 6%, transparent);
+  transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.todayItem:hover {
+  background: color-mix(in srgb, var(--mint) 10%, transparent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(38, 57, 84, 0.05);
+}
+
+.todayItem:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 14%, transparent),
+    var(--shadow-sm);
+  border-color: color-mix(in srgb, var(--mint) 40%, transparent);
 }
 
 .todayItemAnomaly {
   border-color: color-mix(in srgb, var(--pink) 22%, transparent);
   background: color-mix(in srgb, var(--pink) 8%, transparent);
+}
+
+.todayItemAnomaly:hover {
+  background: color-mix(in srgb, var(--pink) 12%, transparent);
 }
 
 .todayTaskMetaRow {
