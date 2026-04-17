@@ -29,7 +29,7 @@ type TodayCourseViewModel = {
   id: string;
   title: string;
   timeText: string;
-  durationText: string;
+  participantText: string;
   coachName: string;
   locationText: string;
   statusText?: string;
@@ -184,7 +184,7 @@ const mapTodayCourses = (bookings: Booking[], courses: Course[]): TodayCourseVie
       id: item.id,
       title: item.session?.course?.name || '课程待确认',
       timeText: formatTimeRange(item.session?.startsAt, item.session?.endsAt),
-      durationText: `会员 ${item.member?.name || '待匹配'}`,
+      participantText: `会员 ${item.member?.name || '待匹配'}`,
       coachName: item.session?.coach?.name || '待分配教练',
       locationText: item.source === 'MINI_PROGRAM' ? '小程序预约' : '后台预约',
       statusText: bookingStatusToLabel(item.status),
@@ -197,12 +197,12 @@ const mapTodayCourses = (bookings: Booking[], courses: Course[]): TodayCourseVie
     id: course.id,
     title: course.name,
     timeText: '待补时段',
-    durationText: `${formatDurationText(course.durationMinutes)} · ${course.type}`,
+    participantText: `${formatDurationText(course.durationMinutes)} · ${course.type}`,
     coachName: course.coach?.name || '待分配教练',
     locationText: course.level ? `${course.level}课程` : '门店信息未同步',
     statusText: course.isActive ? '已确认' : '已取消',
-    queueHintText: '当前暂无可用预约队列，建议先校对课程启停与教练排班。',
-    actionText: '前往课程管理',
+    queueHintText: '当前暂无可用预约队列，可前往预约管理核对近期排程。',
+    actionText: '去预约管理',
   }));
 };
 
@@ -228,6 +228,16 @@ const mapUpcomingBookings = (items: Booking[]): UpcomingBookingViewModel[] => {
     tagText: bookingStatusToLabel(entry.item.status),
     scheduleHintText: deriveScheduleHintText(entry.item.status),
   }));
+};
+
+const countTodayBookings = (items: Booking[]) => {
+  const now = new Date();
+
+  return items.filter((item) => {
+    const startsAt = toValidDate(item.session?.startsAt);
+    if (!startsAt) return false;
+    return isSameCalendarDay(startsAt, now);
+  }).length;
 };
 
 export default function DashboardPage() {
@@ -365,6 +375,8 @@ export default function DashboardPage() {
     [bookingList, courseList],
   );
 
+  const todayBookingCount = useMemo(() => countTodayBookings(bookingList), [bookingList]);
+
   const dashboardStats = useMemo(
     (): DashboardStatViewModel[] => [
       {
@@ -379,8 +391,8 @@ export default function DashboardPage() {
       },
       {
         title: '今日执行',
-        value: metricAvailability.bookings ? String(todayCourses.length) : '--',
-        hint: metricAvailability.bookings ? '处理今日执行队列，保障签到到课' : '执行队列暂不可用',
+        value: metricAvailability.bookings ? String(todayBookingCount) : '--',
+        hint: metricAvailability.bookings ? '聚焦今日预约与到课执行' : '执行队列暂不可用',
         tone: 'mint' as const,
         icon: 'calendar' as const,
         compact: true,
@@ -400,14 +412,14 @@ export default function DashboardPage() {
       {
         title: '本月营收',
         value: metricAvailability.revenue ? `¥${stats.monthlyRevenue.toLocaleString('zh-CN')}` : '--',
-        hint: metricAvailability.revenue ? '来源：交易汇总' : '交易汇总暂不可用',
+        hint: metricAvailability.revenue ? '来自交易汇总' : '交易汇总暂不可用',
         tone: 'pink' as const,
         icon: 'wallet' as const,
         compact: true,
         subtle: true,
       },
     ],
-    [stats, bookingList, metricAvailability, todayCourses.length],
+    [stats, bookingList, metricAvailability, todayBookingCount],
   );
 
   const upcomingBookings = useMemo(() => mapUpcomingBookings(bookingList), [bookingList]);
@@ -467,10 +479,10 @@ export default function DashboardPage() {
       {partialFailures.length ? (
         <SectionCard
           title="部分数据加载失败"
-          subtitle={`未成功加载：${partialFailures.join('、')}`}
+          subtitle={`未成功加载：${partialFailures.join('、')}，可稍后刷新页面重试。`}
         >
           <div className={styles.partialFailureWrap}>
-            <span className={styles.partialFailurePill}>稍后刷新</span>
+            <span className={styles.partialFailurePill}>加载异常</span>
           </div>
         </SectionCard>
       ) : null}
@@ -498,7 +510,7 @@ export default function DashboardPage() {
               <div className={styles.taskFocusEyebrow}>运营焦点</div>
               <div className={styles.taskFocusTitle}>清理异常，推进今日执行</div>
               <div className={styles.taskNorthStar}>
-                今日执行 {todayCourses.length} 项 · 未来排程 {metricAvailability.bookings ? upcomingBookings.length : 0} 项
+                今日预约 {todayBookingCount} 项 · 后续排程 {metricAvailability.bookings ? upcomingBookings.length : 0} 项
               </div>
             </div>
             <Button
@@ -560,7 +572,7 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <SectionCard title="运营诊断" subtitle="只保留需要用于判断优先级的摘要信号。">
+        <SectionCard title="运营诊断" subtitle="聚焦优先级判断所需信号。">
           <div className={styles.operationalMetricsGrid}>
             {operationalMetrics.map((item) => (
               <div key={item.label} className={styles.operationalMetricCard}>

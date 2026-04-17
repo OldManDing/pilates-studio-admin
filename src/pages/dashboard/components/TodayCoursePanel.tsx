@@ -7,7 +7,7 @@ export type TodayCourseItem = {
   id: string;
   title: string;
   timeText: string;
-  durationText: string;
+  participantText: string;
   coachName: string;
   locationText: string;
   statusText?: string;
@@ -54,7 +54,7 @@ export default function TodayCoursePanel({
                     {item.coachName} · {item.locationText}
                   </div>
                   <div className={styles.todayTaskMetaRow}>
-                    <span className={widgetCls.recordSub}>{item.durationText}</span>
+                    <span className={widgetCls.recordSub}>{item.participantText}</span>
                   </div>
                   {item.queueHintText ? <div className={styles.executionHint}>{item.queueHintText}</div> : null}
                 </div>
