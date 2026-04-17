@@ -22,7 +22,7 @@ export default function UpcomingBookingsPanel({ items, onViewDetail }: UpcomingB
   return (
     <SectionCard
       title="近期排程"
-      subtitle="未来 1-3 天排班预览，用于场地与教练准备。"
+      subtitle="未来 1-3 天排班预览，用于提前准备。"
     >
       {items.length > 0 ? (
         <div className={styles.upcomingList}>
