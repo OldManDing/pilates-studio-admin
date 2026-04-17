@@ -44,7 +44,7 @@ export default function TodayCoursePanel({
   return (
     <SectionCard
       title="今日执行队列"
-      subtitle={`${new Date().toLocaleDateString('zh-CN')} · 先确认，再签到，再回访`}
+      subtitle={`${new Date().toLocaleDateString('zh-CN')} · 聚焦今天必须落地的任务`}
     >
       {anomalyCount > 0 ? (
         <div className={styles.todayAlertBar}>存在异常任务 {anomalyCount} 项，建议优先处理回访与补位。</div>
@@ -75,15 +75,14 @@ export default function TodayCoursePanel({
                       >
                         {taskPriority.label}
                       </span>
-                      {item.actionText ? <span className={styles.todayTaskNext}>下一步：{item.actionText}</span> : null}
+                      <span className={widgetCls.recordSub}>{item.durationText}</span>
                     </div>
-                    <div className={widgetCls.recordSub}>{item.durationText}</div>
                     {item.queueHintText ? <div className={styles.executionHint}>{item.queueHintText}</div> : null}
                   </div>
                 </div>
                 <div className={widgetCls.dashboardCourseAside}>
                   {item.statusText ? <StatusTag status={item.statusText} /> : null}
-                  {item.actionText ? <span className={styles.executionActionPill}>执行：{item.actionText}</span> : null}
+                  {item.actionText ? <span className={styles.executionActionPill}>{item.actionText}</span> : null}
                 </div>
               </button>
             );
