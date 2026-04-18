@@ -31,7 +31,7 @@ export default function TodayCoursePanel({
   return (
     <SectionCard
       title="今日执行队列"
-      subtitle={`${new Date().toLocaleDateString('zh-CN')} · 聚焦今天落地的任务`}
+      subtitle="今天 · 聚焦落地任务"
     >
       {anomalyCount > 0 ? (
         <div className={styles.todayAlertBar}>异常预约 {anomalyCount} 单，优先处理回访与补位。</div>

@@ -473,13 +473,13 @@ export default function DashboardPage() {
         title="仪表盘"
         subtitle={partialFailures.length
           ? `部分模块暂不可用：${partialFailures.join('、')}`
-          : '运营概览与动态。'}
+          : '运营概览与今日动态。'}
       />
 
       {partialFailures.length ? (
         <SectionCard
           title="部分数据加载失败"
-          subtitle={`未成功加载：${partialFailures.join('、')}，可稍后刷新页面重试。`}
+          subtitle={`未成功加载：${partialFailures.join('、')}，建议稍后刷新页面。`}
         >
           <div className={styles.partialFailureWrap}>
             <span className={styles.partialFailurePill}>加载异常</span>
