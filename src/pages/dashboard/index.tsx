@@ -469,126 +469,128 @@ export default function DashboardPage() {
   return (
     <div className={`${pageCls.page} ${pageCls.workPage}`}>
       {contextHolder}
-      <PageHeader
-        title="仪表盘"
-        subtitle={partialFailures.length
-          ? `部分模块暂不可用：${partialFailures.join('、')}`
-          : '运营概览与今日动态。'}
-      />
+      <div className={styles.dashboardFlow}>
+        <PageHeader
+          title="仪表盘"
+          subtitle={partialFailures.length
+            ? `部分模块暂不可用：${partialFailures.join('、')}`
+            : '运营概览与今日动态。'}
+        />
 
-      {partialFailures.length ? (
-        <SectionCard
-          title="部分数据加载失败"
-          subtitle={`未成功加载：${partialFailures.join('、')}，建议稍后刷新页面。`}
-        >
-          <div className={styles.partialFailureWrap}>
-            <span className={styles.partialFailurePill}>加载异常</span>
-          </div>
-        </SectionCard>
-      ) : null}
-
-      <div className={styles.dashboardStack}>
-        <div className={`${pageCls.dashboardHeroGrid} ${styles.kpiGrid}`}>
-          {dashboardStats.map((item) => (
-            <StatCard
-              key={item.title}
-              title={item.title}
-              value={item.value}
-              hint={item.hint}
-              tone={item.tone}
-              icon={iconMap[item.icon]}
-              compact={item.compact}
-              emphasis={item.emphasis}
-              subtle={item.subtle}
-            />
-          ))}
-        </div>
-
-        <section className={styles.taskFocusSection}>
-          <div className={styles.taskFocusHeader}>
-            <div className={styles.taskFocusContent}>
-              <div className={styles.taskFocusEyebrow}>运营焦点</div>
-              <div className={styles.taskFocusTitle}>清理异常，推进今日执行</div>
-              <div className={styles.taskNorthStar}>
-                今日预约 {todayBookingCount} 单 · 后续排程 {metricAvailability.bookings ? upcomingBookings.length : 0} 单
-              </div>
-            </div>
-            <Button
-              type="default"
-              size="large"
-              className={styles.taskFocusAction}
-              onClick={() => go('/bookings')}
-            >
-              去预约管理处理
-            </Button>
-          </div>
-
-          <div
-            className={`${styles.anomalyPriorityBlock} ${metricAvailability.bookings && unresolvedAnomalyCount > 0 ? styles.anomalyPriorityBlockCritical : ''}`}
+        {partialFailures.length ? (
+          <SectionCard
+            title="部分数据加载失败"
+            subtitle={`未成功加载：${partialFailures.join('、')}，建议稍后刷新页面。`}
           >
-            <div className={styles.anomalyPriorityHead}>
-              <div>
-                <div className={styles.anomalyPriorityTitle}>异常优先处理</div>
-              </div>
-              <span
-                className={`${styles.anomalyPrioritySummary} ${!metricAvailability.bookings
-                  ? styles.anomalyPrioritySummaryMuted
-                  : unresolvedAnomalyCount > 0
-                    ? styles.anomalyPrioritySummaryCritical
-                    : styles.anomalyPrioritySummaryCalm}`}
-              >
-                {metricAvailability.bookings
-                  ? unresolvedAnomalyCount > 0
-                    ? `异常 ${unresolvedAnomalyCount} 单`
-                    : '当前无异常'
-                  : '预约数据暂不可用'}
-              </span>
+            <div className={styles.partialFailureWrap}>
+              <span className={styles.partialFailurePill}>加载异常</span>
             </div>
+          </SectionCard>
+        ) : null}
 
-            <div className={styles.anomalyPriorityGrid}>
-              {anomalyCards.map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  className={`${styles.anomalyPriorityCard} ${item.tone === 'critical' ? styles.anomalyPriorityCardCritical : styles.anomalyPriorityCardWarn}`}
-                  onClick={() => go('/bookings')}
-                >
-                  <div className={styles.anomalyPriorityCardHead}>
-                    <span className={styles.anomalyPriorityCardLabel}>{item.label}</span>
-                    <span className={styles.anomalyPriorityCardCount}>
-                      {metricAvailability.bookings ? `${item.count} 单` : '--'}
-                    </span>
-                  </div>
-                  <div className={styles.anomalyPriorityCardDetail}>{item.detail}</div>
-                </button>
-                ))}
-            </div>
-          </div>
-
-          <div className={styles.taskPanelsGrid}>
-            <TodayCoursePanel
-              items={todayCourses}
-              anomalyCount={metricAvailability.bookings ? noShowBookingCount + cancelledBookingCount : 0}
-              onViewDetail={() => go('/bookings')}
-            />
-            <UpcomingBookingsPanel
-              items={upcomingBookings}
-              onViewDetail={() => go('/bookings')}
-            />
-          </div>
-        </section>
-
-        <SectionCard title="运营诊断" subtitle="聚焦优先级判断所需信号。">
-          <div className={styles.operationalMetricsGrid}>
-            {operationalMetrics.map((item) => (
-              <div key={item.label} className={styles.operationalMetricCard}>
-                <div className={styles.operationalMetricLabel}>{item.label}</div>
-                <div className={styles.operationalMetricValue}>{item.value}</div>
-                <div className={styles.operationalMetricHint}>{item.hint}</div>
-              </div>
+        <div className={styles.dashboardStack}>
+          <div className={`${pageCls.dashboardHeroGrid} ${styles.kpiGrid}`}>
+            {dashboardStats.map((item) => (
+              <StatCard
+                key={item.title}
+                title={item.title}
+                value={item.value}
+                hint={item.hint}
+                tone={item.tone}
+                icon={iconMap[item.icon]}
+                compact={item.compact}
+                emphasis={item.emphasis}
+                subtle={item.subtle}
+              />
             ))}
           </div>
-        </SectionCard>
+
+          <section className={styles.taskFocusSection}>
+            <div className={styles.taskFocusHeader}>
+              <div className={styles.taskFocusContent}>
+                <div className={styles.taskFocusEyebrow}>运营焦点</div>
+                <div className={styles.taskFocusTitle}>清理异常，推进今日执行</div>
+                <div className={styles.taskNorthStar}>
+                  今日预约 {todayBookingCount} 单 · 后续排程 {metricAvailability.bookings ? upcomingBookings.length : 0} 单
+                </div>
+              </div>
+              <Button
+                type="default"
+                size="large"
+                className={styles.taskFocusAction}
+                onClick={() => go('/bookings')}
+              >
+                去预约管理处理
+              </Button>
+            </div>
+
+            <div
+              className={`${styles.anomalyPriorityBlock} ${metricAvailability.bookings && unresolvedAnomalyCount > 0 ? styles.anomalyPriorityBlockCritical : ''}`}
+            >
+              <div className={styles.anomalyPriorityHead}>
+                <div>
+                  <div className={styles.anomalyPriorityTitle}>异常优先处理</div>
+                </div>
+                <span
+                  className={`${styles.anomalyPrioritySummary} ${!metricAvailability.bookings
+                    ? styles.anomalyPrioritySummaryMuted
+                    : unresolvedAnomalyCount > 0
+                      ? styles.anomalyPrioritySummaryCritical
+                      : styles.anomalyPrioritySummaryCalm}`}
+                >
+                  {metricAvailability.bookings
+                    ? unresolvedAnomalyCount > 0
+                      ? `异常 ${unresolvedAnomalyCount} 单`
+                      : '当前无异常'
+                    : '预约数据暂不可用'}
+                </span>
+              </div>
+
+              <div className={styles.anomalyPriorityGrid}>
+                {anomalyCards.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    className={`${styles.anomalyPriorityCard} ${item.tone === 'critical' ? styles.anomalyPriorityCardCritical : styles.anomalyPriorityCardWarn}`}
+                    onClick={() => go('/bookings')}
+                  >
+                    <div className={styles.anomalyPriorityCardHead}>
+                      <span className={styles.anomalyPriorityCardLabel}>{item.label}</span>
+                      <span className={styles.anomalyPriorityCardCount}>
+                        {metricAvailability.bookings ? `${item.count} 单` : '--'}
+                      </span>
+                    </div>
+                    <div className={styles.anomalyPriorityCardDetail}>{item.detail}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className={styles.taskPanelsGrid}>
+              <TodayCoursePanel
+                items={todayCourses}
+                anomalyCount={metricAvailability.bookings ? noShowBookingCount + cancelledBookingCount : 0}
+                onViewDetail={() => go('/bookings')}
+              />
+              <UpcomingBookingsPanel
+                items={upcomingBookings}
+                onViewDetail={() => go('/bookings')}
+              />
+            </div>
+          </section>
+
+          <SectionCard title="运营诊断" subtitle="聚焦优先级判断所需信号。">
+            <div className={styles.operationalMetricsGrid}>
+              {operationalMetrics.map((item) => (
+                <div key={item.label} className={styles.operationalMetricCard}>
+                  <div className={styles.operationalMetricLabel}>{item.label}</div>
+                  <div className={styles.operationalMetricValue}>{item.value}</div>
+                  <div className={styles.operationalMetricHint}>{item.hint}</div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        </div>
       </div>
     </div>
   );
