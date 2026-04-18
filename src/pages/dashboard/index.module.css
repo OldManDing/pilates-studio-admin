@@ -540,14 +540,14 @@
 
 .todayItemAnomaly:hover {
   background: color-mix(in srgb, var(--pink) 12%, transparent);
+}
+
 .todayAnomalyIcon {
   margin-left: 6px;
   color: var(--text-pink);
   font-size: 12px;
   opacity: 0.68;
   vertical-align: -1px;
-}
-
 }
 
 .todayTaskMetaRow {
@@ -807,6 +807,12 @@
   font-weight: var(--font-bold);
 }
 
+.upcomingStatusWrap {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+}
+
 .upcomingMeta {
   color: var(--text-tertiary);
   font-size: var(--font-size-sm);
@@ -828,13 +834,13 @@
   width: 100%;
   border: none;
   text-align: left;
+}
+
 @media (min-width: 1024px) and (max-width: 1200px) {
   .taskFocusSection,
   .anomalyPriorityBlock {
     gap: var(--space-2);
   }
-}
-
 }
 
 @media (max-width: 1200px) {

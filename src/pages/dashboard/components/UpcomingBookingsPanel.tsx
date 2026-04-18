@@ -41,7 +41,7 @@ export default function UpcomingBookingsPanel({ items, onViewDetail }: UpcomingB
               <div className={styles.upcomingBody}>
                 <div className={styles.upcomingTitleRow}>
                   <span className={styles.upcomingTitle} title={item.title}>{item.title}</span>
-                  {item.tagText ? <StatusTag status={item.tagText} /> : null}
+                  {item.tagText ? <span className={styles.upcomingStatusWrap}><StatusTag status={item.tagText} /></span> : null}
                 </div>
                 <div className={styles.upcomingMeta}>{item.metaText}</div>
                 {item.scheduleHintText ? <div className={styles.upcomingHint}>{item.scheduleHintText}</div> : null}
