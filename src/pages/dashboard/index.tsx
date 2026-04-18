@@ -530,7 +530,13 @@ export default function DashboardPage() {
               <div>
                 <div className={styles.anomalyPriorityTitle}>异常优先处理</div>
               </div>
-              <span className={styles.anomalyPrioritySummary}>
+              <span
+                className={`${styles.anomalyPrioritySummary} ${!metricAvailability.bookings
+                  ? styles.anomalyPrioritySummaryMuted
+                  : unresolvedAnomalyCount > 0
+                    ? styles.anomalyPrioritySummaryCritical
+                    : styles.anomalyPrioritySummaryCalm}`}
+              >
                 {metricAvailability.bookings
                   ? unresolvedAnomalyCount > 0
                     ? `异常 ${unresolvedAnomalyCount} 单`

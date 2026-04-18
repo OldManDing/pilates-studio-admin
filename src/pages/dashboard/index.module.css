@@ -30,8 +30,7 @@
 
 .taskFocusEyebrow {
   font-size: var(--font-size-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.04em;
   color: var(--text-tertiary);
   margin-bottom: var(--space-2);
 }
@@ -94,11 +93,26 @@
   min-height: 30px;
   padding: 0 12px;
   border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+}
+
+.anomalyPrioritySummaryCritical {
   border: 1px solid color-mix(in srgb, var(--pink) 22%, transparent);
   background: color-mix(in srgb, var(--pink) 10%, transparent);
   color: var(--text-pink);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-bold);
+}
+
+.anomalyPrioritySummaryCalm {
+  border: 1px solid color-mix(in srgb, var(--mint) 18%, transparent);
+  background: color-mix(in srgb, var(--mint) 9%, transparent);
+  color: var(--text-mint);
+}
+
+.anomalyPrioritySummaryMuted {
+  border: 1px solid var(--border-soft);
+  background: var(--control-surface);
+  color: var(--text-tertiary);
 }
 
 .anomalyPriorityGrid {
@@ -267,8 +281,7 @@
   color: var(--text-tertiary);
   font-size: var(--font-size-xs);
   font-weight: var(--font-bold);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .operationalMetricValue {
@@ -749,8 +762,7 @@
 .upcomingWeekday {
   margin-top: 4px;
   font-size: var(--font-size-xs);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--text-tertiary);
 }
 
@@ -770,11 +782,16 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   margin-bottom: 6px;
 }
 
 .upcomingTitle {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--text-heading);
   font-size: var(--font-size-md);
   font-weight: var(--font-bold);
