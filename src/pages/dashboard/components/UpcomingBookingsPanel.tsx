@@ -40,7 +40,7 @@ export default function UpcomingBookingsPanel({ items, onViewDetail }: UpcomingB
               <div className={styles.upcomingDivider} />
               <div className={styles.upcomingBody}>
                 <div className={styles.upcomingTitleRow}>
-                  <span className={styles.upcomingTitle}>{item.title}</span>
+                  <span className={styles.upcomingTitle} title={item.title}>{item.title}</span>
                   {item.tagText ? <StatusTag status={item.tagText} /> : null}
                 </div>
                 <div className={styles.upcomingMeta}>{item.metaText}</div>
