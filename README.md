@@ -93,14 +93,14 @@ pilates-studio-mini/        # 小程序 (独立目录)
 
 ## 管理后台页面
 
-1. 仪表盘 - 经营数据总览、趋势图表
+1. 仪表盘 - 运营总览、今日动态、异常优先处理、近期排程与运营诊断
 2. 会员管理 - 会员 CRUD、会籍状态
 3. 课程管理 - 课程卡片、排期
 4. 预约管理 - 预约列表、签到确认
 5. 教练管理 - 教练资料、排班
 6. 财务报表 - 收支 KPI、交易记录
 7. 数据分析 - 课程热度、雷达图
-8. 系统设置 - 门店信息、通知开关
+8. 系统设置 - 门店配置、通知设置、安全设置与数据管理
 9. 角色权限 - RBAC 权限矩阵
 
 ## 小程序页面
@@ -136,6 +136,9 @@ npm run seed             # 注入种子数据
 cd pilates-studio-admin
 npm install
 npm run dev              # 开发服务器 (http://localhost:8000)
+npm run typecheck        # TypeScript 类型检查
+npm run lint             # ESLint 代码检查
+npm run smoke-test       # 页面级 smoke 测试
 npm run build            # 生产构建
 
 # 小程序
