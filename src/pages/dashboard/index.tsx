@@ -382,7 +382,7 @@ export default function DashboardPage() {
       {
         title: '待处理预约',
         value: metricAvailability.bookings ? String(bookingList.filter((item) => item.status === 'PENDING').length) : '--',
-        hint: metricAvailability.bookings ? '优先处理待确认与异常回访' : '预约列表暂不可用',
+        hint: metricAvailability.bookings ? '优先处理待确认预约与异常回访' : '预约列表暂不可用',
         tone: 'orange' as const,
         icon: 'rise' as const,
         compact: true,
@@ -510,7 +510,7 @@ export default function DashboardPage() {
               <div className={styles.taskFocusEyebrow}>运营焦点</div>
               <div className={styles.taskFocusTitle}>清理异常，推进今日执行</div>
               <div className={styles.taskNorthStar}>
-                今日预约 {todayBookingCount} 项 · 后续排程 {metricAvailability.bookings ? upcomingBookings.length : 0} 项
+                今日预约 {todayBookingCount} 单 · 后续排程 {metricAvailability.bookings ? upcomingBookings.length : 0} 单
               </div>
             </div>
             <Button

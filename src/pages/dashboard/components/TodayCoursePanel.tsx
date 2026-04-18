@@ -34,7 +34,7 @@ export default function TodayCoursePanel({
       subtitle={`${new Date().toLocaleDateString('zh-CN')} · 聚焦今天落地的任务`}
     >
       {anomalyCount > 0 ? (
-        <div className={styles.todayAlertBar}>异常任务 {anomalyCount} 项，优先处理回访与补位。</div>
+        <div className={styles.todayAlertBar}>异常预约 {anomalyCount} 单，优先处理回访与补位。</div>
       ) : null}
 
       {items.length > 0 ? (
