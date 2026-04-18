@@ -718,6 +718,7 @@
   width: 100%;
   padding: 14px 4px;
   border: none;
+  border-radius: var(--radius-sm);
   border-bottom: 1px solid var(--border-soft);
   background: transparent;
   text-align: left;
@@ -738,6 +739,7 @@
 .upcomingItem:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 14%, transparent);
+  background: color-mix(in srgb, var(--violet) 6%, transparent);
 }
 
 .upcomingItem:last-child {
@@ -762,7 +764,7 @@
 .upcomingWeekday {
   margin-top: 4px;
   font-size: var(--font-size-xs);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   color: var(--text-tertiary);
 }
 
@@ -871,6 +873,14 @@
 
   .upcomingItem {
     gap: 12px;
+  }
+
+  .upcomingTitleRow {
+    flex-wrap: wrap;
+  }
+
+  .upcomingTitle {
+    white-space: normal;
   }
 
   .trainingSplit {
