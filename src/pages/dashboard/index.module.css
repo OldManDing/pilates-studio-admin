@@ -138,6 +138,17 @@
   border-color: color-mix(in srgb, var(--mint) 20%, transparent);
 }
 
+.anomalyPriorityCardCritical:hover {
+  border-color: color-mix(in srgb, var(--pink) 40%, transparent);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--pink) 10%, rgba(38, 57, 84, 0.06));
+}
+
+.anomalyPriorityCardWarn:hover {
+  border-color: color-mix(in srgb, var(--orange) 40%, transparent);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--orange) 10%, rgba(38, 57, 84, 0.06));
+}
+
+
 .anomalyPriorityCard:active {
   transform: translateY(0);
   box-shadow: 0 4px 10px rgba(38, 57, 84, 0.06);
@@ -479,6 +490,12 @@
   overflow: hidden;
 }
 
+.executionHintAnomaly {
+  color: var(--text-heading);
+  font-weight: var(--font-medium);
+}
+
+
 .executionActionPill {
   display: inline-flex;
   align-items: center;
@@ -770,11 +787,12 @@
 }
 
 .upcomingWeekday {
-  margin-top: 4px;
+  margin-top: 0px;
   font-size: var(--font-size-xs);
   letter-spacing: 0.02em;
   color: var(--text-tertiary);
 }
+
 
 .upcomingDivider {
   width: 1px;

@@ -63,7 +63,8 @@ export default function TodayCoursePanel({
                     <div className={styles.todayTaskMetaRow}>
                       <span className={widgetCls.recordSub}>{item.participantText}</span>
                     </div>
-                    {item.queueHintText ? <div className={styles.executionHint}>{item.queueHintText}</div> : null}
+                    {item.queueHintText ? <div className={`${styles.executionHint} ${isAnomaly ? styles.executionHintAnomaly : ''}`}>{item.queueHintText}</div> : null}
+
                   </div>
                 </div>
                 <div className={widgetCls.dashboardCourseAside}>
