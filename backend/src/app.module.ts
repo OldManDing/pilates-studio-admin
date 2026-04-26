@@ -17,14 +17,17 @@ import { CoachesModule } from './modules/coaches/coaches.module';
 import { CourseSessionsModule } from './modules/course-sessions/course-sessions.module';
 import { CoursesModule } from './modules/courses/courses.module';
 import { HealthModule } from './modules/health/health.module';
+import { MembershipRenewalsModule } from './modules/membership-renewals/membership-renewals.module';
 import { MembershipPlansModule } from './modules/membership-plans/membership-plans.module';
 import { MembersModule } from './modules/members/members.module';
+import { MiniAuthModule } from './modules/mini-auth/mini-auth.module';
 import { MiniUsersModule } from './modules/mini-users/mini-users.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { SupportModule } from './modules/support/support.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 
 @Module({
@@ -46,7 +49,9 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
     AdminsModule,
     RolesModule,
     MembersModule,
+    MiniAuthModule,
     MembershipPlansModule,
+    MembershipRenewalsModule,
     MiniUsersModule,
     NotificationsModule,
     CoachesModule,
@@ -57,6 +62,7 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
     TransactionsModule,
     ReportsModule,
     SettingsModule,
+    SupportModule,
     AnalyticsModule
   ],
   providers: [

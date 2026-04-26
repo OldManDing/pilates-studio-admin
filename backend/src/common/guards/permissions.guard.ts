@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PERMISSION_KEY } from '../constants/permissions.constant';
+import { ALLOW_MINI_USER_KEY } from '../decorators/allow-mini-user.decorator';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -25,6 +26,19 @@ export class PermissionsGuard implements CanActivate {
 
     if (!user) {
       throw new ForbiddenException('User not authenticated');
+    }
+
+    if (user.principalType === 'MINI_USER') {
+      const allowMiniUser = this.reflector.getAllAndOverride<boolean>(
+        ALLOW_MINI_USER_KEY,
+        [context.getHandler(), context.getClass()],
+      );
+
+      if (allowMiniUser) {
+        return true;
+      }
+
+      throw new ForbiddenException('Mini user is not allowed to access this resource');
     }
 
     // Owner has all permissions

@@ -11,6 +11,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { AllowMiniUser } from '../../common/decorators/allow-mini-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { CoachesService } from './coaches.service';
 import { CreateCoachDto } from './dto/create-coach.dto';
@@ -31,6 +32,7 @@ export class CoachesController {
   }
 
   @Get()
+  @AllowMiniUser()
   @RequirePermissions('READ:COACHES')
   @ApiOperation({ summary: 'Get all coaches' })
   async findAll(@Query() query: QueryCoachesDto) {
@@ -38,6 +40,7 @@ export class CoachesController {
   }
 
   @Get('active')
+  @AllowMiniUser()
   @RequirePermissions('READ:COACHES')
   @ApiOperation({ summary: 'Get active coaches only' })
   async findActive() {
@@ -45,6 +48,7 @@ export class CoachesController {
   }
 
   @Get(':id/schedule')
+  @AllowMiniUser()
   @RequirePermissions('READ:COACHES')
   @ApiOperation({ summary: 'Get coach schedule' })
   @ApiParam({ name: 'id', description: 'Coach ID' })
@@ -56,6 +60,7 @@ export class CoachesController {
   }
 
   @Get(':id')
+  @AllowMiniUser()
   @RequirePermissions('READ:COACHES')
   @ApiOperation({ summary: 'Get coach by ID' })
   @ApiParam({ name: 'id', description: 'Coach ID' })

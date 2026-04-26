@@ -1,9 +1,9 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { QueryBookingsDto } from './dto/query-bookings.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
-import { BookingStatus } from '../../common/enums/domain.enums';
+import { AttendanceStatus, BookingStatus } from '../../common/enums/domain.enums';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
 import { buildDateRange } from '../../common/utils/date-range';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -15,19 +15,40 @@ export class BookingsService {
     private notificationsService: NotificationsService,
   ) {}
 
-  async create(dto: CreateBookingDto, requesterUserId?: string) {
+  async create(dto: CreateBookingDto, requesterUserId?: string, isMiniUser = false) {
     let targetMemberId = dto.memberId;
 
-    if (!targetMemberId || targetMemberId === 'SELF') {
+    if (isMiniUser) {
       if (!requesterUserId) {
-        throw new BadRequestException('Member ID is required');
+        throw new BadRequestException('Mini user ID is required');
       }
+
       const currentMember = await this.prisma.member.findUnique({
         where: { miniUserId: requesterUserId },
       });
+
       if (!currentMember) {
         throw new NotFoundException('Member profile not found');
       }
+
+      if (targetMemberId && targetMemberId !== 'SELF' && targetMemberId !== currentMember.id) {
+        throw new ForbiddenException('Cannot create booking for another member');
+      }
+
+      targetMemberId = currentMember.id;
+    } else if (!targetMemberId || targetMemberId === 'SELF') {
+      if (!requesterUserId) {
+        throw new BadRequestException('Member ID is required');
+      }
+
+      const currentMember = await this.prisma.member.findUnique({
+        where: { miniUserId: requesterUserId },
+      });
+
+      if (!currentMember) {
+        throw new NotFoundException('Member profile not found');
+      }
+
       targetMemberId = currentMember.id;
     }
 
@@ -316,8 +337,64 @@ export class BookingsService {
   }
 
   // Mini-program: cancel booking
-  async cancel(id: string, _reason?: string) {
+  async cancel(id: string, _reason?: string, miniUserId?: string) {
+    if (miniUserId) {
+      const booking = await this.findOne(id);
+
+      if (booking.member?.miniUserId !== miniUserId) {
+        throw new ForbiddenException('Cannot cancel another member booking');
+      }
+    }
+
     return this.updateStatus(id, { status: BookingStatus.CANCELLED });
+  }
+
+  async checkIn(id: string, miniUserId?: string) {
+    const booking = await this.findOne(id);
+
+    if (miniUserId && booking.member?.miniUserId !== miniUserId) {
+      throw new ForbiddenException('Cannot check in another member booking');
+    }
+
+    if (booking.status === BookingStatus.CANCELLED || booking.status === BookingStatus.NO_SHOW) {
+      throw new BadRequestException('Cannot check in a cancelled or no-show booking');
+    }
+
+    const checkedInAt = new Date();
+
+    return this.prisma.$transaction(async (tx) => {
+      const updatedBooking = await tx.booking.update({
+        where: { id },
+        data: { status: BookingStatus.COMPLETED },
+        include: {
+          member: { select: { id: true, name: true, phone: true } },
+          session: {
+            include: {
+              course: { select: { id: true, name: true, type: true, level: true } },
+              coach: { select: { id: true, name: true } },
+            },
+          },
+          attendance: true,
+        },
+      });
+
+      await tx.attendance.upsert({
+        where: { bookingId: id },
+        create: {
+          bookingId: id,
+          memberId: booking.memberId,
+          sessionId: booking.sessionId,
+          status: AttendanceStatus.CHECKED_IN,
+          checkedInAt,
+        },
+        update: {
+          status: AttendanceStatus.CHECKED_IN,
+          checkedInAt,
+        },
+      });
+
+      return updatedBooking;
+    });
   }
 
   private async generateBookingCode(): Promise<string> {

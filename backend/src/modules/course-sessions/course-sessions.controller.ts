@@ -11,6 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { AllowMiniUser } from '../../common/decorators/allow-mini-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { CourseSessionsService } from './course-sessions.service';
@@ -31,6 +32,7 @@ export class CourseSessionsController {
   }
 
   @Get()
+  @AllowMiniUser()
   @RequirePermissions('READ:COURSES')
   @ApiOperation({ summary: 'Get upcoming course sessions' })
   async findAll(@Query() pagination: PaginationDto) {
@@ -38,6 +40,7 @@ export class CourseSessionsController {
   }
 
   @Get('upcoming')
+  @AllowMiniUser()
   @RequirePermissions('READ:COURSES')
   @ApiOperation({ summary: 'Get upcoming course sessions' })
   async findUpcoming(@Query() pagination: PaginationDto) {
@@ -45,6 +48,7 @@ export class CourseSessionsController {
   }
 
   @Get(':id')
+  @AllowMiniUser()
   @RequirePermissions('READ:COURSES')
   @ApiOperation({ summary: 'Get session by ID' })
   @ApiParam({ name: 'id', description: 'Session ID' })
@@ -53,6 +57,7 @@ export class CourseSessionsController {
   }
 
   @Get(':id/available-seats')
+  @AllowMiniUser()
   @RequirePermissions('READ:COURSES')
   @ApiOperation({ summary: 'Get available seats for session' })
   @ApiParam({ name: 'id', description: 'Session ID' })

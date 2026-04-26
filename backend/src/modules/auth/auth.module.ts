@@ -16,7 +16,7 @@ import { PrismaModule } from '../prisma/prisma.module';
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('auth.accessSecret'),
         signOptions: {
-          expiresIn: configService.get<string>('auth.expiresIn', '15m'),
+          expiresIn: configService.get<string>('auth.accessExpiresIn', '15m'),
         },
       }),
       inject: [ConfigService],

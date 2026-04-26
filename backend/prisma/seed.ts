@@ -101,6 +101,118 @@ async function main() {
 
   console.log(`Created ${courses.length} courses`);
 
+  const annualPlan = await prisma.membershipPlan.findUnique({ where: { code: 'ANNUAL' } });
+  const firstCoach = await prisma.coach.findUnique({ where: { coachCode: 'COACH001' } });
+  const secondCoach = await prisma.coach.findUnique({ where: { coachCode: 'COACH002' } });
+  const firstCourse = await prisma.course.findUnique({ where: { courseCode: 'C001' } });
+  const secondCourse = await prisma.course.findUnique({ where: { courseCode: 'C002' } });
+
+  if (!annualPlan || !firstCoach || !secondCoach || !firstCourse || !secondCourse) {
+    throw new Error('Seed prerequisites not found');
+  }
+
+  const seedMiniOpenId = process.env.SEED_MINI_OPEN_ID || 'dev-openid-pilates';
+
+  const miniUser = await prisma.miniUser.upsert({
+    where: { openId: seedMiniOpenId },
+    update: {
+      nickname: 'Mini Demo User',
+      status: MiniUserStatus.ACTIVE,
+    },
+    create: {
+      openId: seedMiniOpenId,
+      nickname: 'Mini Demo User',
+      phone: '13900139000',
+      status: MiniUserStatus.ACTIVE,
+    },
+  });
+
+  const member = await prisma.member.upsert({
+    where: { memberCode: 'MDEMO001' },
+    update: {
+      miniUserId: miniUser.id,
+      planId: annualPlan.id,
+      remainingCredits: 20,
+      status: MemberStatus.ACTIVE,
+    },
+    create: {
+      memberCode: 'MDEMO001',
+      name: '小程序测试会员',
+      phone: '13900139000',
+      email: 'mini-demo@pilates.com',
+      status: MemberStatus.ACTIVE,
+      joinedAt: new Date(),
+      remainingCredits: 20,
+      planId: annualPlan.id,
+      miniUserId: miniUser.id,
+    },
+  });
+
+  console.log(`Created demo mini user and member: ${seedMiniOpenId}`);
+
+  const now = new Date();
+  const sessions = [
+    {
+      sessionCode: 'SDEMO001',
+      courseId: firstCourse.id,
+      coachId: firstCoach.id,
+      startsAt: new Date(now.getTime() + 24 * 60 * 60 * 1000),
+      endsAt: new Date(now.getTime() + 25 * 60 * 60 * 1000),
+      capacity: 8,
+      location: '一号教室',
+    },
+    {
+      sessionCode: 'SDEMO002',
+      courseId: secondCourse.id,
+      coachId: secondCoach.id,
+      startsAt: new Date(now.getTime() + 48 * 60 * 60 * 1000),
+      endsAt: new Date(now.getTime() + 49 * 60 * 60 * 1000),
+      capacity: 6,
+      location: '器械教室',
+    },
+  ];
+
+  for (const session of sessions) {
+    await prisma.courseSession.upsert({
+      where: { sessionCode: session.sessionCode },
+      update: {
+        courseId: session.courseId,
+        coachId: session.coachId,
+        startsAt: session.startsAt,
+        endsAt: session.endsAt,
+        capacity: session.capacity,
+        location: session.location,
+      },
+      create: session,
+    });
+  }
+
+  const firstSession = await prisma.courseSession.findUnique({ where: { sessionCode: 'SDEMO001' } });
+
+  if (!firstSession) {
+    throw new Error('Demo course session not found');
+  }
+
+  await prisma.booking.upsert({
+    where: { bookingCode: 'BDEMO001' },
+    update: {
+      memberId: member.id,
+      sessionId: firstSession.id,
+      status: BookingStatus.CONFIRMED,
+      source: BookingSource.MINI_PROGRAM,
+    },
+    create: {
+      bookingCode: 'BDEMO001',
+      memberId: member.id,
+      sessionId: firstSession.id,
+      source: BookingSource.MINI_PROGRAM,
+      status: BookingStatus.CONFIRMED,
+      bookedAt: new Date(),
+    },
+  });
+
+  console.log(`Created ${sessions.length} demo course sessions and one demo booking`);
+
   // Create studio settings
   await prisma.studioSetting.upsert({
     where: { id: '1' },

@@ -8,6 +8,8 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { AllowMiniUser } from '../../common/decorators/allow-mini-user.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { TransactionsService } from './transactions.service';
@@ -40,6 +42,28 @@ export class TransactionsController {
   @ApiOperation({ summary: 'Get financial summary' })
   async getSummary() {
     return this.transactionsService.getSummary();
+  }
+
+  @Get('my')
+  @AllowMiniUser()
+  @RequirePermissions('READ:TRANSACTIONS')
+  @ApiOperation({ summary: 'Get current mini-program member transactions' })
+  async getMyTransactions(
+    @CurrentUser('sub') userId: string,
+    @Query() query: PaginationDto & { kind?: string; from?: string; to?: string },
+  ) {
+    return this.transactionsService.findMyTransactions(userId, query);
+  }
+
+  @Get('my-summary')
+  @AllowMiniUser()
+  @RequirePermissions('READ:TRANSACTIONS')
+  @ApiOperation({ summary: 'Get current mini-program member transaction summary' })
+  async getMySummary(
+    @CurrentUser('sub') userId: string,
+    @Query() query: { from?: string; to?: string },
+  ) {
+    return this.transactionsService.getMySummary(userId, query);
   }
 
   @Get(':id')

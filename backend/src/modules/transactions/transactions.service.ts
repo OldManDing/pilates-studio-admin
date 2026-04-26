@@ -93,6 +93,32 @@ export class TransactionsService {
     };
   }
 
+  async findMyTransactions(
+    miniUserId: string,
+    query: PaginationDto & { kind?: string; from?: string; to?: string },
+  ): Promise<PaginatedResponse<any>> {
+    const member = await this.prisma.member.findUnique({
+      where: { miniUserId },
+    });
+
+    if (!member) {
+      return {
+        data: [],
+        meta: {
+          page: Number(query.page) || 1,
+          pageSize: Number(query.pageSize) || 10,
+          total: 0,
+          totalPages: 0,
+        },
+      };
+    }
+
+    return this.findAll({
+      ...query,
+      memberId: member.id,
+    });
+  }
+
   async findOne(id: string) {
     const transaction = await this.prisma.transaction.findUnique({
       where: { id },
@@ -172,6 +198,59 @@ export class TransactionsService {
       refundedAmountCents: refundedAmount._sum.amountCents || 0,
       todayRevenueCents: todayRevenue._sum.amountCents || 0,
     };
+  }
+
+  async getMySummary(miniUserId: string, query: { from?: string; to?: string }) {
+    const member = await this.prisma.member.findUnique({
+      where: { miniUserId },
+    });
+
+    if (!member) {
+      return {
+        totalRevenue: 0,
+        transactionCount: 0,
+        byKind: {},
+        byStatus: {},
+      };
+    }
+
+    const happenedAtRange = buildDateRange(query.from, query.to, 'transactions.happenedAt');
+    const where = {
+      memberId: member.id,
+      ...(happenedAtRange ? { happenedAt: happenedAtRange } : {}),
+    };
+
+    const transactions = await this.prisma.transaction.findMany({
+      where,
+      select: {
+        kind: true,
+        status: true,
+        amountCents: true,
+      },
+    });
+
+    const summary = {
+      totalRevenue: 0,
+      transactionCount: transactions.length,
+      byKind: {} as Record<string, { count: number; total: number }>,
+      byStatus: {} as Record<string, { count: number; total: number }>,
+    };
+
+    transactions.forEach((transaction) => {
+      summary.totalRevenue += transaction.amountCents;
+
+      const kindSummary = summary.byKind[transaction.kind] ?? { count: 0, total: 0 };
+      kindSummary.count += 1;
+      kindSummary.total += transaction.amountCents;
+      summary.byKind[transaction.kind] = kindSummary;
+
+      const statusSummary = summary.byStatus[transaction.status] ?? { count: 0, total: 0 };
+      statusSummary.count += 1;
+      statusSummary.total += transaction.amountCents;
+      summary.byStatus[transaction.status] = statusSummary;
+    });
+
+    return summary;
   }
 
   private async generateTransactionCode(): Promise<string> {

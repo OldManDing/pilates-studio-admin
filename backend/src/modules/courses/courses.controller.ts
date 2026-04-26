@@ -11,6 +11,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { AllowMiniUser } from '../../common/decorators/allow-mini-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { CoursesService } from './courses.service';
 import { CourseSessionsService } from '../course-sessions/course-sessions.service';
@@ -35,6 +36,7 @@ export class CoursesController {
   }
 
   @Get()
+  @AllowMiniUser()
   @RequirePermissions('READ:COURSES')
   @ApiOperation({ summary: 'Get all courses' })
   async findAll(@Query() query: QueryCoursesDto) {
@@ -42,6 +44,7 @@ export class CoursesController {
   }
 
   @Get('active')
+  @AllowMiniUser()
   @RequirePermissions('READ:COURSES')
   @ApiOperation({ summary: 'Get active courses only' })
   async findActive() {
@@ -49,6 +52,7 @@ export class CoursesController {
   }
 
   @Get(':id')
+  @AllowMiniUser()
   @RequirePermissions('READ:COURSES')
   @ApiOperation({ summary: 'Get course by ID' })
   @ApiParam({ name: 'id', description: 'Course ID' })
@@ -74,6 +78,7 @@ export class CoursesController {
   }
 
   @Get(':id/sessions')
+  @AllowMiniUser()
   @RequirePermissions('READ:COURSES')
   @ApiOperation({ summary: 'Get course sessions' })
   @ApiParam({ name: 'id', description: 'Course ID' })

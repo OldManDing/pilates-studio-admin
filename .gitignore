@@ -6,6 +6,7 @@ src/.umi-production/
 .temp/
 coverage/
 .sisyphus/
+.sisyphus-*.log
 .DS_Store
 Thumbs.db
 npm-debug.log*

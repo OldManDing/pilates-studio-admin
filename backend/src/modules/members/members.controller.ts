@@ -12,6 +12,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { AllowMiniUser } from '../../common/decorators/allow-mini-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -42,6 +43,7 @@ export class MembersController {
 
   // Mini-program endpoints (member-facing) - must be before :id routes
   @Get('profile')
+  @AllowMiniUser()
   @RequirePermissions('READ:MEMBERS')
   @ApiOperation({ summary: 'Get current member profile (mini-program)' })
   async getMyProfile(@CurrentUser('sub') userId: string) {
@@ -49,6 +51,7 @@ export class MembersController {
   }
 
   @Get('my-memberships')
+  @AllowMiniUser()
   @RequirePermissions('READ:MEMBERS')
   @ApiOperation({ summary: 'Get current member memberships (mini-program)' })
   async getMyMemberships(@CurrentUser('sub') userId: string) {

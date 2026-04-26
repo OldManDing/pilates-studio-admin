@@ -8,7 +8,13 @@ import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/skip-auth.decorator';
+import { MiniUserStatus } from '../enums/domain.enums';
 import { PrismaService } from '../../modules/prisma/prisma.service';
+
+interface JwtPayload {
+  sub: string;
+  principalType?: 'ADMIN' | 'MINI_USER';
+}
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -36,7 +42,27 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      const payload = await this.jwtService.verifyAsync(token);
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
+
+      if (payload.principalType === 'MINI_USER') {
+        const miniUser = await this.prisma.miniUser.findUnique({
+          where: { id: payload.sub },
+          include: { member: true },
+        });
+
+        if (!miniUser || miniUser.status !== MiniUserStatus.ACTIVE) {
+          throw new UnauthorizedException('Mini user not found or disabled');
+        }
+
+        request.user = {
+          ...payload,
+          principalType: 'MINI_USER',
+          miniUser,
+          member: miniUser.member,
+        };
+
+        return true;
+      }
 
       const admin = await this.prisma.adminUser.findUnique({
         where: { id: payload.sub },
@@ -59,6 +85,7 @@ export class JwtAuthGuard implements CanActivate {
 
       request.user = {
         ...payload,
+        principalType: 'ADMIN',
         role: {
           id: admin.role.id,
           code: admin.role.code,

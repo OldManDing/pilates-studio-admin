@@ -11,6 +11,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { AllowMiniUser } from '../../common/decorators/allow-mini-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -27,13 +28,19 @@ export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
   @Post()
+  @AllowMiniUser()
   @RequirePermissions('WRITE:BOOKINGS')
   @ApiOperation({ summary: 'Create new booking' })
   async create(
     @Body() dto: CreateBookingDto,
     @CurrentUser('sub') userId: string,
+    @CurrentUser('principalType') principalType?: string,
   ) {
-    return this.bookingsService.create(dto, userId);
+    return this.bookingsService.create(
+      dto,
+      userId,
+      principalType === 'MINI_USER',
+    );
   }
 
   @Get()
@@ -45,6 +52,7 @@ export class BookingsController {
 
   // Mini-program endpoints (member-facing)
   @Get('my')
+  @AllowMiniUser()
   @RequirePermissions('READ:BOOKINGS')
   @ApiOperation({ summary: 'Get my bookings (mini-program)' })
   async getMyBookings(
@@ -83,13 +91,36 @@ export class BookingsController {
   }
 
   @Patch(':id/cancel')
+  @AllowMiniUser()
   @RequirePermissions('WRITE:BOOKINGS')
   @ApiOperation({ summary: 'Cancel booking (mini-program)' })
   @ApiParam({ name: 'id', description: 'Booking ID' })
   async cancel(
     @Param('id') id: string,
     @Body('reason') reason?: string,
+    @CurrentUser('sub') userId?: string,
+    @CurrentUser('principalType') principalType?: string,
   ) {
-    return this.bookingsService.cancel(id, reason);
+    return this.bookingsService.cancel(
+      id,
+      reason,
+      principalType === 'MINI_USER' ? userId : undefined,
+    );
+  }
+
+  @Patch(':id/checkin')
+  @AllowMiniUser()
+  @RequirePermissions('WRITE:BOOKINGS')
+  @ApiOperation({ summary: 'Check in booking' })
+  @ApiParam({ name: 'id', description: 'Booking ID' })
+  async checkIn(
+    @Param('id') id: string,
+    @CurrentUser('sub') userId?: string,
+    @CurrentUser('principalType') principalType?: string,
+  ) {
+    return this.bookingsService.checkIn(
+      id,
+      principalType === 'MINI_USER' ? userId : undefined,
+    );
   }
 }
