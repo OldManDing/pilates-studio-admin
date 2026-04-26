@@ -64,6 +64,7 @@ export class NotificationsService {
     const where = {
       ...(query.channel ? { channel: query.channel } : {}),
       ...(query.status ? { status: query.status } : {}),
+      ...(query.type ? { type: query.type } : {}),
       ...(query.memberId ? { memberId: query.memberId } : {}),
       ...(query.miniUserId ? { miniUserId: query.miniUserId } : {}),
       ...(query.adminUserId ? { adminUserId: query.adminUserId } : {}),
