@@ -11,11 +11,11 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger'
 import { AllowMiniUser } from '../../common/decorators/allow-mini-user.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
-import { PaginationDto } from '../../common/dto/pagination.dto';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { UpdateTransactionStatusDto } from './dto/update-transaction-status.dto';
+import { QueryTransactionDto } from './dto/query-transaction.dto';
 
 @ApiTags('Transactions')
 @ApiBearerAuth()
@@ -33,7 +33,7 @@ export class TransactionsController {
   @Get()
   @RequirePermissions('READ:TRANSACTIONS')
   @ApiOperation({ summary: 'Get all transactions with pagination' })
-  async findAll(@Query() query: PaginationDto & { memberId?: string; kind?: string; from?: string; to?: string }) {
+  async findAll(@Query() query: QueryTransactionDto) {
     return this.transactionsService.findAll(query);
   }
 
@@ -50,7 +50,7 @@ export class TransactionsController {
   @ApiOperation({ summary: 'Get current mini-program member transactions' })
   async getMyTransactions(
     @CurrentUser('sub') userId: string,
-    @Query() query: PaginationDto & { kind?: string; from?: string; to?: string },
+    @Query() query: QueryTransactionDto,
   ) {
     return this.transactionsService.findMyTransactions(userId, query);
   }

@@ -1,8 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { UpdateTransactionStatusDto } from './dto/update-transaction-status.dto';
+import { QueryTransactionDto } from './dto/query-transaction.dto';
 import { TransactionStatus } from '../../common/enums/domain.enums';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
 import { buildDateRange } from '../../common/utils/date-range';
@@ -52,15 +54,16 @@ export class TransactionsService {
     return transaction;
   }
 
-  async findAll(query: PaginationDto & { memberId?: string; kind?: string; from?: string; to?: string }): Promise<PaginatedResponse<any>> {
+  async findAll(query: QueryTransactionDto): Promise<PaginatedResponse<any>> {
     const page = Number(query.page) || 1;
     const pageSize = Number(query.pageSize) || 10;
-    const { memberId, kind, from, to } = query;
+    const { memberId, kind, status, from, to } = query;
     const skip = (page - 1) * pageSize;
 
-    const where: any = {};
+    const where: Prisma.TransactionWhereInput = {};
     if (memberId) where.memberId = memberId;
     if (kind) where.kind = kind;
+    if (status) where.status = status;
     const happenedAtRange = buildDateRange(from, to, 'transactions.happenedAt');
     if (happenedAtRange) {
       where.happenedAt = happenedAtRange;
@@ -95,7 +98,7 @@ export class TransactionsService {
 
   async findMyTransactions(
     miniUserId: string,
-    query: PaginationDto & { kind?: string; from?: string; to?: string },
+    query: QueryTransactionDto,
   ): Promise<PaginatedResponse<any>> {
     const member = await this.prisma.member.findUnique({
       where: { miniUserId },
