@@ -33,7 +33,7 @@ interface StoreInfoValues {
 }
 
 type SecurityActionTitle = '修改密码' | '两步验证' | '权限管理';
-type DataActionTitle = '数据备份' | '导出数据' | '数据恢复';
+type DataActionTitle = '导出备份' | '导出数据' | '数据恢复';
 
 interface SecurityActionState {
   title: SecurityActionTitle;
@@ -80,14 +80,14 @@ function dayjsToHoursString(hours: [dayjs.Dayjs, dayjs.Dayjs]): string {
 }
 
 const PLACEHOLDER_STORE_INFO: StoreInfoValues = {
-  studioName: '普拉提工作室',
-  phone: '400-820-8899',
-  email: 'service@studio.cn',
+  studioName: '',
+  phone: '',
+  email: '',
   businessHours: '06:00-22:00',
   province: '',
   city: '',
   district: '',
-  address: '上海市静安区愚园路 168 号'
+  address: ''
 };
 
 const defaultStoreInfo: StoreInfoValues = {
@@ -102,7 +102,7 @@ const securityActionsList: Array<{ title: SecurityActionTitle; description: stri
 ];
 
 const dataActionsList: Array<{ title: DataActionTitle; description: string }> = [
-  { title: '数据备份', description: '每日自动备份课程、预约和交易数据' },
+  { title: '导出备份', description: '下载当前数据快照用于人工备份' },
   { title: '导出数据', description: '按时间范围导出经营与会员报表' },
   { title: '数据恢复', description: '从最近一次备份恢复门店数据' }
 ];
@@ -221,7 +221,7 @@ export default function SettingsPage() {
     权限管理: { title: '权限管理', description: '配置前台、店长和财务的页面权限', status: '正常', detail: '进入角色权限页面调整' }
   });
   const [dataState, setDataState] = useState<Record<DataActionTitle, DataActionState>>({
-    数据备份: { title: '数据备份', description: '每日自动备份课程、预约和交易数据', status: '正常', detail: '支持手动导出备份' },
+    导出备份: { title: '导出备份', description: '下载当前数据快照用于人工备份', status: '正常', detail: '支持导出 JSON 快照' },
     导出数据: { title: '导出数据', description: '按时间范围导出经营与会员报表', status: '正常', detail: '导出经营数据' },
     数据恢复: { title: '数据恢复', description: '从最近一次备份恢复门店数据', status: '正常', detail: '上传备份文件恢复' }
   });
@@ -231,7 +231,7 @@ export default function SettingsPage() {
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [disablePassword, setDisablePassword] = useState('');
   const [exportRange, setExportRange] = useState('近 30 天');
-  const [systemVersion] = useState('v1.0.0');
+  const [systemVersion] = useState('当前构建');
   const [systemStatus] = useState<'稳定'>('稳定');
   const [openSecurityDrawer, setOpenSecurityDrawer] = useState<SecurityDrawerKey>(null);
   const [openDataDrawer, setOpenDataDrawer] = useState<DataDrawerKey>(null);
@@ -249,7 +249,7 @@ export default function SettingsPage() {
 
         if (studioData) {
           // 解析地址：尝试从地址字符串中提取省市区
-          const addressStr = studioData.address || PLACEHOLDER_STORE_INFO.address;
+          const addressStr = studioData.address || '';
           let province = '', city = '', district = '', remainingAddress = addressStr;
           
           // 简单解析：检查地址是否包含省市区信息
@@ -477,11 +477,15 @@ export default function SettingsPage() {
   };
 
   const handleInitializeNotifications = async () => {
-    await settingsApi.initialize().catch(() => null);
-    const initialized = await settingsApi.getNotifications().catch(() => []);
-    setNotifications(initialized);
-    setNotificationSavedAt(todayText());
-    message.success('通知模板已初始化');
+    try {
+      await settingsApi.initialize();
+      const initialized = await settingsApi.getNotifications();
+      setNotifications(initialized);
+      setNotificationSavedAt(todayText());
+      message.success('通知模板已初始化');
+    } catch (err) {
+      message.error(getErrorMessage(err, '通知模板初始化失败'));
+    }
   };
 
   const handleSavePassword = async () => {
@@ -568,7 +572,7 @@ export default function SettingsPage() {
       const timestamp = todayText();
       setDataState((current) => ({
         ...current,
-        数据备份: { ...current.数据备份, status: '正常', detail: `最近备份于 ${timestamp}` }
+        导出备份: { ...current.导出备份, status: '正常', detail: `最近导出备份于 ${timestamp}` }
       }));
     } catch (err) {
       message.error('备份失败');
@@ -582,7 +586,7 @@ export default function SettingsPage() {
       const link = document.createElement('a');
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       link.href = url;
-      link.download = `门店备份-${timestamp}.json`;
+      link.download = `门店数据-${timestamp}.json`;
       link.click();
       URL.revokeObjectURL(url);
 
@@ -655,7 +659,7 @@ export default function SettingsPage() {
       <PageHeader title="系统设置" />
 
       <SettingsOverviewCard
-        title={storeInfo.studioName || PLACEHOLDER_STORE_INFO.studioName}
+        title={storeInfo.studioName || '门店档案待补充'}
         summary={storeChanged ? '当前有门店档案修改待保存。' : '集中维护门店档案与关键系统设置。'}
         statusLabel={storeChanged ? '处理中' : '正常'}
         savedBadgeText={storeSavedLabel}
@@ -969,11 +973,11 @@ export default function SettingsPage() {
               <div className={styles.settingsDrawerLead}>{dataState[openDataDrawer].detail}</div>
             </div>
 
-            {openDataDrawer === '数据备份' ? (
+            {openDataDrawer === '导出备份' ? (
               <div className={styles.settingsDrawerPanel}>
-                <div className={styles.settingsDrawerNotice}>建议在重要数据调整后手动执行一次备份。</div>
+                <div className={styles.settingsDrawerNotice}>当前动作会下载一份 JSON 快照，请保存到门店指定备份位置。</div>
                 <div className={styles.settingsDrawerActions}>
-                  <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleRunBackup}>立即备份</Button>
+                  <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleRunBackup}>导出备份文件</Button>
                 </div>
               </div>
             ) : null}

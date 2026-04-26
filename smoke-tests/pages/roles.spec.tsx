@@ -35,7 +35,8 @@ describe('RolesPage smoke test', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: '角色与权限' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /新增角色/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /编辑权限/ })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /新增角色/ })).not.toBeInTheDocument();
       expect(screen.getByText('角色列表')).toBeInTheDocument();
     });
   });

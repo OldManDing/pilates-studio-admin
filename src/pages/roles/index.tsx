@@ -1,14 +1,9 @@
-import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, SaveOutlined, SearchOutlined } from '@ant-design/icons';
+import { EditOutlined, EyeOutlined, SaveOutlined, SearchOutlined } from '@ant-design/icons';
 import {
   App,
   Button,
-  Col,
   Drawer,
-  Form,
   Input,
-  Modal,
-  Row,
-  Select,
   Spin,
   Switch,
 } from 'antd';
@@ -19,19 +14,13 @@ import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import StatusTag from '@/components/StatusTag';
 import { rolesApi, type Permission, type Role } from '@/services/roles';
-import { CRUD_MODAL_WIDTH, NARROW_DETAIL_DRAWER_WIDTH, ROLE_PERMISSION_DRAWER_WIDTH } from '@/styles/dimensions';
+import { NARROW_DETAIL_DRAWER_WIDTH, ROLE_PERMISSION_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import { getErrorMessage } from '@/utils/errors';
 import roleCss from './index.module.css';
 
 type RoleCode = 'OWNER' | 'FRONTDESK' | 'COACH' | 'FINANCE';
-
-type RoleFormValues = {
-  code: RoleCode;
-  name: string;
-  description?: string;
-};
 
 const roleCodeLabel: Record<RoleCode, string> = {
   OWNER: '店长',
@@ -101,13 +90,11 @@ const actionLabelMap: Record<string, string> = {
 };
 
 export default function RolesPage() {
-  const [form] = Form.useForm<RoleFormValues>();
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [isRoleFormOpen, setIsRoleFormOpen] = useState(false);
   const [detailRole, setDetailRole] = useState<Role | null>(null);
   const [editingPermissionRole, setEditingPermissionRole] = useState<Role | null>(null);
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([]);
@@ -163,39 +150,6 @@ export default function RolesPage() {
       .filter(([, permissionList]) => permissionList.length > 0);
   }, [groupedPermissions, permissionSearch, selectedPermissionIds, showSelectedOnly]);
 
-  const openCreateModal = () => {
-    form.setFieldsValue({
-      code: 'FRONTDESK',
-      name: '',
-      description: '',
-    });
-    setIsRoleFormOpen(true);
-  };
-
-  const closeCreateModal = () => {
-    setIsRoleFormOpen(false);
-    form.resetFields();
-  };
-
-  const handleCreateRole = async () => {
-    const values = await form.validateFields();
-    try {
-      setSaving(true);
-      await rolesApi.create({
-        code: values.code,
-        name: values.name,
-        description: values.description,
-      });
-      message.success('角色创建成功');
-      closeCreateModal();
-      await fetchData();
-    } catch (err) {
-      message.error(getErrorMessage(err, '角色创建失败'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const openPermissionEditor = (role: Role) => {
     setEditingPermissionRole(role);
     setSelectedPermissionIds(role.permissions.map((rp) => rp.permission.id));
@@ -236,38 +190,11 @@ export default function RolesPage() {
     });
   };
 
-  const handleDeleteRole = (role: Role) => {
-    modal.confirm({
-      title: '删除角色',
-      content: '删除后该角色将无法恢复，且不会删除保留角色或已分配角色。',
-      okText: '确认删除',
-      cancelText: '取消',
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        try {
-          await rolesApi.remove(role.id);
-          message.success('角色已删除');
-          if (detailRole?.id === role.id) {
-            setDetailRole(null);
-          }
-          await fetchData();
-        } catch (err) {
-          message.error(getErrorMessage(err, '删除角色失败'));
-        }
-      },
-    });
-  };
-
   return (
     <div className={`${pageCls.page} ${pageCls.workPage}`}>
       <PageHeader
         title="角色与权限"
-        subtitle="统一管理门店角色分工，所有修改均通过后端接口持久化并即时生效。"
-        extra={(
-          <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>
-            新增角色
-          </ActionButton>
-        )}
+        subtitle="当前系统使用内置角色编码，支持维护每个角色的权限模板。"
       />
 
       <SectionCard title="角色列表" subtitle={`当前角色 ${roles.length} 个 · 权限实时同步后端`}>
@@ -324,63 +251,15 @@ export default function RolesPage() {
                     >
                       编辑权限
                     </ActionButton>
-                    <ActionButton
-                      size="large"
-                      ghost
-                      className={`${roleCss.roleActionButton} ${pageCls.cardActionWarning}`}
-                      icon={<DeleteOutlined />}
-                      onClick={() => handleDeleteRole(item)}
-                    >
-                      删除角色
-                    </ActionButton>
                   </div>
                 </div>
               );
             })}
           </div>
         ) : (
-          <EmptyState title="暂无角色配置" description="请先创建角色并分配权限。" actionText="新增角色" onAction={openCreateModal} />
+          <EmptyState title="暂无角色配置" description="请先初始化内置角色并分配权限。" />
         )}
       </SectionCard>
-
-      <Modal
-        className={pageCls.crudModal}
-        title="新增角色"
-        open={isRoleFormOpen}
-        width={CRUD_MODAL_WIDTH}
-        onCancel={closeCreateModal}
-        onOk={handleCreateRole}
-        okText="创建角色"
-        cancelText="取消"
-        confirmLoading={saving}
-        destroyOnHidden
-      >
-        <Form form={form} className={pageCls.crudModalForm} layout="vertical">
-          <Row gutter={18}>
-            <Col xs={24} md={12}>
-              <Form.Item name="code" label="角色类型" rules={[{ required: true, message: '请选择角色类型' }]}>
-                <Select
-                  className={pageCls.settingsInput}
-                  options={(Object.keys(roleCodeLabel) as RoleCode[]).map((key) => ({
-                    label: roleCodeLabel[key],
-                    value: key,
-                  }))}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} md={12}>
-              <Form.Item name="name" label="角色名称" rules={[{ required: true, message: '请输入角色名称' }]}>
-                <Input className={pageCls.settingsInput} placeholder="例如：运营主管" />
-              </Form.Item>
-            </Col>
-            <Col xs={24}>
-              <Form.Item name="description" label="角色说明">
-                <Input.TextArea className={pageCls.settingsInput} rows={4} placeholder="概述角色职责与协作范围" />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Form>
-      </Modal>
 
       <Drawer
         open={editingPermissionRole !== null}
