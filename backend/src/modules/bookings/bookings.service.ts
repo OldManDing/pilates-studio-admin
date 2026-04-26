@@ -89,9 +89,7 @@ export class BookingsService {
       throw new NotFoundException('Member not found');
     }
 
-    if (isMiniUser) {
-      this.assertBookableMember(member);
-    }
+    this.assertBookableMember(member);
 
     // Check for duplicate booking
     const existingBooking = await this.prisma.booking.findFirst({
