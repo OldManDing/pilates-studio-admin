@@ -95,9 +95,7 @@ export default function MembersPage() {
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
 
-  // Fetch stats
-  useEffect(() => {
-    const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
       try {
         const data = await reportsApi.getMembers();
         const expiringSoonCount = await reportsApi.getMemberExpiringSoon(30).catch(() => 0);
@@ -110,9 +108,12 @@ export default function MembersPage() {
       } catch (err) {
         messageApi.error(getErrorMessage(err, '加载会员统计失败'));
       }
-    };
-    fetchStats();
   }, [messageApi]);
+
+  // Fetch stats
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   // Fetch membership plans
   useEffect(() => {
@@ -255,7 +256,7 @@ export default function MembersPage() {
         await membersApi.create(values);
         messageApi.success('新会员已添加');
       }
-      await fetchMembers(currentPage);
+      await Promise.all([fetchMembers(currentPage), fetchStats()]);
       closeFormModal();
     } catch (err) {
       messageApi.error(getErrorMessage(err, '保存失败'));
@@ -265,7 +266,7 @@ export default function MembersPage() {
   const handleDeleteMember = async (member: Member) => {
     try {
       await membersApi.delete(member.id);
-      await fetchMembers(currentPage);
+      await Promise.all([fetchMembers(currentPage), fetchStats()]);
 
       if (detailMember?.id === member.id) {
         setDetailMember(null);
@@ -277,15 +278,30 @@ export default function MembersPage() {
     }
   };
 
-  const handleExportMembers = () => {
-    if (members.length === 0) {
+  const handleExportMembers = async () => {
+    const firstPage = await membersApi.getAll(1, 100, {
+      search: searchValue.trim() || undefined,
+      status: statusFilter === '全部' ? undefined : statusFilter,
+      planId: planFilter === '全部' ? undefined : planFilter,
+    });
+    const exportMembers = [...firstPage.data];
+    for (let nextPage = 2; nextPage <= firstPage.meta.totalPages; nextPage += 1) {
+      const pageData = await membersApi.getAll(nextPage, 100, {
+        search: searchValue.trim() || undefined,
+        status: statusFilter === '全部' ? undefined : statusFilter,
+        planId: planFilter === '全部' ? undefined : planFilter,
+      });
+      exportMembers.push(...pageData.data);
+    }
+
+    if (exportMembers.length === 0) {
       messageApi.warning('当前没有可导出的会员记录');
       return;
     }
 
     const rows = [
       ['姓名', '手机号', '邮箱', '会籍类型', '会籍状态', '剩余课时', '加入日期'],
-      ...members.map((member) => [
+      ...exportMembers.map((member) => [
         member.name,
         member.phone,
         member.email || '',
@@ -309,7 +325,7 @@ export default function MembersPage() {
     link.click();
     URL.revokeObjectURL(url);
 
-    messageApi.success('会员数据已导出');
+    messageApi.success(`已导出 ${exportMembers.length} 条会员数据`);
   };
 
   const openFilterModal = () => {

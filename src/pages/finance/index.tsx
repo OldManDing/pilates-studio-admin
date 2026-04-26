@@ -110,17 +110,23 @@ export default function FinancePage() {
     netRevenue: 0,
   });
 
-  const fetchTransactions = useCallback(async (page = 1, pageSize = 100) => {
+  const fetchTransactions = useCallback(async () => {
     try {
       const from = new Date(Date.now() - SIX_MONTHS_MS).toISOString().split('T')[0];
       const to = new Date().toISOString().split('T')[0];
-      const [txRes, summaryRes, reportsRes] = await Promise.all([
-        transactionsApi.getAll({ page, pageSize, from, to }),
+      const [firstTxPage, summaryRes, reportsRes] = await Promise.all([
+        transactionsApi.getAll({ page: 1, pageSize: 100, from, to }),
         transactionsApi.getSummary().catch(() => ({ totalRevenueCents: 0, pendingAmountCents: 0, refundedAmountCents: 0, todayRevenueCents: 0 })),
         reportsApi.getTransactions(from, to).catch(() => null),
       ]);
 
-      setTransactionList(txRes.data);
+      const allTransactions = [...firstTxPage.data];
+      for (let nextPage = 2; nextPage <= firstTxPage.meta.totalPages; nextPage += 1) {
+        const pageData = await transactionsApi.getAll({ page: nextPage, pageSize: 100, from, to });
+        allTransactions.push(...pageData.data);
+      }
+
+      setTransactionList(allTransactions);
 
       const totalRevenue = summaryRes.totalRevenueCents / 100;
       const refundedAmount = summaryRes.refundedAmountCents / 100;
@@ -156,7 +162,7 @@ export default function FinancePage() {
         const key = `${d.getMonth() + 1}月`;
         monthlyData[key] = { revenue: 0 };
       }
-      txRes.data.forEach((tx) => {
+      allTransactions.forEach((tx) => {
         const date = new Date(tx.happenedAt);
         const key = `${date.getMonth() + 1}月`;
         if (monthlyData[key]) {
@@ -169,7 +175,7 @@ export default function FinancePage() {
         revenue: Math.round(values.revenue),
       }));
       setFinanceBar(barData);
-      return txRes.data;
+      return allTransactions;
     } catch (err) {
       messageApi.error('获取财务数据失败');
       return [] as Transaction[];

@@ -277,7 +277,7 @@ export default function DashboardPage() {
           reportsApi.getMembers(),
           coursesApi.getAll(),
           coachesApi.getAll(),
-          bookingsApi.getAll({ page: 1, pageSize: 12 }),
+          bookingsApi.getAll({ page: 1, pageSize: 200 }),
           transactionsApi.getSummary(),
         ]);
 
@@ -294,7 +294,7 @@ export default function DashboardPage() {
 
         const bookingsRes = bookingsResult.status === 'fulfilled'
           ? bookingsResult.value
-          : { data: [], meta: { page: 1, pageSize: 12, total: 0, totalPages: 0 } };
+          : { data: [], meta: { page: 1, pageSize: 200, total: 0, totalPages: 0 } };
         if (bookingsResult.status !== 'fulfilled') failures.push('预约列表');
 
         const txSummary = txSummaryResult.status === 'fulfilled'

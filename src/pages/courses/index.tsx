@@ -83,10 +83,10 @@ export default function CoursesPage() {
         setTotal(coursesResponse.meta.total);
         setCoaches(coachesData);
 
-        const totalCourses = coursesData.length;
-        const weeklySessions = coursesData.reduce((sum, c) => sum + (c._count?.sessions || 0), 0);
+        const totalCourses = allCoursesData.length;
+        const weeklySessions = allCoursesData.reduce((sum, c) => sum + (c._count?.sessions || 0), 0);
         const popularCourse = totalCourses > 0
-          ? coursesData.reduce((max, c) => ((c._count?.sessions || 0) > (max._count?.sessions || 0) ? c : max), coursesData[0])?.name || '-'
+          ? allCoursesData.reduce((max, c) => ((c._count?.sessions || 0) > (max._count?.sessions || 0) ? c : max), allCoursesData[0])?.name || '-'
           : '-';
 
         // 从报告数据计算真实的上座率
@@ -244,10 +244,10 @@ export default function CoursesPage() {
       setAllCourses(refreshedAllCourses);
       setTotal(refreshed.meta.total);
 
-      const totalCourses = refreshed.meta.total;
-      const weeklySessions = refreshed.data.reduce((sum, c) => sum + (c._count?.sessions || 0), 0);
+      const totalCourses = refreshedAllCourses.length;
+      const weeklySessions = refreshedAllCourses.reduce((sum, c) => sum + (c._count?.sessions || 0), 0);
       const popularCourse = totalCourses > 0
-        ? refreshed.data.reduce((max, c) => ((c._count?.sessions || 0) > (max._count?.sessions || 0) ? c : max), refreshed.data[0])?.name || '-'
+        ? refreshedAllCourses.reduce((max, c) => ((c._count?.sessions || 0) > (max._count?.sessions || 0) ? c : max), refreshedAllCourses[0])?.name || '-'
         : '-';
 
       setStats((current) => ({
