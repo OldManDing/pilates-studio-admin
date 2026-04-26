@@ -41,7 +41,7 @@ describe('SettingsService', () => {
     const result = await service.getStudioSettings();
 
     expect(result).toEqual({
-      studioName: 'Pilates Studio',
+      studioName: '普拉提工作室',
       phone: '',
       email: '',
       businessHours: '',
@@ -88,6 +88,6 @@ describe('SettingsService', () => {
     const result = await service.restoreFromBackup({ version: '1.0', data: { members: {} } });
 
     expect(result.success).toBe(false);
-    expect(result.message).toContain('members must be an array');
+    expect(result.message).toContain('members 在提供时必须为数组');
   });
 });
