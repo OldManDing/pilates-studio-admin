@@ -66,9 +66,6 @@ export class BookingsService {
       where: { id: dto.sessionId },
       include: {
         course: true,
-        _count: {
-          select: { bookings: true },
-        },
       },
     });
 
@@ -76,7 +73,14 @@ export class BookingsService {
       throw new NotFoundException('Course session not found');
     }
 
-    if (session._count.bookings >= session.capacity) {
+    const activeBookingCount = await this.prisma.booking.count({
+      where: {
+        sessionId: dto.sessionId,
+        status: { notIn: [BookingStatus.CANCELLED, BookingStatus.NO_SHOW] },
+      },
+    });
+
+    if (activeBookingCount >= session.capacity) {
       throw new ConflictException('Session is fully booked');
     }
 
