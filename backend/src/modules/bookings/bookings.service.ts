@@ -256,6 +256,10 @@ export class BookingsService {
       throw new BadRequestException('Cannot update a cancelled booking');
     }
 
+    if (dto.status === BookingStatus.COMPLETED) {
+      return this.checkIn(id);
+    }
+
     const result = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.booking.update({
         where: { id },
