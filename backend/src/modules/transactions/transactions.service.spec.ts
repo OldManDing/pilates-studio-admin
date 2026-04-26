@@ -35,9 +35,18 @@ describe('TransactionsService', () => {
         findMany: jest.fn(),
         findUnique: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn(),
+        findUniqueOrThrow: jest.fn(),
         aggregate: jest.fn(),
       },
+      member: {
+        update: jest.fn(),
+        findUnique: jest.fn(),
+      },
+      $transaction: jest.fn(),
     };
+
+    prisma.$transaction.mockImplementation(async (callback: (tx: typeof prisma) => unknown) => callback(prisma));
 
     service = new TransactionsService(prisma, notificationsService as never);
   });
