@@ -1,4 +1,4 @@
-import { api } from '@/utils/request';
+import { api, requestWithMeta } from '@/utils/request';
 import type { TransactionStatus, TransactionKind } from '@/types';
 import type { PaginatedResponse } from './members';
 
@@ -41,7 +41,7 @@ export interface UpdateTransactionData extends Partial<CreateTransactionData> {}
 
 export const transactionsApi = {
   getAll: async (params?: { page?: number; pageSize?: number; memberId?: string; kind?: string; status?: TransactionStatus; from?: string; to?: string }) => {
-    const res = await api.get<PaginatedResponse<any>>('/transactions', { params: params || {} });
+    const res = await requestWithMeta<any[]>('/transactions', { params: params || {} });
     return {
       ...res,
       data: (res.data || []).map(mapTransaction),
