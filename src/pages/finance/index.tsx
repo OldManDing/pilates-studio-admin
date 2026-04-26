@@ -361,6 +361,21 @@ export default function FinancePage() {
     }
   };
 
+  const handleUpdateTransactionStatus = async (transaction: Transaction, status: TransactionStatus) => {
+    try {
+      await transactionsApi.updateStatus(transaction.id, status);
+      messageApi.success(`交易状态已更新为${statusMap[status]}`);
+      const refreshedTransactions = await fetchTransactions();
+      const updated = refreshedTransactions.find((item) => item.id === transaction.id) || null;
+
+      if (detailTransaction?.id === transaction.id) {
+        setDetailTransaction(updated);
+      }
+    } catch (err) {
+      messageApi.error(getErrorMessage(err, '更新交易状态失败'));
+    }
+  };
+
   const openFilterModal = () => {
     setFilterDraft({ status: statusFilter, kind: kindFilter });
     setIsFilterOpen(true);
@@ -383,17 +398,43 @@ export default function FinancePage() {
     setIsFilterOpen(false);
   };
 
-  const handleViewAll = () => {
+  const handleViewAll = async () => {
     const hasActiveQuery = searchValue.trim().length > 0 || statusFilter !== '全部' || kindFilter !== '全部';
 
     if (hasActiveQuery) {
       resetFilters();
+      await fetchTransactions();
       messageApi.success('已恢复查看全部最近交易');
       return;
     }
   };
 
+  const showPendingRenewals = async () => {
+    try {
+      setLoading(true);
+      const response = await transactionsApi.getAll({
+        page: 1,
+        pageSize: 100,
+        kind: 'MEMBERSHIP_RENEWAL',
+        status: 'PENDING',
+      });
+
+      setTransactionList(response.data);
+      setSearchValue('');
+      setStatusFilter('PENDING');
+      setKindFilter('MEMBERSHIP_RENEWAL');
+      setFilterDraft({ status: 'PENDING', kind: 'MEMBERSHIP_RENEWAL' });
+      setShowAllTransactions(true);
+      messageApi.success('已加载待处理续费申请');
+    } catch (err) {
+      messageApi.error(getErrorMessage(err, '加载待处理续费失败'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const transactionCountText = `当前共 ${filteredTransactions.length} 笔交易`;
+  const pendingRenewalCount = transactionList.filter((item) => item.kind === 'MEMBERSHIP_RENEWAL' && item.status === 'PENDING').length;
   const transactionResultSummary = transactionFilterLabels.length
     ? `已按${transactionFilterLabels.join('、')}筛选。`
     : '当前展示全部最近交易，支持继续筛选、编辑与查看详情。';
@@ -505,6 +546,7 @@ export default function FinancePage() {
             <div className={pageCls.sectionSummaryText}>{transactionResultSummary}</div>
             <div className={pageCls.statusMetaWrap}>
               {stats.pendingAmount > 0 ? <span className={pageCls.sectionMetaPill}>待处理 ¥{stats.pendingAmount.toLocaleString('zh-CN')}</span> : null}
+              {pendingRenewalCount > 0 ? <span className={pageCls.sectionMetaPill}>待处理续费 {pendingRenewalCount} 笔</span> : null}
               {stats.refundedAmount > 0 ? <span className={pageCls.sectionMetaPill}>退款 ¥{stats.refundedAmount.toLocaleString('zh-CN')}</span> : null}
               <span className={pageCls.sectionMetaPill}>{transactionCountText}</span>
             </div>
@@ -527,6 +569,7 @@ export default function FinancePage() {
               />
             </div>
             <div className={pageCls.toolbarRight}>
+              <ActionButton icon={<FilterOutlined />} ghost onClick={showPendingRenewals}>待处理续费</ActionButton>
               <ActionButton icon={<FilterOutlined />} ghost onClick={openFilterModal}>筛选条件</ActionButton>
               <ActionButton icon={<DownloadOutlined />} ghost onClick={handleExportVisibleTransactions}>导出</ActionButton>
               <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增交易</ActionButton>
@@ -560,9 +603,15 @@ export default function FinancePage() {
                   </div>
 
                   <div className={`${pageCls.actionRowWrap} ${pageCls.actionRowWrapEnd}`}>
-                      <Button type="primary" size="large" className={pageCls.cardActionHalf} icon={<EyeOutlined />} onClick={() => setDetailTransaction(item)}>核对详情</Button>
-                      <Button size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={() => openEditModal(item)}>调整记录</Button>
-                    </div>
+                    {item.kind === 'MEMBERSHIP_RENEWAL' && item.status === 'PENDING' ? (
+                      <Button size="large" className={pageCls.cardActionHalf} onClick={() => handleUpdateTransactionStatus(item, 'PROCESSING')}>开始处理</Button>
+                    ) : null}
+                    {item.kind === 'MEMBERSHIP_RENEWAL' && item.status === 'PROCESSING' ? (
+                      <Button type="primary" size="large" className={pageCls.cardActionHalf} onClick={() => handleUpdateTransactionStatus(item, 'COMPLETED')}>完成续费</Button>
+                    ) : null}
+                    <Button type="primary" size="large" className={pageCls.cardActionHalf} icon={<EyeOutlined />} onClick={() => setDetailTransaction(item)}>核对详情</Button>
+                    <Button size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={() => openEditModal(item)}>调整记录</Button>
+                  </div>
                   </div>
                 ))}
             </div>
@@ -668,6 +717,12 @@ export default function FinancePage() {
         onClose={() => setDetailTransaction(null)}
         extra={detailTransaction ? (
           <div className={pageCls.drawerActionGroup}>
+            {detailTransaction.kind === 'MEMBERSHIP_RENEWAL' && detailTransaction.status === 'PENDING' ? (
+              <Button onClick={() => handleUpdateTransactionStatus(detailTransaction, 'PROCESSING')}>开始处理</Button>
+            ) : null}
+            {detailTransaction.kind === 'MEMBERSHIP_RENEWAL' && detailTransaction.status === 'PROCESSING' ? (
+              <Button type="primary" onClick={() => handleUpdateTransactionStatus(detailTransaction, 'COMPLETED')}>完成续费</Button>
+            ) : null}
             <Button icon={<EditOutlined />} onClick={() => openEditModal(detailTransaction)}>调整记录</Button>
           </div>
         ) : null}

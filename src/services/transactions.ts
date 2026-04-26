@@ -40,7 +40,7 @@ export interface CreateTransactionData {
 export interface UpdateTransactionData extends Partial<CreateTransactionData> {}
 
 export const transactionsApi = {
-  getAll: async (params?: { page?: number; pageSize?: number; memberId?: string; kind?: string; from?: string; to?: string }) => {
+  getAll: async (params?: { page?: number; pageSize?: number; memberId?: string; kind?: string; status?: TransactionStatus; from?: string; to?: string }) => {
     const res = await api.get<PaginatedResponse<any>>('/transactions', { params: params || {} });
     return {
       ...res,
