@@ -236,7 +236,7 @@ export default function DashboardFinanceTrendPage() {
                 <div>
                   <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
                     {item.member?.name || '-'}
-                    <StatusTag status={item.status === 'COMPLETED' ? '已完成' : item.status === 'PENDING' ? '处理中' : item.status === 'REFUNDED' ? '已取消' : '处理中'} />
+                    <StatusTag status={item.status === 'COMPLETED' ? '已完成' : item.status === 'PENDING' ? '待处理' : item.status === 'REFUNDED' ? '已退款' : '处理中'} />
                   </div>
                   <div className={widgetCls.recordSub}>{kindLabelMap[item.kind] || item.kind}</div>
                   <div className={widgetCls.recordSub}>{new Date(item.happenedAt).toLocaleDateString('zh-CN')}</div>

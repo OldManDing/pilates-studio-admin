@@ -91,7 +91,7 @@ export default function DashboardCoursesPage() {
         <div className={widgetCls.recordListDense}>
           {courses.map((course) => {
             const sessionCount = course._count?.sessions || 0;
-            const status = course.isActive ? (sessionCount >= course.capacity ? '已满' : '已确认') : '已取消';
+            const status = course.isActive ? (sessionCount >= course.capacity ? '已满' : '正常') : '已停用';
             return (
              <div key={course.id} className={`${widgetCls.recordItem} ${widgetCls.workRecordItem}`}>
                 <div className={widgetCls.detailCourseMeta}>
