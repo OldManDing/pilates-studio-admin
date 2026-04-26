@@ -219,6 +219,14 @@ export class CourseSessionsService {
       throw new ConflictException('Cannot delete a session with active bookings');
     }
 
+    const bookingHistoryCount = await this.prisma.booking.count({
+      where: { sessionId: id },
+    });
+
+    if (bookingHistoryCount > 0) {
+      throw new ConflictException('Cannot delete a session with booking history');
+    }
+
     await this.prisma.courseSession.delete({ where: { id } });
 
     return { success: true };
@@ -280,14 +288,14 @@ export class CourseSessionsService {
     };
   }
 
-  private withActiveBookedCount<T extends { bookedCount: number; _count: { bookings: number } }>(
+  private withActiveBookedCount<T extends { bookedCount: number; _count?: { bookings: number } }>(
     session: T,
   ) {
     const { _count, ...sessionData } = session;
 
     return {
       ...sessionData,
-      bookedCount: _count.bookings,
+      bookedCount: _count?.bookings ?? session.bookedCount,
     };
   }
 
@@ -323,7 +331,15 @@ export class CourseSessionsService {
   }
 
   private async generateSessionCode(): Promise<string> {
-    const count = await this.prisma.courseSession.count();
-    return `SES${String(count + 1).padStart(6, '0')}`;
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const code = `SES${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      const existing = await this.prisma.courseSession.findUnique({ where: { sessionCode: code } });
+
+      if (!existing) {
+        return code;
+      }
+    }
+
+    throw new ConflictException('Unable to generate a unique session code');
   }
 }
