@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { BookingSource, BookingStatus } from '../../common/enums/domain.enums';
+import { BookingSource, BookingStatus, MemberStatus, MembershipPlanCategory } from '../../common/enums/domain.enums';
 import { BookingsService } from './bookings.service';
 
 const createBooking = (overrides: Partial<Record<string, unknown>> = {}) => ({
@@ -17,6 +17,9 @@ const createBooking = (overrides: Partial<Record<string, unknown>> = {}) => ({
     name: 'Alice',
     phone: '13800000000',
     remainingCredits: 8,
+    status: MemberStatus.ACTIVE,
+    joinedAt: new Date('2026-01-01T00:00:00.000Z'),
+    plan: { category: MembershipPlanCategory.TIME_CARD, durationDays: 365 },
   },
   session: {
     id: 'session-1',
@@ -57,6 +60,10 @@ describe('BookingsService', () => {
     };
     member: {
       findUnique: jest.Mock;
+      updateMany: jest.Mock;
+    };
+    attendance: {
+      upsert: jest.Mock;
     };
     $transaction: jest.Mock;
   };
@@ -82,6 +89,10 @@ describe('BookingsService', () => {
       },
       member: {
         findUnique: jest.fn(),
+        updateMany: jest.fn(),
+      },
+      attendance: {
+        upsert: jest.fn(),
       },
       $transaction: jest.fn(),
     };
@@ -128,7 +139,10 @@ describe('BookingsService', () => {
     });
 
     it('rejects create when the session is fully booked', async () => {
-      prisma.courseSession.findUnique.mockResolvedValue(createSession({ capacity: 2, _count: { bookings: 2 } }));
+      prisma.courseSession.findUnique.mockResolvedValue(createSession({ capacity: 2 }));
+      prisma.member.findUnique.mockResolvedValue(createBooking().member);
+      prisma.booking.findUnique.mockResolvedValue(null);
+      prisma.booking.count.mockResolvedValue(2);
 
       await expect(
         service.create({ memberId: 'member-1', sessionId: 'session-1', source: BookingSource.ADMIN }),
@@ -137,7 +151,9 @@ describe('BookingsService', () => {
 
     it('rejects create when the member already booked the same session', async () => {
       prisma.courseSession.findUnique.mockResolvedValue(createSession());
-      prisma.member.findUnique.mockResolvedValue({ id: 'member-1' });
+      prisma.member.findUnique.mockResolvedValue(createBooking().member);
+      prisma.booking.findUnique.mockResolvedValue(null);
+      prisma.booking.count.mockResolvedValue(1);
       prisma.booking.findFirst.mockResolvedValue(createBooking());
 
       await expect(
@@ -147,7 +163,8 @@ describe('BookingsService', () => {
 
     it('creates a confirmed booking and increments bookedCount', async () => {
       prisma.courseSession.findUnique.mockResolvedValue(createSession());
-      prisma.member.findUnique.mockResolvedValue({ id: 'member-1' });
+      prisma.member.findUnique.mockResolvedValue(createBooking().member);
+      prisma.booking.findUnique.mockResolvedValue(null);
       prisma.booking.findFirst.mockResolvedValue(null);
       prisma.booking.create.mockResolvedValue(createBooking());
       prisma.booking.count.mockResolvedValue(1);
@@ -164,7 +181,7 @@ describe('BookingsService', () => {
       );
       expect(prisma.courseSession.update).toHaveBeenCalledWith({
         where: { id: 'session-1' },
-        data: { bookedCount: { increment: 1 } },
+        data: { bookedCount: 2 },
       });
       expect(notificationsService.createFromSetting).toHaveBeenCalledWith(
         'booking_confirmation',
@@ -179,8 +196,9 @@ describe('BookingsService', () => {
     it('resolves SELF bookings through the requester mini-user id', async () => {
       prisma.member.findUnique
         .mockResolvedValueOnce({ id: 'member-1' })
-        .mockResolvedValueOnce({ id: 'member-1' });
+        .mockResolvedValueOnce(createBooking().member);
       prisma.courseSession.findUnique.mockResolvedValue(createSession());
+      prisma.booking.findUnique.mockResolvedValue(null);
       prisma.booking.findFirst.mockResolvedValue(null);
       prisma.booking.create.mockResolvedValue(createBooking());
       prisma.booking.count.mockResolvedValue(1);
@@ -209,7 +227,7 @@ describe('BookingsService', () => {
 
     it('cancels a booking and decrements bookedCount', async () => {
       prisma.booking.findUnique.mockResolvedValue(createBooking({ status: BookingStatus.CONFIRMED, member: { id: 'member-1', name: 'Alice', miniUserId: 'mini-user-1' } }));
-      prisma.booking.update.mockResolvedValue(createBooking({ status: BookingStatus.CANCELLED }));
+      prisma.booking.update.mockResolvedValue(createBooking({ status: BookingStatus.CANCELLED, member: { id: 'member-1', name: 'Alice', miniUserId: 'mini-user-1' } }));
 
       const result = await service.updateStatus('booking-1', { status: BookingStatus.CANCELLED });
 
@@ -234,6 +252,19 @@ describe('BookingsService', () => {
       expect(result.status).toBe(BookingStatus.CANCELLED);
     });
 
+    it('releases bookedCount when marking a booking no-show', async () => {
+      prisma.booking.findUnique.mockResolvedValue(createBooking({ status: BookingStatus.CONFIRMED }));
+      prisma.booking.update.mockResolvedValue(createBooking({ status: BookingStatus.NO_SHOW }));
+
+      const result = await service.updateStatus('booking-1', { status: BookingStatus.NO_SHOW });
+
+      expect(prisma.courseSession.update).toHaveBeenCalledWith({
+        where: { id: 'session-1' },
+        data: { bookedCount: { decrement: 1 } },
+      });
+      expect(result.status).toBe(BookingStatus.NO_SHOW);
+    });
+
     it('rejects status updates for cancelled bookings', async () => {
       prisma.booking.findUnique.mockResolvedValue(createBooking({ status: BookingStatus.CANCELLED }));
 
@@ -245,6 +276,8 @@ describe('BookingsService', () => {
     it('updates non-cancel transitions without changing bookedCount', async () => {
       prisma.booking.findUnique.mockResolvedValue(createBooking({ status: BookingStatus.CONFIRMED }));
       prisma.booking.update.mockResolvedValue(createBooking({ status: BookingStatus.COMPLETED }));
+      prisma.member.updateMany.mockResolvedValue({ count: 1 });
+      prisma.attendance.upsert.mockResolvedValue(null);
 
       const result = await service.updateStatus('booking-1', { status: BookingStatus.COMPLETED });
 
@@ -269,6 +302,16 @@ describe('BookingsService', () => {
     it('removes cancelled bookings without touching bookedCount', async () => {
       prisma.booking.findUnique.mockResolvedValue(createBooking({ status: BookingStatus.CANCELLED }));
       prisma.booking.delete.mockResolvedValue(createBooking({ status: BookingStatus.CANCELLED }));
+
+      await service.remove('booking-1');
+
+      expect(prisma.courseSession.update).not.toHaveBeenCalled();
+      expect(prisma.booking.delete).toHaveBeenCalledWith({ where: { id: 'booking-1' } });
+    });
+
+    it('removes no-show bookings without touching bookedCount again', async () => {
+      prisma.booking.findUnique.mockResolvedValue(createBooking({ status: BookingStatus.NO_SHOW }));
+      prisma.booking.delete.mockResolvedValue(createBooking({ status: BookingStatus.NO_SHOW }));
 
       await service.remove('booking-1');
 

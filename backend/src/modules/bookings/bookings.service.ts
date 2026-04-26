@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { QueryBookingsDto } from './dto/query-bookings.dto';
@@ -62,26 +63,13 @@ export class BookingsService {
       targetMemberId = currentMember.id;
     }
 
-    const session = await this.prisma.courseSession.findUnique({
+    const sessionExists = await this.prisma.courseSession.findUnique({
       where: { id: dto.sessionId },
-      include: {
-        course: true,
-      },
+      select: { id: true },
     });
 
-    if (!session) {
+    if (!sessionExists) {
       throw new NotFoundException('Course session not found');
-    }
-
-    const activeBookingCount = await this.prisma.booking.count({
-      where: {
-        sessionId: dto.sessionId,
-        status: { notIn: [BookingStatus.CANCELLED, BookingStatus.NO_SHOW] },
-      },
-    });
-
-    if (activeBookingCount >= session.capacity) {
-      throw new ConflictException('Session is fully booked');
     }
 
     const member = await this.prisma.member.findUnique({
@@ -95,22 +83,43 @@ export class BookingsService {
 
     this.assertBookableMember(member);
 
-    // Check for duplicate booking
-    const existingBooking = await this.prisma.booking.findFirst({
-      where: {
-        memberId: targetMemberId,
-        sessionId: dto.sessionId,
-        status: { notIn: [BookingStatus.CANCELLED, BookingStatus.NO_SHOW] },
-      },
-    });
-
-    if (existingBooking) {
-      throw new ConflictException('Member already booked for this session');
-    }
-
     const bookingCode = await this.generateBookingCode();
 
-    const result = await this.prisma.$transaction(async (tx) => {
+    const result = await this.runSerializableTransaction(async (tx) => {
+      const session = await tx.courseSession.findUnique({
+        where: { id: dto.sessionId },
+        include: {
+          course: true,
+        },
+      });
+
+      if (!session) {
+        throw new NotFoundException('Course session not found');
+      }
+
+      const activeBookingCount = await tx.booking.count({
+        where: {
+          sessionId: dto.sessionId,
+          status: { notIn: [BookingStatus.CANCELLED, BookingStatus.NO_SHOW] },
+        },
+      });
+
+      if (activeBookingCount >= session.capacity) {
+        throw new ConflictException('Session is fully booked');
+      }
+
+      const existingBooking = await tx.booking.findFirst({
+        where: {
+          memberId: targetMemberId,
+          sessionId: dto.sessionId,
+          status: { notIn: [BookingStatus.CANCELLED, BookingStatus.NO_SHOW] },
+        },
+      });
+
+      if (existingBooking) {
+        throw new ConflictException('Member already booked for this session');
+      }
+
       const booking = await tx.booking.create({
         data: {
           bookingCode,
@@ -133,9 +142,7 @@ export class BookingsService {
 
       await tx.courseSession.update({
         where: { id: dto.sessionId },
-        data: {
-          bookedCount: { increment: 1 },
-        },
+        data: { bookedCount: activeBookingCount + 1 },
       });
 
       return booking;
@@ -143,13 +150,13 @@ export class BookingsService {
 
     await this.notificationsService.createFromSetting('booking_confirmation', {
       type: 'BOOKING_CONFIRMATION',
-      content: `您已成功预约 ${session.course.name}`,
+      content: `您已成功预约 ${result.session.course.name}`,
       memberId: member.id,
       miniUserId: member.miniUserId ?? undefined,
       payload: {
         bookingId: result.id,
         sessionId: dto.sessionId,
-        courseName: session.course.name,
+        courseName: result.session.course.name,
       },
     });
 
@@ -252,25 +259,33 @@ export class BookingsService {
   }
 
   async updateStatus(id: string, dto: UpdateBookingStatusDto) {
-    const booking = await this.findOne(id);
-
-    if (booking.status === BookingStatus.CANCELLED) {
-      throw new BadRequestException('Cannot update a cancelled booking');
-    }
-
-    if (booking.status === BookingStatus.COMPLETED) {
-      if (dto.status === BookingStatus.COMPLETED) {
-        return booking;
-      }
-
-      throw new BadRequestException('Cannot update a completed booking');
-    }
-
     if (dto.status === BookingStatus.COMPLETED) {
       return this.checkIn(id);
     }
 
-    const result = await this.prisma.$transaction(async (tx) => {
+    const result = await this.runSerializableTransaction(async (tx) => {
+      const booking = await tx.booking.findUnique({
+        where: { id },
+        include: {
+          member: {
+            select: { id: true, name: true, phone: true, miniUserId: true },
+          },
+          session: true,
+        },
+      });
+
+      if (!booking) {
+        throw new NotFoundException('Booking not found');
+      }
+
+      if (booking.status === BookingStatus.CANCELLED) {
+        throw new BadRequestException('Cannot update a cancelled booking');
+      }
+
+      if (booking.status === BookingStatus.COMPLETED) {
+        throw new BadRequestException('Cannot update a completed booking');
+      }
+
       const updated = await tx.booking.update({
         where: { id },
         data: { status: dto.status },
@@ -294,13 +309,13 @@ export class BookingsService {
       await this.notificationsService.createFromSetting('booking_cancelled', {
         type: 'BOOKING_CANCELLED',
         title: '预约已取消',
-        content: `您的预约 ${booking.bookingCode} 已取消。`,
-        memberId: booking.memberId,
-        miniUserId: booking.member?.miniUserId ?? undefined,
+        content: `您的预约 ${result.bookingCode} 已取消。`,
+        memberId: result.memberId,
+        miniUserId: result.member?.miniUserId ?? undefined,
         payload: {
-          bookingId: booking.id,
-          sessionId: booking.sessionId,
-          bookingCode: booking.bookingCode,
+          bookingId: result.id,
+          sessionId: result.sessionId,
+          bookingCode: result.bookingCode,
         },
       });
     }
@@ -309,24 +324,32 @@ export class BookingsService {
   }
 
   async remove(id: string) {
-    const booking = await this.findOne(id);
-
-    if (booking.status === BookingStatus.COMPLETED) {
-      throw new BadRequestException('Cannot delete a completed booking');
-    }
-
-    if (this.occupiesSeat(booking.status)) {
-      await this.prisma.courseSession.update({
-        where: { id: booking.sessionId },
-        data: { bookedCount: { decrement: 1 } },
+    return this.runSerializableTransaction(async (tx) => {
+      const booking = await tx.booking.findUnique({
+        where: { id },
       });
-    }
 
-    await this.prisma.booking.delete({
-      where: { id },
+      if (!booking) {
+        throw new NotFoundException('Booking not found');
+      }
+
+      if (booking.status === BookingStatus.COMPLETED) {
+        throw new BadRequestException('Cannot delete a completed booking');
+      }
+
+      if (this.occupiesSeat(booking.status)) {
+        await tx.courseSession.update({
+          where: { id: booking.sessionId },
+          data: { bookedCount: { decrement: 1 } },
+        });
+      }
+
+      await tx.booking.delete({
+        where: { id },
+      });
+
+      return { success: true };
     });
-
-    return { success: true };
   }
 
   // Mini-program: get bookings for current member
@@ -398,29 +421,63 @@ export class BookingsService {
   }
 
   async checkIn(id: string, miniUserId?: string) {
-    const booking = await this.findOne(id);
-
-    if (miniUserId && booking.member?.miniUserId !== miniUserId) {
-      throw new ForbiddenException('Cannot check in another member booking');
-    }
-
-    if (booking.status === BookingStatus.CANCELLED || booking.status === BookingStatus.NO_SHOW) {
-      throw new BadRequestException('Cannot check in a cancelled or no-show booking');
-    }
-
-    if (booking.status === BookingStatus.COMPLETED) {
-      return booking;
-    }
-
-    if (!booking.member) {
-      throw new NotFoundException('Member not found');
-    }
-
-    this.assertBookableMember(booking.member);
-
     const checkedInAt = new Date();
 
-    return this.prisma.$transaction(async (tx) => {
+    return this.runSerializableTransaction(async (tx) => {
+      const booking = await tx.booking.findUnique({
+        where: { id },
+        include: {
+          member: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              remainingCredits: true,
+              miniUserId: true,
+              status: true,
+              joinedAt: true,
+              plan: {
+                select: {
+                  id: true,
+                  category: true,
+                  durationDays: true,
+                  totalCredits: true,
+                },
+              },
+            },
+          },
+          session: {
+            include: {
+              course: true,
+              coach: true,
+            },
+          },
+          attendance: true,
+        },
+      });
+
+      if (!booking) {
+        throw new NotFoundException('Booking not found');
+      }
+
+      if (miniUserId && booking.member?.miniUserId !== miniUserId) {
+        throw new ForbiddenException('Cannot check in another member booking');
+      }
+
+      if (booking.status === BookingStatus.CANCELLED || booking.status === BookingStatus.NO_SHOW) {
+        throw new BadRequestException('Cannot check in a cancelled or no-show booking');
+      }
+
+      if (booking.status === BookingStatus.COMPLETED) {
+        return booking;
+      }
+
+      if (!booking.member) {
+        throw new NotFoundException('Member not found');
+      }
+
+      this.assertBookableMember(booking.member);
+
       if (this.shouldConsumeCredit(booking.member?.plan?.category)) {
         const creditUpdate = await tx.member.updateMany({
           where: {
@@ -471,9 +528,43 @@ export class BookingsService {
     });
   }
 
+  private async runSerializableTransaction<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>) {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        if (this.isPrismaErrorCode(error, 'P2034') && attempt < 2) {
+          continue;
+        }
+
+        if (this.isPrismaErrorCode(error, 'P2034')) {
+          throw new ConflictException('Booking was updated concurrently, please retry');
+        }
+
+        throw error;
+      }
+    }
+
+    throw new ConflictException('Booking was updated concurrently, please retry');
+  }
+
+  private isPrismaErrorCode(error: unknown, code: string) {
+    return error instanceof Prisma.PrismaClientKnownRequestError && error.code === code;
+  }
+
   private async generateBookingCode(): Promise<string> {
-    const count = await this.prisma.booking.count();
-    return `B${String(count + 1).padStart(8, '0')}`;
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const code = `B${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      const existing = await this.prisma.booking.findUnique({ where: { bookingCode: code } });
+
+      if (!existing) {
+        return code;
+      }
+    }
+
+    throw new ConflictException('Unable to generate a unique booking code');
   }
 
   private assertBookableMember(member: BookableMember) {
