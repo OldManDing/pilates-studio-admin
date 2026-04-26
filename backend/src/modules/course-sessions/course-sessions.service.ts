@@ -3,6 +3,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
 import { CreateCourseSessionDto } from './dto/create-course-session.dto';
 import { UpdateCourseSessionDto } from './dto/update-course-session.dto';
+import { BookingStatus } from '../../common/enums/domain.enums';
+
+const ACTIVE_BOOKING_STATUS_FILTER = {
+  notIn: [BookingStatus.CANCELLED, BookingStatus.NO_SHOW],
+};
 
 @Injectable()
 export class CourseSessionsService {
@@ -48,11 +53,13 @@ export class CourseSessionsService {
         coach: {
           select: { id: true, name: true },
         },
+        _count: {
+          select: {
+            bookings: { where: { status: ACTIVE_BOOKING_STATUS_FILTER } },
+          },
+        },
       },
-    }).then((session) => ({
-      ...session,
-      bookedCount: session.bookedCount,
-    }));
+    }).then((session) => this.withActiveBookedCount(session));
   }
 
   async findUpcoming(pagination: PaginationDto): Promise<PaginatedResponse<any>> {
@@ -75,6 +82,11 @@ export class CourseSessionsService {
           coach: {
             select: { id: true, name: true },
           },
+          _count: {
+            select: {
+              bookings: { where: { status: ACTIVE_BOOKING_STATUS_FILTER } },
+            },
+          },
         },
         orderBy: { startsAt: 'asc' },
       }),
@@ -83,10 +95,7 @@ export class CourseSessionsService {
       }),
     ]);
 
-    const sessions = data.map(session => ({
-      ...session,
-      bookedCount: session.bookedCount,
-    }));
+    const sessions = data.map((session) => this.withActiveBookedCount(session));
 
     return {
       data: sessions,
@@ -107,6 +116,11 @@ export class CourseSessionsService {
         coach: {
           select: { id: true, name: true, bio: true },
         },
+        _count: {
+          select: {
+            bookings: { where: { status: ACTIVE_BOOKING_STATUS_FILTER } },
+          },
+        },
       },
     });
 
@@ -114,19 +128,17 @@ export class CourseSessionsService {
       throw new NotFoundException('Course session not found');
     }
 
-    return {
-      ...session,
-      bookedCount: session.bookedCount,
-    };
+    return this.withActiveBookedCount(session);
   }
 
   async update(id: string, dto: UpdateCourseSessionDto) {
     const existing = await this.prisma.courseSession.findUnique({
       where: { id },
       include: {
-        bookings: {
-          where: { status: { not: 'CANCELLED' } },
-          select: { id: true },
+        _count: {
+          select: {
+            bookings: { where: { status: ACTIVE_BOOKING_STATUS_FILTER } },
+          },
         },
       },
     });
@@ -142,7 +154,7 @@ export class CourseSessionsService {
 
     this.validateTimeRange(startsAt, endsAt);
 
-    if (capacity < existing.bookedCount) {
+    if (capacity < existing._count.bookings) {
       throw new BadRequestException('Capacity cannot be lower than current booked count');
     }
 
@@ -178,20 +190,23 @@ export class CourseSessionsService {
         coach: {
           select: { id: true, name: true },
         },
+        _count: {
+          select: {
+            bookings: { where: { status: ACTIVE_BOOKING_STATUS_FILTER } },
+          },
+        },
       },
-    }).then((session) => ({
-      ...session,
-      bookedCount: session.bookedCount,
-    }));
+    }).then((session) => this.withActiveBookedCount(session));
   }
 
   async remove(id: string) {
     const session = await this.prisma.courseSession.findUnique({
       where: { id },
       include: {
-        bookings: {
-          where: { status: { not: 'CANCELLED' } },
-          select: { id: true },
+        _count: {
+          select: {
+            bookings: { where: { status: ACTIVE_BOOKING_STATUS_FILTER } },
+          },
         },
       },
     });
@@ -200,7 +215,7 @@ export class CourseSessionsService {
       throw new NotFoundException('Course session not found');
     }
 
-    if (session.bookedCount > 0) {
+    if (session._count.bookings > 0) {
       throw new ConflictException('Cannot delete a session with active bookings');
     }
 
@@ -213,7 +228,11 @@ export class CourseSessionsService {
     const session = await this.prisma.courseSession.findUnique({
       where: { id },
       include: {
-        bookings: false,
+        _count: {
+          select: {
+            bookings: { where: { status: ACTIVE_BOOKING_STATUS_FILTER } },
+          },
+        },
       },
     });
 
@@ -221,7 +240,7 @@ export class CourseSessionsService {
       throw new NotFoundException('Course session not found');
     }
 
-    const availableSeats = session.capacity - session.bookedCount;
+    const availableSeats = session.capacity - session._count.bookings;
     return { availableSeats: Math.max(0, availableSeats) };
   }
 
@@ -247,15 +266,28 @@ export class CourseSessionsService {
         coach: {
           select: { id: true, name: true },
         },
+        _count: {
+          select: {
+            bookings: { where: { status: ACTIVE_BOOKING_STATUS_FILTER } },
+          },
+        },
       },
       orderBy: { startsAt: 'asc' },
     });
 
     return {
-      sessions: sessions.map(session => ({
-        ...session,
-        bookedCount: session.bookedCount,
-      })),
+      sessions: sessions.map((session) => this.withActiveBookedCount(session)),
+    };
+  }
+
+  private withActiveBookedCount<T extends { bookedCount: number; _count: { bookings: number } }>(
+    session: T,
+  ) {
+    const { _count, ...sessionData } = session;
+
+    return {
+      ...sessionData,
+      bookedCount: _count.bookings,
     };
   }
 
