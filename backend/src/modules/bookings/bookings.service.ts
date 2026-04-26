@@ -3,10 +3,20 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { QueryBookingsDto } from './dto/query-bookings.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
-import { AttendanceStatus, BookingStatus } from '../../common/enums/domain.enums';
+import { AttendanceStatus, BookingStatus, MemberStatus, MembershipPlanCategory } from '../../common/enums/domain.enums';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
 import { buildDateRange } from '../../common/utils/date-range';
 import { NotificationsService } from '../notifications/notifications.service';
+
+type BookableMember = {
+  status: string;
+  joinedAt: Date;
+  remainingCredits: number;
+  plan: {
+    category: string;
+    durationDays: number | null;
+  } | null;
+};
 
 @Injectable()
 export class BookingsService {
@@ -72,10 +82,15 @@ export class BookingsService {
 
     const member = await this.prisma.member.findUnique({
       where: { id: targetMemberId },
+      include: { plan: true },
     });
 
     if (!member) {
       throw new NotFoundException('Member not found');
+    }
+
+    if (isMiniUser) {
+      this.assertBookableMember(member);
     }
 
     // Check for duplicate booking
@@ -199,7 +214,23 @@ export class BookingsService {
       where: { id },
       include: {
         member: {
-          select: { id: true, name: true, phone: true, remainingCredits: true, miniUserId: true },
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            remainingCredits: true,
+            miniUserId: true,
+            status: true,
+            joinedAt: true,
+            plan: {
+              select: {
+                id: true,
+                category: true,
+                durationDays: true,
+                totalCredits: true,
+              },
+            },
+          },
         },
         session: {
           include: {
@@ -360,9 +391,35 @@ export class BookingsService {
       throw new BadRequestException('Cannot check in a cancelled or no-show booking');
     }
 
+    if (booking.status === BookingStatus.COMPLETED) {
+      return booking;
+    }
+
+    if (!booking.member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    this.assertBookableMember(booking.member);
+
     const checkedInAt = new Date();
 
     return this.prisma.$transaction(async (tx) => {
+      if (this.shouldConsumeCredit(booking.member?.plan?.category)) {
+        const creditUpdate = await tx.member.updateMany({
+          where: {
+            id: booking.memberId,
+            remainingCredits: { gt: 0 },
+          },
+          data: {
+            remainingCredits: { decrement: 1 },
+          },
+        });
+
+        if (creditUpdate.count === 0) {
+          throw new BadRequestException('Insufficient remaining credits');
+        }
+      }
+
       const updatedBooking = await tx.booking.update({
         where: { id },
         data: { status: BookingStatus.COMPLETED },
@@ -400,5 +457,31 @@ export class BookingsService {
   private async generateBookingCode(): Promise<string> {
     const count = await this.prisma.booking.count();
     return `B${String(count + 1).padStart(8, '0')}`;
+  }
+
+  private assertBookableMember(member: BookableMember) {
+    if (member.status !== MemberStatus.ACTIVE) {
+      throw new BadRequestException('Member is not active');
+    }
+
+    if (!member.plan) {
+      throw new BadRequestException('Member does not have an active membership plan');
+    }
+
+    if (member.remainingCredits <= 0) {
+      throw new BadRequestException('Insufficient remaining credits');
+    }
+
+    if (member.plan.durationDays) {
+      const expiresAt = new Date(member.joinedAt.getTime() + member.plan.durationDays * 24 * 60 * 60 * 1000);
+
+      if (expiresAt <= new Date()) {
+        throw new BadRequestException('Membership has expired');
+      }
+    }
+  }
+
+  private shouldConsumeCredit(category?: string) {
+    return category === MembershipPlanCategory.TIME_CARD || category === MembershipPlanCategory.PRIVATE_PACKAGE;
   }
 }
