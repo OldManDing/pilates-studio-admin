@@ -254,6 +254,14 @@ export class BookingsService {
       throw new BadRequestException('Cannot update a cancelled booking');
     }
 
+    if (booking.status === BookingStatus.COMPLETED) {
+      if (dto.status === BookingStatus.COMPLETED) {
+        return booking;
+      }
+
+      throw new BadRequestException('Cannot update a completed booking');
+    }
+
     if (dto.status === BookingStatus.COMPLETED) {
       return this.checkIn(id);
     }
@@ -299,6 +307,10 @@ export class BookingsService {
 
   async remove(id: string) {
     const booking = await this.findOne(id);
+
+    if (booking.status === BookingStatus.COMPLETED) {
+      throw new BadRequestException('Cannot delete a completed booking');
+    }
 
     if (booking.status !== BookingStatus.CANCELLED) {
       await this.prisma.courseSession.update({
