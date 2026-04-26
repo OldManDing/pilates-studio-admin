@@ -44,14 +44,21 @@ import styles from './index.module.css';
 
 type RecipientType = 'member' | 'miniUser' | 'admin';
 
-const getMarkAsReadLabel = (status: NotificationStatus) => {
-  if (status === 'READ') return '已读';
-  if (status === 'SENT') return '标记已读';
-  if (status === 'PENDING') return '待发送';
+const isFeedbackNotification = (notification: NotificationRecord) => notification.type === 'MINI_PROGRAM_FEEDBACK';
+
+const canMarkAsRead = (notification: NotificationRecord) =>
+  notification.status === 'SENT' || (isFeedbackNotification(notification) && notification.status === 'PENDING');
+
+const getMarkAsReadLabel = (notification: NotificationRecord) => {
+  if (notification.status === 'READ') return isFeedbackNotification(notification) ? '已处理' : '已读';
+  if (isFeedbackNotification(notification)) return '标记已处理';
+  if (notification.status === 'SENT') return '标记已读';
+  if (notification.status === 'PENDING') return '待发送';
   return '发送失败';
 };
 type FilterStatus = NotificationStatus | 'ALL';
 type FilterChannel = NotificationChannel | 'ALL';
+type FilterType = 'ALL' | 'MINI_PROGRAM_FEEDBACK' | 'MEMBERSHIP_RENEWAL_REQUEST';
 type RecipientSelectOption = {
   value: string;
   label: string;
@@ -91,6 +98,12 @@ const channelLabelMap: Record<NotificationChannel, string> = {
   MINI_PROGRAM: '小程序',
   EMAIL: '邮件',
   SMS: '短信',
+};
+
+const typeLabelMap: Record<FilterType, string> = {
+  ALL: '全部类型',
+  MINI_PROGRAM_FEEDBACK: '小程序反馈',
+  MEMBERSHIP_RENEWAL_REQUEST: '续费申请',
 };
 
 const recipientTypeLabelMap: Record<RecipientType, string> = {
@@ -237,6 +250,7 @@ export default function NotificationsPage() {
   const [saving, setSaving] = useState(false);
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL');
   const [channelFilter, setChannelFilter] = useState<FilterChannel>('ALL');
+  const [typeFilter, setTypeFilter] = useState<FilterType>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -254,6 +268,7 @@ export default function NotificationsPage() {
         pageSize: PAGE_SIZE,
         status: statusFilter === 'ALL' ? undefined : statusFilter,
         channel: channelFilter === 'ALL' ? undefined : channelFilter,
+        type: typeFilter === 'ALL' ? undefined : typeFilter,
       });
 
       const nextNotifications = response.data ?? [];
@@ -272,7 +287,7 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [channelFilter, currentPage, messageApi, statusFilter]);
+  }, [channelFilter, currentPage, messageApi, statusFilter, typeFilter]);
 
   useEffect(() => {
     void loadNotifications(currentPage);
@@ -359,7 +374,10 @@ export default function NotificationsPage() {
   const notificationFilterLabels = [
     statusFilter !== 'ALL' ? `状态：${statusLabelMap[statusFilter]}` : null,
     channelFilter !== 'ALL' ? `渠道：${channelLabelMap[channelFilter]}` : null,
+    typeFilter !== 'ALL' ? `类型：${typeLabelMap[typeFilter]}` : null,
   ].filter(Boolean);
+
+  const feedbackCount = notifications.filter(isFeedbackNotification).length;
 
   const notificationResultSummary = notificationFilterLabels.length
     ? `已按${notificationFilterLabels.join('、')}筛选，当前匹配 ${total} 条通知。`
@@ -375,6 +393,13 @@ export default function NotificationsPage() {
       content: '',
     });
     setComposerOpen(true);
+  };
+
+  const showMiniProgramFeedback = () => {
+    setCurrentPage(1);
+    setStatusFilter('ALL');
+    setChannelFilter('INTERNAL');
+    setTypeFilter('MINI_PROGRAM_FEEDBACK');
   };
 
   const closeComposerModal = () => {
@@ -432,7 +457,7 @@ export default function NotificationsPage() {
 
     try {
       const updated = await notificationsApi.markAsRead(notification.id);
-      messageApi.success('通知已标记为已读');
+      messageApi.success(isFeedbackNotification(notification) ? '反馈已标记为已处理' : '通知已标记为已读');
 
       if (detailNotification?.id === updated.id) {
         setDetailNotification(updated);
@@ -488,6 +513,7 @@ export default function NotificationsPage() {
           <div className={pageCls.sectionSummaryRow}>
             <div className={pageCls.sectionSummaryText}>{notificationResultSummary}</div>
             <div className={pageCls.statusMetaWrap}>
+              {feedbackCount > 0 ? <span className={pageCls.sectionMetaPill}>当前页反馈 {feedbackCount} 条</span> : null}
               <span className={pageCls.sectionMetaPill}>待发送</span>
               <span className={pageCls.sectionMetaPill}>已发送</span>
               <span className={pageCls.sectionMetaPill}>已读</span>
@@ -526,6 +552,18 @@ export default function NotificationsPage() {
                   setChannelFilter(value);
                 }}
               />
+              <Select
+                value={typeFilter}
+                className={`${pageCls.settingsInput} ${pageCls.toolbarSelect} ${pageCls.toolbarSelectWide}`}
+                options={(
+                  Object.keys(typeLabelMap) as FilterType[]
+                ).map((key) => ({ label: typeLabelMap[key], value: key }))}
+                onChange={(value: FilterType) => {
+                  setCurrentPage(1);
+                  setTypeFilter(value);
+                }}
+              />
+              <Button type="text" className={widgetCls.dashboardCardAction} onClick={showMiniProgramFeedback}>小程序反馈</Button>
             </div>
           </div>
 
@@ -576,10 +614,10 @@ export default function NotificationsPage() {
                             size="large"
                             className={pageCls.cardActionPrimary}
                             icon={<CheckCircleOutlined />}
-                            disabled={notification.status !== 'SENT'}
+                            disabled={!canMarkAsRead(notification)}
                             onClick={() => handleMarkAsRead(notification)}
                           >
-                            {getMarkAsReadLabel(notification.status)}
+                            {getMarkAsReadLabel(notification)}
                           </Button>
                         </div>
                       </div>
@@ -705,10 +743,10 @@ export default function NotificationsPage() {
           <Button
             type="primary"
             icon={<MailOutlined />}
-            disabled={detailNotification.status !== 'SENT'}
+            disabled={!canMarkAsRead(detailNotification)}
             onClick={() => handleMarkAsRead(detailNotification)}
           >
-            {getMarkAsReadLabel(detailNotification.status)}
+            {getMarkAsReadLabel(detailNotification)}
           </Button>
         ) : null}
       >

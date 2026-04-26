@@ -59,6 +59,7 @@ export interface QueryNotificationsParams {
   pageSize?: number;
   channel?: NotificationChannel;
   status?: NotificationStatus;
+  type?: string;
   memberId?: string;
   miniUserId?: string;
   adminUserId?: string;
@@ -82,6 +83,7 @@ export const notificationsApi = {
         pageSize: params.pageSize,
         channel: params.channel,
         status: params.status,
+        type: params.type,
         memberId: params.memberId,
         miniUserId: params.miniUserId,
         adminUserId: params.adminUserId,
