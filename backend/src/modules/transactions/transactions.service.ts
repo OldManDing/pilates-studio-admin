@@ -1,11 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { UpdateTransactionStatusDto } from './dto/update-transaction-status.dto';
 import { QueryTransactionDto } from './dto/query-transaction.dto';
-import { TransactionStatus } from '../../common/enums/domain.enums';
+import {
+  MemberStatus,
+  MembershipPlanCategory,
+  TransactionKind,
+  TransactionStatus,
+} from '../../common/enums/domain.enums';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
 import { buildDateRange } from '../../common/utils/date-range';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -139,15 +144,78 @@ export class TransactionsService {
   }
 
   async updateStatus(id: string, dto: UpdateTransactionStatusDto) {
-    await this.findOne(id);
+    return this.prisma.$transaction(async (tx) => {
+      const transaction = await tx.transaction.findUnique({
+        where: { id },
+        include: {
+          member: true,
+          plan: true,
+        },
+      });
 
-    return this.prisma.transaction.update({
-      where: { id },
-      data: { status: dto.status },
-      include: {
-        member: true,
-        plan: true,
-      },
+      if (!transaction) {
+        throw new NotFoundException('Transaction not found');
+      }
+
+      const shouldApplyRenewal =
+        transaction.kind === TransactionKind.MEMBERSHIP_RENEWAL &&
+        dto.status === TransactionStatus.COMPLETED &&
+        transaction.status !== TransactionStatus.COMPLETED;
+
+      if (!shouldApplyRenewal) {
+        return tx.transaction.update({
+          where: { id },
+          data: { status: dto.status },
+          include: {
+            member: true,
+            plan: true,
+          },
+        });
+      }
+
+      if (!transaction.memberId || !transaction.member || !transaction.planId || !transaction.plan) {
+        throw new BadRequestException('Membership renewal transaction must include member and plan');
+      }
+
+      const statusUpdate = await tx.transaction.updateMany({
+        where: {
+          id,
+          status: { not: TransactionStatus.COMPLETED },
+        },
+        data: { status: dto.status },
+      });
+
+      if (statusUpdate.count === 0) {
+        return tx.transaction.findUniqueOrThrow({
+          where: { id },
+          include: {
+            member: true,
+            plan: true,
+          },
+        });
+      }
+
+      await tx.member.update({
+        where: { id: transaction.memberId },
+        data: {
+          planId: transaction.planId,
+          joinedAt: new Date(),
+          status: MemberStatus.ACTIVE,
+          remainingCredits: this.calculateRenewedCredits(
+            transaction.member.remainingCredits,
+            transaction.plan.category as MembershipPlanCategory,
+            transaction.plan.totalCredits,
+          ),
+        },
+      });
+
+      return tx.transaction.findUniqueOrThrow({
+        where: { id },
+        include: {
+          member: true,
+          plan: true,
+        },
+      });
     });
   }
 
@@ -259,5 +327,19 @@ export class TransactionsService {
   private async generateTransactionCode(): Promise<string> {
     const count = await this.prisma.transaction.count();
     return `T${String(count + 1).padStart(8, '0')}`;
+  }
+
+  private calculateRenewedCredits(
+    currentCredits: number,
+    category: MembershipPlanCategory,
+    planCredits?: number | null,
+  ) {
+    const safeCurrentCredits = Math.max(currentCredits, 0);
+
+    if (category === MembershipPlanCategory.PERIOD_CARD) {
+      return planCredits ?? Math.max(safeCurrentCredits, 1);
+    }
+
+    return safeCurrentCredits + (planCredits ?? 0);
   }
 }
