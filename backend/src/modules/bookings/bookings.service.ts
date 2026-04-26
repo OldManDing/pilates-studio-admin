@@ -280,8 +280,7 @@ export class BookingsService {
         },
       });
 
-      // If cancelling, decrement booked count
-      if (dto.status === BookingStatus.CANCELLED) {
+      if (this.occupiesSeat(booking.status) && !this.occupiesSeat(dto.status)) {
         await tx.courseSession.update({
           where: { id: booking.sessionId },
           data: { bookedCount: { decrement: 1 } },
@@ -316,7 +315,7 @@ export class BookingsService {
       throw new BadRequestException('Cannot delete a completed booking');
     }
 
-    if (booking.status !== BookingStatus.CANCELLED) {
+    if (this.occupiesSeat(booking.status)) {
       await this.prisma.courseSession.update({
         where: { id: booking.sessionId },
         data: { bookedCount: { decrement: 1 } },
@@ -501,5 +500,9 @@ export class BookingsService {
 
   private shouldConsumeCredit(category?: string) {
     return category === MembershipPlanCategory.TIME_CARD || category === MembershipPlanCategory.PRIVATE_PACKAGE;
+  }
+
+  private occupiesSeat(status: string) {
+    return status !== BookingStatus.CANCELLED && status !== BookingStatus.NO_SHOW;
   }
 }
