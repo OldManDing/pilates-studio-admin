@@ -98,6 +98,14 @@ export class NotificationsService {
     };
   }
 
+  async findMine(miniUserId: string, query: QueryNotificationDto): Promise<PaginatedResponse<any>> {
+    return this.findAll({
+      ...query,
+      miniUserId,
+      channel: query.channel ?? NotificationChannel.MINI_PROGRAM,
+    });
+  }
+
   async findOne(id: string) {
     const notification = await this.prisma.notification.findUnique({
       where: { id },
@@ -119,6 +127,31 @@ export class NotificationsService {
 
   async markAsRead(id: string) {
     await this.findOne(id);
+
+    return this.prisma.notification.update({
+      where: { id },
+      data: {
+        status: NotificationStatus.READ,
+        readAt: new Date(),
+      },
+      include: {
+        member: true,
+        miniUser: true,
+        adminUser: {
+          select: { id: true, email: true, displayName: true },
+        },
+      },
+    });
+  }
+
+  async markMineAsRead(miniUserId: string, id: string) {
+    const notification = await this.prisma.notification.findFirst({
+      where: { id, miniUserId },
+    });
+
+    if (!notification) {
+      throw new NotFoundException('Notification not found');
+    }
 
     return this.prisma.notification.update({
       where: { id },

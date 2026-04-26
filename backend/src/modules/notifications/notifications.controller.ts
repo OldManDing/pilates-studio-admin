@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { AllowMiniUser } from '../../common/decorators/allow-mini-user.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { QueryNotificationDto } from './dto/query-notification.dto';
@@ -23,6 +25,29 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Get notifications with pagination and filters' })
   async findAll(@Query() query: QueryNotificationDto) {
     return this.notificationsService.findAll(query);
+  }
+
+  @Get('my')
+  @AllowMiniUser()
+  @RequirePermissions('READ:NOTIFICATIONS')
+  @ApiOperation({ summary: 'Get current mini-program user notifications' })
+  async findMy(
+    @CurrentUser('sub') miniUserId: string,
+    @Query() query: QueryNotificationDto,
+  ) {
+    return this.notificationsService.findMine(miniUserId, query);
+  }
+
+  @Patch('my/:id/read')
+  @AllowMiniUser()
+  @RequirePermissions('WRITE:NOTIFICATIONS')
+  @ApiOperation({ summary: 'Mark current mini-program user notification as read' })
+  @ApiParam({ name: 'id', description: 'Notification ID' })
+  async markMineAsRead(
+    @CurrentUser('sub') miniUserId: string,
+    @Param('id') id: string,
+  ) {
+    return this.notificationsService.markMineAsRead(miniUserId, id);
   }
 
   @Get(':id')
