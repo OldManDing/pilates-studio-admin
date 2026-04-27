@@ -16,9 +16,10 @@ import { MembersService } from '../src/modules/members/members.service';
 import { BookingsController } from '../src/modules/bookings/bookings.controller';
 import { BookingsService } from '../src/modules/bookings/bookings.service';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
+import { NotificationsService } from '../src/modules/notifications/notifications.service';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
 import { TransformInterceptor } from '../src/common/interceptors/transform.interceptor';
-import { BookingSource } from '../src/common/enums/domain.enums';
+import { BookingSource, MembershipPlanCategory } from '../src/common/enums/domain.enums';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const request = require('supertest');
@@ -80,6 +81,10 @@ describe('Auth -> Members -> Bookings integration flow', () => {
     }),
   };
 
+  const notificationsService = {
+    createFromSetting: jest.fn(),
+  };
+
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [AuthController, MembersController, BookingsController],
@@ -90,6 +95,7 @@ describe('Auth -> Members -> Bookings integration flow', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: JwtService, useValue: jwtService },
         { provide: ConfigService, useValue: configService },
+        { provide: NotificationsService, useValue: notificationsService },
       ],
     }).compile();
 
@@ -117,6 +123,7 @@ describe('Auth -> Members -> Bookings integration flow', () => {
     prisma.courseSession.update.mockResolvedValue({});
     prisma.member.findMany.mockResolvedValue([]);
     prisma.transaction.findMany.mockResolvedValue([]);
+    notificationsService.createFromSetting.mockResolvedValue(undefined);
 
     const passwordHash = await bcrypt.hash('Admin123!', 10);
     prisma.adminUser.findUnique.mockResolvedValue({
@@ -142,10 +149,11 @@ describe('Auth -> Members -> Bookings integration flow', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    await app?.close();
   });
 
   it('logs in, creates a member, then creates a booking', async () => {
+    const joinedAt = new Date();
     const createdMember = {
       id: memberId,
       memberCode: 'M000001',
@@ -153,12 +161,17 @@ describe('Auth -> Members -> Bookings integration flow', () => {
       phone: '13800000000',
       email: 'lin@example.com',
       remainingCredits: 12,
-      planId: null,
+      planId: 'plan-1',
       status: 'ACTIVE',
-      joinedAt: new Date('2026-01-01T00:00:00.000Z'),
+      joinedAt,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
-      plan: null,
+      plan: {
+        id: 'plan-1',
+        name: 'Monthly Time Card',
+        category: MembershipPlanCategory.TIME_CARD,
+        durationDays: 30,
+      },
       miniUser: null,
       bookings: [],
       transactions: [],
@@ -172,9 +185,9 @@ describe('Auth -> Members -> Bookings integration flow', () => {
     prisma.courseSession.findUnique.mockResolvedValue({
       id: sessionId,
       capacity: 10,
-      bookedCount: 1,
+      bookedCount: 0,
       course: { id: 'course-1', name: 'Morning Flow' },
-      _count: { bookings: 1 },
+      _count: { bookings: 0 },
     });
 
     prisma.booking.create.mockResolvedValue({
@@ -227,7 +240,11 @@ describe('Auth -> Members -> Bookings integration flow', () => {
     expect(bookingResponse.body.data.status).toBe('CONFIRMED');
     expect(prisma.courseSession.update).toHaveBeenCalledWith({
       where: { id: sessionId },
-      data: { bookedCount: { increment: 1 } },
+      data: { bookedCount: 1 },
     });
+    expect(notificationsService.createFromSetting).toHaveBeenCalledWith('booking_confirmation', expect.objectContaining({
+      memberId,
+      type: 'BOOKING_CONFIRMATION',
+    }));
   });
 });
