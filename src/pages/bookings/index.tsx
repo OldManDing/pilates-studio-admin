@@ -42,7 +42,7 @@ type BookingFilterDraft = {
 
 const bookingStatusOptions: BookingStatus[] = ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
 const bookingPeriods: BookingPeriod[] = ['今天', '明天', '本周'];
-const BOOKING_QUERY_PAGE_SIZE = 200;
+const BOOKING_QUERY_PAGE_SIZE = 100;
 
 const formatDateTime = (dateStr: string) => {
   try {
