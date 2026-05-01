@@ -7,13 +7,14 @@ import AppSidebar from '@/components/AppSidebar';
 import cls from '@/styles/layout.module.css';
 import { MOBILE_SIDEBAR_DRAWER_WIDTH } from '@/styles/dimensions';
 import { authApi, clearTokens } from '@/services/auth';
+import { hasRequiredPermissions, isOwnerOnlyPath, routePermissionMap } from '@/utils/menu';
 
 const AppLayout: FC<PropsWithChildren> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<{ role: { code: string } } | null>(null);
+  const [user, setUser] = useState<{ role: { code: string; permissions?: string[] } } | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -51,7 +52,17 @@ const AppLayout: FC<PropsWithChildren> = ({ children }) => {
     return null;
   }
 
-  const canAccessRoute = (_pathname: string) => true;
+  const canAccessRoute = (pathname: string) => {
+    if (user?.role.code === 'OWNER') {
+      return true;
+    }
+
+    if (isOwnerOnlyPath(pathname)) {
+      return false;
+    }
+
+    return hasRequiredPermissions(user?.role.permissions || [], routePermissionMap[pathname]);
+  };
 
   if (!canAccessRoute(location.pathname)) {
     navigate('/403', { replace: true, state: { from: location.pathname } });

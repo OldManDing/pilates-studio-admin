@@ -4,7 +4,7 @@ import { App } from 'antd';
 import { DownOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import cls from './index.module.css';
-import { menuItems } from '@/utils/menu';
+import { hasRequiredPermissions, menuItems } from '@/utils/menu';
 import { clearTokens } from '@/services/auth';
 import { authApi } from '@/services/auth';
 
@@ -22,7 +22,7 @@ const groupLabelMap = {
 const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
   const { message } = App.useApp();
   const [accountOpen, setAccountOpen] = useState(false);
-  const [user, setUser] = useState<{ displayName: string; email: string; role: { code: string } } | null>(null);
+  const [user, setUser] = useState<{ displayName: string; email: string; role: { code: string; permissions?: string[] } } | null>(null);
   const accountWrapRef = useRef<HTMLDivElement | null>(null);
   const accountButtonRef = useRef<HTMLButtonElement | null>(null);
   const settingsActionRef = useRef<HTMLButtonElement | null>(null);
@@ -77,7 +77,7 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
     }
   }, [accountOpen]);
 
-  const visibleMenuItems = menuItems;
+  const visibleMenuItems = menuItems.filter((item) => user?.role.code === 'OWNER' || hasRequiredPermissions(user?.role.permissions || [], item.requiredPermissions));
 
   const groupedMenuItems = visibleMenuItems.reduce<Record<string, typeof visibleMenuItems>>((groups, item) => {
     groups[item.group] = groups[item.group] || [];
