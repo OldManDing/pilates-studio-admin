@@ -243,10 +243,10 @@ export default function FinancePage() {
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        const firstPage = await membersApi.getAll(1, 500);
+        const firstPage = await membersApi.getAll(1, 100);
         const allRows = [...(firstPage.data || [])];
         for (let nextPage = 2; nextPage <= firstPage.meta.totalPages; nextPage += 1) {
-          const nextData = await membersApi.getAll(nextPage, 500);
+          const nextData = await membersApi.getAll(nextPage, 100);
           allRows.push(...nextData.data);
         }
         setMembers(allRows);
@@ -798,6 +798,7 @@ export default function FinancePage() {
         confirmLoading={isSavingTransaction}
         okText={editingTransaction ? '保存修改' : '新增交易'}
         cancelText="取消"
+        zIndex={1600}
         destroyOnHidden
       >
         <Form form={form} className={pageCls.crudModalForm} layout="vertical">

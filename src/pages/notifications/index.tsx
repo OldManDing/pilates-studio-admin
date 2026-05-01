@@ -75,7 +75,7 @@ type ComposerFormValues = {
 };
 
 const PAGE_SIZE = 10;
-const RECIPIENT_PAGE_SIZE = 500;
+const RECIPIENT_PAGE_SIZE = 100;
 const emptyRecipientOptions: Record<RecipientType, RecipientSelectOption[]> = {
   member: [],
   miniUser: [],
@@ -700,6 +700,7 @@ export default function NotificationsPage() {
         confirmLoading={saving}
         okText="立即发送"
         cancelText="取消"
+        zIndex={1600}
         destroyOnHidden
       >
         <Form form={composerForm} className={pageCls.crudModalForm} layout="vertical">

@@ -98,7 +98,7 @@ export default function BookingListCard({
           {primaryActionLabel}
         </Button>
         <Button size="large" className={pageCls.cardActionHalf} onClick={onViewDetail} disabled={detailActionDisabled}>
-          详情
+          查看详情
         </Button>
       </div>
     </div>

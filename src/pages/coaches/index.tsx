@@ -442,6 +442,7 @@ export default function CoachesPage() {
         confirmLoading={isSavingCoach}
         okText={editingCoach ? '保存修改' : '新增教练'}
         cancelText="取消"
+        zIndex={1600}
         forceRender
         destroyOnHidden
       >

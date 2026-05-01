@@ -398,6 +398,7 @@ export default function CoursesPage() {
         confirmLoading={isSaving}
         okText={editingCourse ? '保存修改' : '新增课程'}
         cancelText="取消"
+        zIndex={1600}
         forceRender
         destroyOnHidden
       >
@@ -441,12 +442,12 @@ export default function CoursesPage() {
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="durationMinutes" label="课程时长（分钟）" rules={[{ required: true, message: '请输入课程时长' }]}>
-                <InputNumber className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`} min={1} precision={0} />
+                <InputNumber className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`} min={1} precision={0} controls={false} size="large" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="capacity" label="课程容量（人）" rules={[{ required: true, message: '请输入课程容量' }]}>
-                <InputNumber className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`} min={1} precision={0} />
+                <InputNumber className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`} min={1} precision={0} controls={false} size="large" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>

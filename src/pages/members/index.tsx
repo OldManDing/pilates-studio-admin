@@ -534,6 +534,7 @@ export default function MembersPage() {
         confirmLoading={isSavingMember}
         okText={editingMember ? '保存修改' : '新增会员'}
         cancelText="取消"
+        zIndex={1600}
         forceRender
         destroyOnHidden
       >

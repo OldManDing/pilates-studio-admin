@@ -1,4 +1,4 @@
-import { CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons';
+import { CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Col, Descriptions, Drawer, Form, Modal, Pagination, Popconfirm, Row, Select, Spin, message } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
@@ -129,6 +129,8 @@ const getNextBookingStatus = (status: BookingStatus): BookingStatus => {
   if (status === 'CONFIRMED') return 'COMPLETED';
   return status;
 };
+
+const canAdvanceBookingStatus = (status: BookingStatus) => status === 'PENDING' || status === 'CONFIRMED';
 
 export default function BookingsPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -564,6 +566,7 @@ export default function BookingsPage() {
         confirmLoading={isSaving}
         okText={editingBooking ? '保存修改' : '新增预约'}
         cancelText="取消"
+        zIndex={1600}
         forceRender
         destroyOnHidden
       >
@@ -659,17 +662,18 @@ export default function BookingsPage() {
             >
               编辑
             </Button>
-            <Button
-              icon={<EyeOutlined />}
-              onClick={() => handleStatusAdvance(detailBooking)}
-              loading={statusUpdatingBookingId === detailBooking.id}
-              disabled={
-                (statusUpdatingBookingId !== null && statusUpdatingBookingId !== detailBooking.id)
-                || deletingBookingId !== null
-              }
-            >
-              {getStatusActionLabel(detailBooking.status)}
-            </Button>
+            {canAdvanceBookingStatus(detailBooking.status) ? (
+              <Button
+                onClick={() => handleStatusAdvance(detailBooking)}
+                loading={statusUpdatingBookingId === detailBooking.id}
+                disabled={
+                  (statusUpdatingBookingId !== null && statusUpdatingBookingId !== detailBooking.id)
+                  || deletingBookingId !== null
+                }
+              >
+                {getStatusActionLabel(detailBooking.status)}
+              </Button>
+            ) : null}
             <Popconfirm
               title="确认删除该预约吗？"
               okText="删除"
