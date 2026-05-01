@@ -118,9 +118,11 @@ export class MembersService {
   async update(id: string, dto: UpdateMemberDto) {
     await this.findOne(id);
 
+    const { initialCredits, ...updateData } = dto as UpdateMemberDto & { initialCredits?: number };
+
     return this.prisma.member.update({
       where: { id },
-      data: dto,
+      data: updateData,
       include: {
         plan: true,
         miniUser: true,

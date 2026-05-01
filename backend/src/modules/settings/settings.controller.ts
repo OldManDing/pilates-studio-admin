@@ -1,8 +1,9 @@
-import { Controller, Get, Put, Body, Post, Res, UploadedFile, UseInterceptors, HttpCode, HttpStatus, Query } from '@nestjs/common';
+import { Controller, Get, Put, Body, Post, Res, UploadedFile, UseInterceptors, HttpCode, HttpStatus, Query, ForbiddenException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SettingsService } from './settings.service';
 import { UpdateStudioDto } from './dto/update-studio.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
@@ -52,13 +53,22 @@ export class SettingsController {
   @Get('export')
   @RequirePermissions('MANAGE:SETTINGS')
   @ApiOperation({ summary: 'Export data as JSON' })
-  async exportData(@Query('range') range: string | undefined, @Res() res: Response) {
+  async exportData(
+    @Query('range') range: string | undefined,
+    @CurrentUser('role') role: { code?: string } | undefined,
+    @Res() res: Response,
+  ) {
+    if ((!range || range === '全部') && role?.code !== 'OWNER') {
+      throw new ForbiddenException('Only owner can export full backups');
+    }
+
     const data = await this.settingsService.exportAllData(range);
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const fileName = `门店备份-${range || '全部'}-${timestamp}.json`;
+    const fileName = `store-backup-${timestamp}.json`;
+    const encodedFileName = encodeURIComponent(`门店备份-${range || '全部'}-${timestamp}.json`);
     
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"; filename*=UTF-8''${encodedFileName}`);
     res.send(JSON.stringify(data, null, 2));
   }
 
@@ -79,7 +89,14 @@ export class SettingsController {
       },
     },
   })
-  async restoreData(@UploadedFile() file: { buffer: Buffer } | undefined) {
+  async restoreData(
+    @CurrentUser('role') role: { code?: string } | undefined,
+    @UploadedFile() file: { buffer: Buffer } | undefined,
+  ) {
+    if (role?.code !== 'OWNER') {
+      throw new ForbiddenException('Only owner can restore backups');
+    }
+
     if (!file) {
       return { success: false, message: '未上传备份文件' };
     }

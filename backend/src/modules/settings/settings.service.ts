@@ -117,6 +117,8 @@ export class SettingsService {
     const dayCount = range === '近 7 天' ? 7 : range === '本季度' ? 90 : range === '近 30 天' ? 30 : null;
     const startsAt = dayCount ? new Date(Date.now() - dayCount * 24 * 60 * 60 * 1000) : null;
 
+    const includeAdminUsers = !startsAt;
+
     const [
       studioSettings,
       notificationSettings,
@@ -160,19 +162,21 @@ export class SettingsService {
         where: startsAt ? { happenedAt: { gte: startsAt } } : undefined,
         include: { member: true },
       }),
-      this.prisma.adminUser.findMany({
-        select: {
-          id: true,
-          email: true,
-          phone: true,
-          passwordHash: true,
-          displayName: true,
-          roleId: true,
-          twoFactorEnabled: true,
-          twoFactorSecret: true,
-          createdAt: true,
-        },
-      }),
+      includeAdminUsers
+        ? this.prisma.adminUser.findMany({
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              passwordHash: true,
+              displayName: true,
+              roleId: true,
+              twoFactorEnabled: true,
+              twoFactorSecret: true,
+              createdAt: true,
+            },
+          })
+        : Promise.resolve([]),
     ]);
 
     return {
