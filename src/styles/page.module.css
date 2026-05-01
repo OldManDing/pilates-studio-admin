@@ -737,6 +737,7 @@
   border-radius: var(--radius-sm) !important;
   font-weight: var(--font-bold);
   color: var(--button-text-primary) !important;
+  white-space: nowrap;
 }
 
 :global(.ant-btn-primary).cardActionPrimary,
@@ -771,6 +772,7 @@
   border-radius: var(--radius-sm) !important;
   font-weight: var(--font-bold);
   color: var(--button-text-secondary) !important;
+  white-space: nowrap;
 }
 
 .cardActionHalf {
@@ -778,6 +780,7 @@
   min-width: 0;
   border-radius: var(--radius-sm) !important;
   font-weight: var(--font-bold);
+  white-space: nowrap;
 }
 
 .cardActionSecondary,
