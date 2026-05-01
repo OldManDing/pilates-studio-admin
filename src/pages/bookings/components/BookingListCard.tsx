@@ -18,6 +18,9 @@ export type BookingListCardProps = {
   sourceText: string;
   tone: AccentTone;
   primaryActionLabel: string;
+  primaryActionLoading?: boolean;
+  primaryActionDisabled?: boolean;
+  detailActionDisabled?: boolean;
   onPrimaryAction: () => void;
   onViewDetail: () => void;
 };
@@ -34,6 +37,9 @@ export default function BookingListCard({
   sourceText,
   tone,
   primaryActionLabel,
+  primaryActionLoading = false,
+  primaryActionDisabled = false,
+  detailActionDisabled = false,
   onPrimaryAction,
   onViewDetail,
 }: BookingListCardProps) {
@@ -81,10 +87,17 @@ export default function BookingListCard({
       </div>
 
       <div className={`${widgetCls.detailActionGroup} ${styles.bookingRecordActions}`}>
-        <Button type="primary" size="large" className={pageCls.cardActionHalf} onClick={onPrimaryAction}>
+        <Button
+          type="primary"
+          size="large"
+          className={pageCls.cardActionHalf}
+          onClick={onPrimaryAction}
+          loading={primaryActionLoading}
+          disabled={primaryActionDisabled}
+        >
           {primaryActionLabel}
         </Button>
-        <Button size="large" className={pageCls.cardActionHalf} onClick={onViewDetail}>
+        <Button size="large" className={pageCls.cardActionHalf} onClick={onViewDetail} disabled={detailActionDisabled}>
           详情
         </Button>
       </div>

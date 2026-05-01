@@ -155,12 +155,7 @@ const formatTimeRange = (start?: string, end?: string) => {
   return `${startText} - ${endText}`;
 };
 
-const formatDurationText = (minutes?: number) => {
-  if (!minutes || minutes <= 0) return '时长信息未同步';
-  return `${minutes} min`;
-};
-
-const mapTodayCourses = (bookings: Booking[], courses: Course[]): TodayCourseViewModel[] => {
+const mapTodayCourses = (bookings: Booking[], _courses: Course[]): TodayCourseViewModel[] => {
   const now = new Date();
   const sortedBookings = [...bookings].sort((left, right) => {
     const leftTime = toValidDate(left.session?.startsAt)?.getTime() ?? Number.MAX_SAFE_INTEGER;
@@ -176,8 +171,18 @@ const mapTodayCourses = (bookings: Booking[], courses: Course[]): TodayCourseVie
     return isSameCalendarDay(startsAt, now);
   });
 
-  const fallbackQueue = sortedBookings.filter((item) => item.status === 'PENDING' || item.status === 'CONFIRMED');
-  const executionQueue = (todayQueue.length ? todayQueue : fallbackQueue).slice(0, 4);
+  const sessionDedup = new Map<string, Booking>();
+  for (const booking of todayQueue) {
+    const sessionId = booking.session?.id;
+    if (!sessionId) {
+      continue;
+    }
+    if (!sessionDedup.has(sessionId)) {
+      sessionDedup.set(sessionId, booking);
+    }
+  }
+
+  const executionQueue = Array.from(sessionDedup.values()).slice(0, 4);
 
   if (executionQueue.length > 0) {
     return executionQueue.map((item) => ({
@@ -193,17 +198,7 @@ const mapTodayCourses = (bookings: Booking[], courses: Course[]): TodayCourseVie
     }));
   }
 
-  return courses.slice(0, 4).map((course) => ({
-    id: course.id,
-    title: course.name,
-    timeText: '待补时段',
-    participantText: `${formatDurationText(course.durationMinutes)} · ${course.type}`,
-    coachName: course.coach?.name || '待分配教练',
-    locationText: course.level ? `${course.level}课程` : '门店信息未同步',
-    statusText: course.isActive ? '已确认' : '已取消',
-    queueHintText: '当前暂无可用预约队列，可前往预约管理核对近期排程。',
-    actionText: '去预约管理',
-  }));
+  return [];
 };
 
 const mapUpcomingBookings = (items: Booking[]): UpcomingBookingViewModel[] => {
@@ -273,11 +268,34 @@ export default function DashboardPage() {
       try {
         setLoading(true);
 
+        const loadAllBookings = async () => {
+          const now = new Date();
+          const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).toISOString().split('T')[0];
+          const to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 30).toISOString().split('T')[0];
+          const pageSize = 100;
+          const firstPage = await bookingsApi.getAll({ page: 1, pageSize, from, to });
+          const allBookings = [...firstPage.data];
+
+          for (let nextPage = 2; nextPage <= firstPage.meta.totalPages; nextPage += 1) {
+            const pageData = await bookingsApi.getAll({ page: nextPage, pageSize, from, to });
+            allBookings.push(...pageData.data);
+          }
+
+          return {
+            data: allBookings,
+            meta: {
+              ...firstPage.meta,
+              total: allBookings.length,
+              totalPages: firstPage.meta.totalPages,
+            },
+          };
+        };
+
         const [memberReportResult, coursesResult, coachesResult, bookingsResult, txSummaryResult] = await Promise.allSettled([
           reportsApi.getMembers(),
-          coursesApi.getAll(),
-          coachesApi.getAll(),
-          bookingsApi.getAll({ page: 1, pageSize: 100 }),
+          coursesApi.getPaged({ page: 1, pageSize: 50 }),
+          coachesApi.getPaged({ page: 1, pageSize: 50 }),
+          loadAllBookings(),
           transactionsApi.getSummary(),
         ]);
 
@@ -286,10 +304,10 @@ export default function DashboardPage() {
         const memberReport = memberReportResult.status === 'fulfilled' ? memberReportResult.value : null;
         if (!memberReport) failures.push('会员统计');
 
-        const coursesData = coursesResult.status === 'fulfilled' ? coursesResult.value : [];
+        const coursesData = coursesResult.status === 'fulfilled' ? coursesResult.value.data : [];
         if (coursesResult.status !== 'fulfilled') failures.push('课程列表');
 
-        const coachesData = coachesResult.status === 'fulfilled' ? coachesResult.value : [];
+        const coachesData = coachesResult.status === 'fulfilled' ? coachesResult.value.data : [];
         if (coachesResult.status !== 'fulfilled') failures.push('教练列表');
 
         const bookingsRes = bookingsResult.status === 'fulfilled'

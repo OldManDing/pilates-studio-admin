@@ -32,7 +32,7 @@ export default function TodayCoursePanel({
   return (
     <SectionCard
       title="今日执行队列"
-      subtitle="今天 · 聚焦落地任务"
+      subtitle="仅展示今日预约任务"
     >
       {anomalyCount > 0 ? (
         <div className={styles.todayAlertBar}>异常预约 {anomalyCount} 单，优先处理回访与补位。</div>
@@ -42,6 +42,7 @@ export default function TodayCoursePanel({
         <div className={`${widgetCls.recordListDense} ${styles.todayList}`}>
           {items.map((item) => {
             const isAnomaly = isAnomalyStatus(item.statusText);
+            const hasDetailAction = Boolean(onViewDetail);
 
             return (
               <button
@@ -49,6 +50,8 @@ export default function TodayCoursePanel({
                 type="button"
                 className={`${widgetCls.recordItem} ${widgetCls.dashboardCourseItem} ${styles.itemButtonReset} ${styles.todayItem} ${isAnomaly ? styles.todayItemAnomaly : ''}`}
                 onClick={() => onViewDetail?.(item.id)}
+                disabled={!hasDetailAction}
+                aria-disabled={!hasDetailAction}
               >
                 <div className={widgetCls.recordMeta}>
                   <div className={widgetCls.dashboardTimeBadge}>{item.timeText}</div>

@@ -76,8 +76,8 @@
   height: auto !important;
   padding: 16px !important;
   border-radius: var(--radius-md) !important;
-  border-color: var(--border-soft) !important;
-  background: rgba(248, 250, 251, 0.92) !important;
+  border-color: color-mix(in srgb, var(--text-tertiary) 28%, transparent) !important;
+  background: color-mix(in srgb, var(--text-tertiary) 8%, #fff) !important;
   box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
@@ -104,7 +104,7 @@
 }
 
 .bookingPeriodMeta {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: var(--font-size-xs);
   font-weight: var(--font-bold);
   letter-spacing: 0.12em;
@@ -153,14 +153,14 @@
 
 .bookingScheduleBlock {
   display: flex;
-  min-width: 92px;
+  min-width: 82px;
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
 }
 
 .bookingScheduleBadge {
-  min-width: 92px;
+  min-width: 82px;
 }
 
 .bookingScheduleDate {
@@ -263,6 +263,10 @@
 
 .bookingRecordActions :global(.ant-btn) {
   width: 100%;
+}
+
+.bookingDetailStatGrid {
+  grid-template-columns: 1fr;
 }
 
 @media (max-width: 1200px) {

@@ -50,12 +50,14 @@ export default function BookingPeriodSelector({
       </div>
 
       <div className={styles.bookingSelectorBody}>
-        <div className={styles.bookingPeriodGrid}>
+        <div className={styles.bookingPeriodGrid} role="group" aria-label="预约周期筛选">
           {periods.map((period) => (
             <Button
               key={period.value}
               type={period.active ? 'primary' : 'default'}
               className={`${styles.bookingPeriodButton} ${period.active ? styles.bookingPeriodButtonActive : ''}`}
+              aria-pressed={period.active}
+              aria-label={`${period.label}，${period.metaText}`}
               onClick={() => onPeriodChange(period.value)}
             >
               <span className={styles.bookingPeriodButtonBody}>

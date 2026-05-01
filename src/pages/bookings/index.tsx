@@ -11,12 +11,14 @@ import StatusTag from '@/components/StatusTag';
 import { CRUD_MODAL_WIDTH, DETAIL_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
-import { bookingStatusLabels, type BookingStatus } from '@/types';
+import { bookingStatusLabels, memberStatusLabels, type BookingStatus } from '@/types';
 import { bookingsApi, type Booking } from '@/services/bookings';
-import { membersApi, type Member } from '@/services/members';
+import { type Member } from '@/services/members';
 import { courseSessionsApi, type CourseSession } from '@/services/courseSessions';
 import { getErrorMessage } from '@/utils/errors';
 import { getToneFromName } from '@/utils/tone';
+import { useDebouncedValue } from '@/utils/useDebouncedValue';
+import styles from './index.module.css';
 import {
   BookingHeroStats,
   BookingListCard,
@@ -42,7 +44,6 @@ type BookingFilterDraft = {
 
 const bookingStatusOptions: BookingStatus[] = ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
 const bookingPeriods: BookingPeriod[] = ['今天', '明天', '本周'];
-const BOOKING_QUERY_PAGE_SIZE = 100;
 
 const formatDateTime = (dateStr: string) => {
   try {
@@ -113,45 +114,32 @@ const getBookingPeriodMeta = (period: BookingPeriod) => {
   return `${formatMonthDay(today)} - ${formatMonthDay(weekEnd)}`;
 };
 
-const getPeriodFromDate = (dateStr: string): BookingPeriod => {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const nextWeek = new Date(today);
-  nextWeek.setDate(nextWeek.getDate() + 7);
-
-  if (date >= today && date < tomorrow) return '今天';
-  if (date >= tomorrow && date < new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000)) return '明天';
-  return '本周';
-};
 
 const getStatusActionLabel = (status: BookingStatus) => {
   if (status === 'PENDING') return '确认';
   if (status === 'CONFIRMED') return '签到';
-  if (status === 'COMPLETED') return '恢复待确认';
-  if (status === 'CANCELLED') return '恢复待确认';
-  if (status === 'NO_SHOW') return '标记待确认';
-  return '更新状态';
+  if (status === 'COMPLETED') return '查看详情';
+  if (status === 'CANCELLED') return '查看详情';
+  if (status === 'NO_SHOW') return '查看详情';
+  return '查看详情';
 };
 
 const getNextBookingStatus = (status: BookingStatus): BookingStatus => {
   if (status === 'PENDING') return 'CONFIRMED';
   if (status === 'CONFIRMED') return 'COMPLETED';
-  return 'PENDING';
+  return status;
 };
 
 export default function BookingsPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm<BookingFormValues>();
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [bookingStatsSource, setBookingStatsSource] = useState<Booking[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [sessions, setSessions] = useState<CourseSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [periodFilter, setPeriodFilter] = useState<BookingPeriod>('今天');
   const [searchValue, setSearchValue] = useState('');
+  const debouncedSearchValue = useDebouncedValue(searchValue, 350);
   const [statusFilter, setStatusFilter] = useState<BookingStatus | '全部'>('全部');
   const [filterDraft, setFilterDraft] = useState<BookingFilterDraft>({ status: '全部' });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -164,6 +152,42 @@ export default function BookingsPage() {
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [isMemberLoading, setIsMemberLoading] = useState(false);
+  const [isSessionLoading, setIsSessionLoading] = useState(false);
+  const [statusUpdatingBookingId, setStatusUpdatingBookingId] = useState<string | null>(null);
+  const [deletingBookingId, setDeletingBookingId] = useState<string | null>(null);
+  const [bookingSummary, setBookingSummary] = useState({
+    todayCount: 0,
+    weekTotal: 0,
+    pendingCount: 0,
+    confirmedCount: 0,
+    completedCount: 0,
+    noShowCount: 0,
+  });
+  const fetchAllMembers = useCallback(async () => {
+    const data = await bookingsApi.getMemberOptions();
+    return data as Member[];
+  }, []);
+
+  const loadCreateFormOptions = useCallback(async () => {
+    try {
+      setIsMemberLoading(true);
+      setIsSessionLoading(true);
+
+      const [membersRes, sessionsRes] = await Promise.all([
+        fetchAllMembers(),
+        courseSessionsApi.getUpcoming().catch(() => []),
+      ]);
+
+      setMembers(membersRes);
+      setSessions(sessionsRes);
+    } catch (err) {
+      messageApi.error(getErrorMessage(err, '加载新增预约选项失败，请稍后重试'));
+    } finally {
+      setIsMemberLoading(false);
+      setIsSessionLoading(false);
+    }
+  }, [fetchAllMembers, messageApi]);
 
   const loadBookingsData = useCallback(async (page = 1) => {
     const now = new Date();
@@ -171,12 +195,12 @@ export default function BookingsPage() {
     const endDate = new Date(now);
 
     if (periodFilter === '今天') {
-      endDate.setDate(endDate.getDate() + 1);
+      endDate.setDate(endDate.getDate());
     } else if (periodFilter === '明天') {
       startDate.setDate(startDate.getDate() + 1);
-      endDate.setDate(endDate.getDate() + 2);
+      endDate.setDate(endDate.getDate() + 1);
     } else {
-      endDate.setDate(endDate.getDate() + 7);
+      endDate.setDate(endDate.getDate() + 6);
     }
 
     const from = startDate.toISOString().split('T')[0];
@@ -185,31 +209,27 @@ export default function BookingsPage() {
       from,
       to,
       status: statusFilter === '全部' ? undefined : statusFilter,
-      search: searchValue.trim() || undefined,
+      search: debouncedSearchValue.trim() || undefined,
     };
 
-    const [bookingsRes, bookingStatsRes, membersRes, sessionsRes] = await Promise.all([
+    const [bookingsRes, bookingSummaryRes, membersRes, sessionsRes] = await Promise.all([
       bookingsApi.getAll({
         page,
         pageSize,
         ...queryParams,
       }),
-      bookingsApi.getAll({
-        page: 1,
-        pageSize: BOOKING_QUERY_PAGE_SIZE,
-        ...queryParams,
-      }),
-      membersApi.getAll(1, 100),
+      bookingsApi.getSummary(queryParams),
+      fetchAllMembers(),
       courseSessionsApi.getUpcoming().catch(() => []),
     ]);
 
     setBookings(bookingsRes.data);
-    setBookingStatsSource(bookingStatsRes.data);
+    setBookingSummary(bookingSummaryRes);
     setCurrentPage(bookingsRes.meta.page);
-    setMembers(membersRes.data);
+    setMembers(membersRes);
     setSessions(sessionsRes);
     setTotal(bookingsRes.meta.total);
-  }, [pageSize, periodFilter, searchValue, statusFilter]);
+  }, [debouncedSearchValue, fetchAllMembers, pageSize, periodFilter, statusFilter]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -229,23 +249,23 @@ export default function BookingsPage() {
     {
       key: 'today',
       title: '今日预约',
-      value: String(bookingStatsSource.filter((b) => getPeriodFromDate(b.session?.startsAt || b.bookedAt) === '今天').length),
-      hint: `${bookingStatsSource.filter((b) => b.status === 'PENDING').length} 待确认`,
+      value: String(bookingSummary.todayCount),
+      hint: `${bookingSummary.pendingCount} 待确认`,
       tone: 'mint' as const,
       icon: iconMap.calendar,
     },
     {
       key: 'week',
       title: '本周预约',
-      value: String(bookingStatsSource.length),
-      hint: `${bookingStatsSource.filter((b) => b.status === 'CONFIRMED').length} 已确认`,
+      value: String(bookingSummary.weekTotal),
+      hint: `${bookingSummary.confirmedCount} 已确认`,
       tone: 'violet' as const,
       icon: iconMap.schedule,
     },
     {
       key: 'pending',
       title: '待确认',
-      value: String(bookingStatsSource.filter((b) => b.status === 'PENDING').length),
+      value: String(bookingSummary.pendingCount),
       hint: '需及时处理',
       tone: 'orange' as const,
       icon: iconMap.clock,
@@ -253,12 +273,26 @@ export default function BookingsPage() {
     {
       key: 'checkin',
       title: '已完成',
-      value: String(bookingStatsSource.filter((b) => b.status === 'COMPLETED').length),
-      hint: `${bookingStatsSource.filter((b) => b.status === 'NO_SHOW').length} 未到场`,
+      value: String(bookingSummary.completedCount),
+      hint: `${bookingSummary.noShowCount} 未到场`,
       tone: 'pink' as const,
       icon: iconMap.check,
     },
-  ], [bookingStatsSource]);
+  ], [bookingSummary]);
+
+  const memberOptions = useMemo(
+    () => members.map((member) => {
+      const isBookable = member.status === 'ACTIVE';
+      const statusText = memberStatusLabels[member.status];
+
+      return {
+        label: `${member.name} (${member.phone})${isBookable ? '' : ` · ${statusText}`}`,
+        value: member.id,
+        disabled: !isBookable,
+      };
+    }),
+    [members],
+  );
 
   const bookingPeriodItems = useMemo(() => bookingPeriods.map((period) => ({
     value: period,
@@ -294,6 +328,7 @@ export default function BookingsPage() {
       status: 'PENDING',
     });
     setIsFormOpen(true);
+    void loadCreateFormOptions();
   };
 
   const openEditModal = (booking: Booking) => {
@@ -327,6 +362,7 @@ export default function BookingsPage() {
         await bookingsApi.create({
           memberId: values.memberId,
           sessionId: values.sessionId,
+          status: values.status,
           source: 'ADMIN',
         });
         messageApi.success('预约已创建');
@@ -343,6 +379,7 @@ export default function BookingsPage() {
 
   const handleDeleteBooking = async (booking: Booking) => {
     try {
+      setDeletingBookingId(booking.id);
       await bookingsApi.delete(booking.id);
       await loadBookingsData();
 
@@ -353,12 +390,20 @@ export default function BookingsPage() {
       messageApi.success(`已删除预约 ${booking.bookingCode}`);
     } catch (err) {
       messageApi.error(getErrorMessage(err, '删除失败'));
+    } finally {
+      setDeletingBookingId(null);
     }
   };
 
   const handleStatusAdvance = async (booking: Booking) => {
+    const nextStatus = getNextBookingStatus(booking.status);
+    if (nextStatus === booking.status) {
+      setDetailBooking(booking);
+      return;
+    }
+
     try {
-      const nextStatus = getNextBookingStatus(booking.status);
+      setStatusUpdatingBookingId(booking.id);
       const updatedBooking = await bookingsApi.updateStatus(booking.id, nextStatus);
       await loadBookingsData(currentPage);
 
@@ -369,6 +414,8 @@ export default function BookingsPage() {
       messageApi.success(`预约 ${booking.bookingCode} 已更新为${bookingStatusLabels[nextStatus]}`);
     } catch (err) {
       messageApi.error(getErrorMessage(err, '更新失败'));
+    } finally {
+      setStatusUpdatingBookingId(null);
     }
   };
 
@@ -445,58 +492,66 @@ export default function BookingsPage() {
       <SectionCard
         title="预约列表"
       >
-        <div className={pageCls.sectionContentStack}>
-          <div className={pageCls.sectionSummaryRow}>
-            <div className={pageCls.sectionSummaryText}>{bookingResultSummary}</div>
-            <span className={pageCls.sectionMetaPill}>{bookingCountText}</span>
-          </div>
+        <Spin spinning={loading}>
+          <div className={pageCls.sectionContentStack}>
+            <div className={pageCls.sectionSummaryRow}>
+              <div className={pageCls.sectionSummaryText}>{bookingResultSummary}</div>
+              <span className={pageCls.sectionMetaPill}>{bookingCountText}</span>
+            </div>
 
-          {bookings.length ? (
-            <>
-              <div className={`${widgetCls.recordList} ${pageCls.sectionListStack}`}>
-                {bookings.map((item) => (
-                  <BookingListCard
-                    key={item.id}
-                    memberName={item.member?.name || '未知会员'}
-                    statusLabel={bookingStatusLabels[item.status]}
-                    bookingCode={item.bookingCode}
-                    courseName={item.session?.course?.name || '未知课程'}
-                    sessionTimeText={formatTime(item.session?.startsAt || item.bookedAt)}
-                    sessionDateText={formatBookingDateLabel(item.session?.startsAt || item.bookedAt)}
-                    bookedAtText={formatDateTime(item.bookedAt)}
-                    coachName={item.session?.coach?.name || '-'}
-                    sourceText={item.source === 'ADMIN' ? '后台创建' : '小程序预约'}
-                    tone={getToneFromName(item.member?.name || '未知会员')}
-                    primaryActionLabel={getStatusActionLabel(item.status)}
-                    onPrimaryAction={() => handleStatusAdvance(item)}
-                    onViewDetail={() => setDetailBooking(item)}
+            {bookings.length ? (
+              <>
+                <div className={`${widgetCls.recordList} ${pageCls.sectionListStack}`}>
+                  {bookings.map((item) => (
+                    <BookingListCard
+                      key={item.id}
+                      memberName={item.member?.name || '未知会员'}
+                      statusLabel={bookingStatusLabels[item.status]}
+                      bookingCode={item.bookingCode}
+                      courseName={item.session?.course?.name || '未知课程'}
+                      sessionTimeText={formatTime(item.session?.startsAt || item.bookedAt)}
+                      sessionDateText={formatBookingDateLabel(item.session?.startsAt || item.bookedAt)}
+                      bookedAtText={formatDateTime(item.bookedAt)}
+                      coachName={item.session?.coach?.name || '-'}
+                      sourceText={item.source === 'ADMIN' ? '后台创建' : '小程序预约'}
+                      tone={getToneFromName(item.member?.name || '未知会员')}
+                      primaryActionLabel={getStatusActionLabel(item.status)}
+                      primaryActionLoading={statusUpdatingBookingId === item.id}
+                      primaryActionDisabled={
+                        (statusUpdatingBookingId !== null && statusUpdatingBookingId !== item.id)
+                        || deletingBookingId !== null
+                      }
+                      detailActionDisabled={statusUpdatingBookingId !== null || deletingBookingId !== null}
+                      onPrimaryAction={() => handleStatusAdvance(item)}
+                      onViewDetail={() => setDetailBooking(item)}
+                    />
+                  ))}
+                </div>
+                <div className={pageCls.sectionPagination}>
+                  <Pagination
+                    current={currentPage}
+                    pageSize={pageSize}
+                    total={total}
+                    onChange={handlePageChange}
+                    showSizeChanger={false}
                   />
-                ))}
-              </div>
-              <div className={pageCls.sectionPagination}>
-                <Pagination
-                  current={currentPage}
-                  pageSize={pageSize}
-                  total={total}
-                  onChange={handlePageChange}
-                  showSizeChanger={false}
+                </div>
+              </>
+            ) : (
+              <div className={pageCls.sectionEmptyState}>
+                <EmptyState
+                  title="当前筛选下暂无预约"
+                  description="调整筛选条件后再试。"
+                  actionText="重置筛选"
+                  onAction={() => {
+                    setSearchValue('');
+                    resetFilters();
+                  }}
                 />
               </div>
-            </>
-          ) : (
-            <div className={pageCls.sectionEmptyState}>
-              <EmptyState
-                title="当前筛选下暂无预约"
-                description="调整筛选条件后再试。"
-                actionText="重置筛选"
-                onAction={() => {
-                  setSearchValue('');
-                  resetFilters();
-                }}
-              />
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </Spin>
       </SectionCard>
 
       <Modal
@@ -509,6 +564,7 @@ export default function BookingsPage() {
         confirmLoading={isSaving}
         okText={editingBooking ? '保存修改' : '新增预约'}
         cancelText="取消"
+        forceRender
         destroyOnHidden
       >
         <Form form={form} className={pageCls.crudModalForm} layout="vertical">
@@ -520,7 +576,9 @@ export default function BookingsPage() {
                     <Select
                       className={pageCls.settingsInput}
                       placeholder="选择会员"
-                      options={members.map((m) => ({ label: `${m.name} (${m.phone})`, value: m.id }))}
+                      options={memberOptions}
+                      loading={isMemberLoading}
+                      notFoundContent={isMemberLoading ? '正在加载会员...' : '暂无可选会员'}
                       showSearch
                       filterOption={(input, option) =>
                         (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
@@ -537,6 +595,8 @@ export default function BookingsPage() {
                         label: `${s.course?.name || '未知'} - ${formatDateTime(s.startsAt)}`,
                         value: s.id,
                       }))}
+                      loading={isSessionLoading}
+                      notFoundContent={isSessionLoading ? '正在加载课程时段...' : '暂无可选课程时段'}
                       showSearch
                       filterOption={(input, option) =>
                         (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
@@ -585,16 +645,53 @@ export default function BookingsPage() {
       </Modal>
 
       <Drawer
+        rootClassName={pageCls.responsiveDetailDrawer}
         open={detailBooking !== null}
         width={DETAIL_DRAWER_WIDTH}
         title={detailBooking?.bookingCode ?? '预约详情'}
         onClose={() => setDetailBooking(null)}
         extra={detailBooking ? (
           <div className={pageCls.drawerActionGroup}>
-            <Button icon={<EditOutlined />} onClick={() => openEditModal(detailBooking)}>编辑</Button>
-            <Button icon={<EyeOutlined />} onClick={() => handleStatusAdvance(detailBooking)}>{getStatusActionLabel(detailBooking.status)}</Button>
-            <Popconfirm title="确认删除该预约吗？" okText="删除" cancelText="取消" okButtonProps={{ danger: true }} onConfirm={() => handleDeleteBooking(detailBooking)}>
-              <Button className={pageCls.cardActionWarning} icon={<DeleteOutlined />}>删除</Button>
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => openEditModal(detailBooking)}
+              disabled={statusUpdatingBookingId !== null || deletingBookingId !== null}
+            >
+              编辑
+            </Button>
+            <Button
+              icon={<EyeOutlined />}
+              onClick={() => handleStatusAdvance(detailBooking)}
+              loading={statusUpdatingBookingId === detailBooking.id}
+              disabled={
+                (statusUpdatingBookingId !== null && statusUpdatingBookingId !== detailBooking.id)
+                || deletingBookingId !== null
+              }
+            >
+              {getStatusActionLabel(detailBooking.status)}
+            </Button>
+            <Popconfirm
+              title="确认删除该预约吗？"
+              okText="删除"
+              cancelText="取消"
+              okButtonProps={{
+                danger: true,
+                loading: deletingBookingId === detailBooking.id,
+                disabled: (statusUpdatingBookingId !== null) || (deletingBookingId !== null && deletingBookingId !== detailBooking.id),
+              }}
+              onConfirm={() => handleDeleteBooking(detailBooking)}
+            >
+              <Button
+                className={pageCls.cardActionWarning}
+                icon={<DeleteOutlined />}
+                loading={deletingBookingId === detailBooking.id}
+                disabled={
+                  statusUpdatingBookingId !== null
+                  || (deletingBookingId !== null && deletingBookingId !== detailBooking.id)
+                }
+              >
+                删除
+              </Button>
             </Popconfirm>
           </div>
         ) : null}
@@ -613,7 +710,7 @@ export default function BookingsPage() {
                   <div className={widgetCls.recordSub}>{detailBooking.session?.course?.name || '未知课程'} · {formatDateTime(detailBooking.session?.startsAt || detailBooking.bookedAt)}</div>
                 </div>
               </div>
-              <div className={widgetCls.detailOverviewStatGrid}>
+              <div className={`${widgetCls.detailOverviewStatGrid} ${styles.bookingDetailStatGrid}`}>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatMint}`}>
                   <div className={widgetCls.detailInsightLabel}>教练</div>
                   <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{detailBooking.session?.coach?.name || '-'}</div>

@@ -22,7 +22,7 @@ export default function UpcomingBookingsPanel({ items, onViewDetail }: UpcomingB
   return (
     <SectionCard
       title="近期排程"
-      subtitle="优先显示非今日的最近 4 条预约。"
+      subtitle="仅展示非今日的未来预约（最近 4 条）。"
     >
       {items.length > 0 ? (
         <div className={styles.upcomingList}>
