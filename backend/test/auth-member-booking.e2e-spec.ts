@@ -177,9 +177,21 @@ describe('Auth -> Members -> Bookings integration flow', () => {
       transactions: [],
     };
 
-    prisma.member.findUnique
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(createdMember);
+    prisma.member.findUnique.mockImplementation(({ where }: { where?: Record<string, unknown> }) => {
+      if (where?.phone === '13800000000') {
+        return Promise.resolve(null);
+      }
+      if (where?.memberCode) {
+        return Promise.resolve(null);
+      }
+      if (where?.id === memberId) {
+        return Promise.resolve(createdMember);
+      }
+      if (where?.miniUserId) {
+        return Promise.resolve(null);
+      }
+      return Promise.resolve(null);
+    });
     prisma.member.create.mockResolvedValue(createdMember);
 
     prisma.courseSession.findUnique.mockResolvedValue({

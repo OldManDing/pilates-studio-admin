@@ -72,20 +72,20 @@ export class BookingsService {
       throw new NotFoundException('Course session not found');
     }
 
-    const member = await this.prisma.member.findUnique({
-      where: { id: targetMemberId },
-      include: { plan: true },
-    });
-
-    if (!member) {
-      throw new NotFoundException('Member not found');
-    }
-
-    this.assertBookableMember(member);
-
     const bookingCode = await this.generateBookingCode();
 
     const result = await this.runSerializableTransaction(async (tx) => {
+      const member = await tx.member.findUnique({
+        where: { id: targetMemberId },
+        include: { plan: true },
+      });
+
+      if (!member) {
+        throw new NotFoundException('Member not found');
+      }
+
+      this.assertBookableMember(member);
+
       const session = await tx.courseSession.findUnique({
         where: { id: dto.sessionId },
         include: {
@@ -126,7 +126,7 @@ export class BookingsService {
           memberId: targetMemberId,
           sessionId: dto.sessionId,
           source: dto.source,
-          status: BookingStatus.CONFIRMED,
+          status: dto.status ?? BookingStatus.CONFIRMED,
           bookedAt: new Date(),
         },
         include: {
@@ -151,8 +151,8 @@ export class BookingsService {
     await this.notificationsService.createFromSetting('booking_confirmation', {
       type: 'BOOKING_CONFIRMATION',
       content: `您已成功预约 ${result.session.course.name}`,
-      memberId: member.id,
-      miniUserId: member.miniUserId ?? undefined,
+      memberId: result.memberId,
+      miniUserId: result.member?.miniUserId ?? undefined,
       payload: {
         bookingId: result.id,
         sessionId: dto.sessionId,
@@ -172,9 +172,11 @@ export class BookingsService {
 
     const where: any = {};
     if (status) where.status = status;
-    const bookedAtRange = buildDateRange(from, to, 'bookings.bookedAt');
-    if (bookedAtRange) {
-      where.bookedAt = bookedAtRange;
+    const startsAtRange = buildDateRange(from, to, 'bookings.session.startsAt');
+    if (startsAtRange) {
+      where.session = {
+        startsAt: startsAtRange,
+      };
     }
     if (keyword) {
       where.OR = [
@@ -218,7 +220,99 @@ export class BookingsService {
     };
   }
 
-  async findOne(id: string) {
+  async findMemberOptions() {
+    return this.prisma.member.findMany({
+      select: {
+        id: true,
+        memberCode: true,
+        name: true,
+        phone: true,
+        email: true,
+        status: true,
+        joinedAt: true,
+        remainingCredits: true,
+        plan: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        miniUser: {
+          select: {
+            id: true,
+            nickname: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 2000,
+    });
+  }
+
+  async getSummary(query: QueryBookingsDto) {
+    const { status, from, to } = query;
+    const keyword = query.search?.trim();
+    const where: Prisma.BookingWhereInput = {};
+
+    if (status) {
+      where.status = status;
+    }
+
+    const startsAtRange = buildDateRange(from, to, 'bookings.session.startsAt');
+    if (startsAtRange) {
+      where.session = {
+        startsAt: startsAtRange,
+      };
+    }
+
+    if (keyword) {
+      where.OR = [
+        { bookingCode: { contains: keyword } },
+        { member: { name: { contains: keyword } } },
+        { session: { course: { name: { contains: keyword } } } },
+        { session: { coach: { name: { contains: keyword } } } },
+      ];
+    }
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+
+    const [weekTotal, pendingCount, confirmedCount, completedCount, noShowCount, todayCount] = await Promise.all([
+      this.prisma.booking.count({ where }),
+      this.prisma.booking.count({ where: { ...where, status: BookingStatus.PENDING } }),
+      this.prisma.booking.count({ where: { ...where, status: BookingStatus.CONFIRMED } }),
+      this.prisma.booking.count({ where: { ...where, status: BookingStatus.COMPLETED } }),
+      this.prisma.booking.count({ where: { ...where, status: BookingStatus.NO_SHOW } }),
+      this.prisma.booking.count({
+        where: {
+          AND: [
+            where,
+            {
+              session: {
+                startsAt: {
+                  gte: todayStart,
+                  lt: tomorrowStart,
+                },
+              },
+            },
+          ],
+        },
+      }),
+    ]);
+
+    return {
+      todayCount,
+      weekTotal,
+      pendingCount,
+      confirmedCount,
+      completedCount,
+      noShowCount,
+    };
+  }
+
+  async findOne(id: string, miniUserId?: string) {
     const booking = await this.prisma.booking.findUnique({
       where: { id },
       include: {
@@ -253,6 +347,10 @@ export class BookingsService {
 
     if (!booking) {
       throw new NotFoundException('Booking not found');
+    }
+
+    if (miniUserId && booking.member.miniUserId !== miniUserId) {
+      throw new ForbiddenException('Cannot access another member booking');
     }
 
     return booking;
@@ -576,7 +674,7 @@ export class BookingsService {
       throw new BadRequestException('Member does not have an active membership plan');
     }
 
-    if (member.remainingCredits <= 0) {
+    if (this.shouldConsumeCredit(member.plan.category) && member.remainingCredits <= 0) {
       throw new BadRequestException('Insufficient remaining credits');
     }
 

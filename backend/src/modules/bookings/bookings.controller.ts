@@ -50,6 +50,20 @@ export class BookingsController {
     return this.bookingsService.findAll(query);
   }
 
+  @Get('summary')
+  @RequirePermissions('READ:BOOKINGS')
+  @ApiOperation({ summary: 'Get booking summary stats' })
+  async getSummary(@Query() query: QueryBookingsDto) {
+    return this.bookingsService.getSummary(query);
+  }
+
+  @Get('members/options')
+  @RequirePermissions('READ:BOOKINGS')
+  @ApiOperation({ summary: 'Get member options for booking creation' })
+  async getMemberOptions() {
+    return this.bookingsService.findMemberOptions();
+  }
+
   // Mini-program endpoints (member-facing)
   @Get('my')
   @AllowMiniUser()
@@ -63,11 +77,19 @@ export class BookingsController {
   }
 
   @Get(':id')
+  @AllowMiniUser()
   @RequirePermissions('READ:BOOKINGS')
   @ApiOperation({ summary: 'Get booking by ID' })
   @ApiParam({ name: 'id', description: 'Booking ID' })
-  async findOne(@Param('id') id: string) {
-    return this.bookingsService.findOne(id);
+  async findOne(
+    @Param('id') id: string,
+    @CurrentUser('sub') userId?: string,
+    @CurrentUser('principalType') principalType?: string,
+  ) {
+    return this.bookingsService.findOne(
+      id,
+      principalType === 'MINI_USER' ? userId : undefined,
+    );
   }
 
   @Patch(':id/status')
@@ -109,7 +131,6 @@ export class BookingsController {
   }
 
   @Patch(':id/checkin')
-  @AllowMiniUser()
   @RequirePermissions('WRITE:BOOKINGS')
   @ApiOperation({ summary: 'Check in booking' })
   @ApiParam({ name: 'id', description: 'Booking ID' })

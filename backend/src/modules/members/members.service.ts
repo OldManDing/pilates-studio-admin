@@ -4,12 +4,13 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { QueryMembersDto } from './dto/query-members.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
-import { MemberStatus } from '../../common/enums/domain.enums';
+import { MemberStatus, MembershipPlanCategory } from '../../common/enums/domain.enums';
 
 @Injectable()
 export class MembersService {
@@ -33,8 +34,8 @@ export class MembersService {
         phone: dto.phone,
         email: dto.email,
         planId: dto.planId,
-        remainingCredits: dto.initialCredits ?? 0,
-        status: MemberStatus.ACTIVE,
+        remainingCredits: dto.remainingCredits ?? dto.initialCredits ?? 0,
+        status: dto.status ?? MemberStatus.ACTIVE,
         joinedAt: new Date(),
       },
       include: {
@@ -129,6 +130,19 @@ export class MembersService {
 
   async remove(id: string) {
     await this.findOne(id);
+
+    const [bookingCount, attendanceCount, transactionCount, notificationCount, reviewCount] = await Promise.all([
+      this.prisma.booking.count({ where: { memberId: id } }),
+      this.prisma.attendance.count({ where: { memberId: id } }),
+      this.prisma.transaction.count({ where: { memberId: id } }),
+      this.prisma.notification.count({ where: { memberId: id } }),
+      this.prisma.courseReview.count({ where: { memberId: id } }),
+    ]);
+
+    const dependentCount = bookingCount + attendanceCount + transactionCount + notificationCount + reviewCount;
+    if (dependentCount > 0) {
+      throw new ConflictException('该会员存在历史预约/出勤/交易/通知/评价记录，不能直接删除，请改为停用。');
+    }
 
     await this.prisma.member.delete({
       where: { id },
@@ -233,14 +247,24 @@ export class MembersService {
       endDate: endDate.toISOString(),
       totalCredits: member.plan.totalCredits || 0,
       remainingCredits: member.remainingCredits,
-      isActive: member.status === MemberStatus.ACTIVE && endDate > now && member.remainingCredits > 0,
+      isActive: member.status === MemberStatus.ACTIVE && endDate > now && (
+        member.plan.category === MembershipPlanCategory.PERIOD_CARD
+          ? true
+          : member.remainingCredits > 0
+      ),
     };
 
     return { memberships: [membership] };
   }
 
   private async generateMemberCode(): Promise<string> {
-    const count = await this.prisma.member.count();
-    return `M${String(count + 1).padStart(6, '0')}`;
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const candidate = `M${Date.now().toString(36).toUpperCase()}${randomBytes(2).toString('hex').toUpperCase()}`;
+      const exists = await this.prisma.member.findUnique({ where: { memberCode: candidate } });
+      if (!exists) {
+        return candidate;
+      }
+    }
+    throw new ConflictException('无法生成唯一会员编号，请重试');
   }
 }

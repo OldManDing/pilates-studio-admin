@@ -107,7 +107,7 @@ describe('BookingsService', () => {
       await service.findAll({ page: 1, pageSize: 10, to: '2025-01-01' });
 
       const whereArg = prisma.booking.findMany.mock.calls[0][0].where;
-      const toDate: Date = whereArg.bookedAt.lte;
+      const toDate: Date = whereArg.session.startsAt.lte;
 
       expect(toDate).toBeInstanceOf(Date);
       expect(toDate.getHours()).toBe(23);

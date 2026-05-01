@@ -85,13 +85,13 @@ describe('MembersService', () => {
     expect(prisma.member.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          memberCode: 'M000002',
+          memberCode: expect.stringMatching(/^M[A-Z0-9]+$/),
           status: MemberStatus.ACTIVE,
           remainingCredits: 12,
         }),
       }),
     );
-    expect(result.memberCode).toBe('M000002');
+    expect(result.memberCode).toMatch(/^M[A-Z0-9]+$/);
     expect(result.status).toBe(MemberStatus.ACTIVE);
   });
 
