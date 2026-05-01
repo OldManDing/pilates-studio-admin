@@ -193,7 +193,7 @@ select:focus-visible,
 textarea:focus-visible,
 [tabindex]:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 28%, transparent);
 }
 
 .recharts-default-tooltip {

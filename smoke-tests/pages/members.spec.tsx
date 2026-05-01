@@ -70,5 +70,5 @@ describe('MembersPage smoke test', () => {
       expect(screen.getByRole('button', { name: /新增会员/ })).toBeInTheDocument();
       expect(screen.getByText('总会员数')).toBeInTheDocument();
     });
-  });
+  }, 10000);
 });

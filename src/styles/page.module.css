@@ -1376,6 +1376,11 @@
   max-width: 100%;
 }
 
+.responsiveDetailDrawer :global(.ant-drawer-content-wrapper) {
+  width: min(var(--drawer-max-width, 480px), calc(100vw - 16px)) !important;
+  max-width: calc(100vw - 16px);
+}
+
 @media (max-width: 768px) {
   .memberRecordGrid {
     grid-template-columns: 1fr;

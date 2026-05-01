@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
 import pageCls from '@/styles/page.module.css';
-import { authApi, setTokens, type AuthResponse, type LoginMfaChallenge } from '@/services/auth';
+import { authApi, clearTokens, setTokens, type AuthResponse, type LoginMfaChallenge } from '@/services/auth';
 import { getErrorMessage } from '@/utils/errors';
 import { getSafeRedirectPath } from '@/utils/safeRedirect';
 import cls from './index.module.css';
@@ -20,6 +20,7 @@ export default function LoginPage() {
   const location = useLocation();
   const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [form] = Form.useForm<LoginValues>();
   const [mfaChallenge, setMfaChallenge] = useState<LoginMfaChallenge | null>(null);
 
@@ -30,10 +31,43 @@ export default function LoginPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('pilates_access_token');
-    if (token) {
-      navigate(redirectPath, { replace: true });
+    if (!token) {
+      setCheckingSession(false);
+      return;
     }
+
+    let cancelled = false;
+
+    authApi.getMe()
+      .then(() => {
+        if (!cancelled) {
+          navigate(redirectPath, { replace: true });
+        }
+      })
+      .catch(() => {
+        clearTokens();
+        if (!cancelled) {
+          setCheckingSession(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [navigate, redirectPath]);
+
+  if (checkingSession) {
+    return (
+      <div className={pageCls.authShell}>
+        <div className={cls.backdrop} />
+        <div className={pageCls.authPanel}>
+          <div className={cls.brand}>普拉提工作室</div>
+          <h1 className={cls.title}>门店管理后台</h1>
+          <p className={cls.subtitle}>正在校验登录状态...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleFinish = async (values: LoginValues) => {
     setLoading(true);

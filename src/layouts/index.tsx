@@ -51,12 +51,7 @@ const AppLayout: FC<PropsWithChildren> = ({ children }) => {
     return null;
   }
 
-  const canAccessRoute = (pathname: string) => {
-    if (pathname === '/roles') {
-      return user.role.code === 'OWNER';
-    }
-    return true;
-  };
+  const canAccessRoute = (_pathname: string) => true;
 
   if (!canAccessRoute(location.pathname)) {
     navigate('/403', { replace: true, state: { from: location.pathname } });
