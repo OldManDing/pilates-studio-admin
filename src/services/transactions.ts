@@ -33,6 +33,7 @@ export interface CreateTransactionData {
   memberId?: string;
   planId?: string;
   kind: TransactionKind;
+  status?: TransactionStatus;
   amountCents: number;
   notes?: string;
 }

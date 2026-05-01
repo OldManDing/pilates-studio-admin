@@ -40,10 +40,6 @@ export const settingsApi = {
   restoreData: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return api.post<{ success: boolean; message: string }>('/settings/restore', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return api.post<{ success: boolean; message: string }>('/settings/restore', formData);
   },
 };

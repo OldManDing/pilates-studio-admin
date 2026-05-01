@@ -1,4 +1,4 @@
-import { api } from '@/utils/request';
+import { api, requestWithMeta } from '@/utils/request';
 import type { MemberStatus } from '@/types';
 
 const mapMember = (raw: any): Member => ({
@@ -30,6 +30,7 @@ export interface CreateMemberData {
   phone: string;
   email?: string;
   planId?: string;
+  remainingCredits?: number;
   initialCredits?: number;
 }
 
@@ -58,7 +59,7 @@ export type MembersQueryParams = {
 
 export const membersApi = {
   getAll: async (page = 1, pageSize = 10, filters: Omit<MembersQueryParams, 'page' | 'pageSize'> = {}) => {
-    const res = await api.get<PaginatedResponse<any>>('/members', {
+    const res = await requestWithMeta<any[]>('/members', {
       params: {
         page,
         pageSize,
@@ -70,6 +71,12 @@ export const membersApi = {
     return {
       ...res,
       data: (res.data || []).map(mapMember),
+      meta: res.meta ?? {
+        page,
+        pageSize,
+        total: res.data?.length ?? 0,
+        totalPages: res.data?.length ? 1 : 0,
+      },
     } as PaginatedResponse<Member>;
   },
 

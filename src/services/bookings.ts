@@ -1,4 +1,4 @@
-import { api } from '@/utils/request';
+import { api, requestWithMeta } from '@/utils/request';
 import type { BookingStatus } from '@/types';
 import type { PaginatedResponse } from './members';
 
@@ -42,22 +42,44 @@ export interface Booking {
 export interface CreateBookingData {
   memberId: string;
   sessionId: string;
+  status?: BookingStatus;
   source?: 'ADMIN' | 'MINI_PROGRAM';
+}
+
+export interface BookingSummary {
+  todayCount: number;
+  weekTotal: number;
+  pendingCount: number;
+  confirmedCount: number;
+  completedCount: number;
+  noShowCount: number;
 }
 
 export const bookingsApi = {
   getAll: async (params?: { page?: number; pageSize?: number; status?: BookingStatus; from?: string; to?: string; search?: string }) => {
-    const res = await api.get<PaginatedResponse<any>>('/bookings', { params: params || {} });
+    const res = await requestWithMeta<any[]>('/bookings', { params: params || {} });
     return {
       ...res,
       data: (res.data || []).map(mapBooking),
+      meta: res.meta ?? {
+        page: params?.page ?? 1,
+        pageSize: params?.pageSize ?? 10,
+        total: res.data?.length ?? 0,
+        totalPages: res.data?.length ? 1 : 0,
+      },
     } as PaginatedResponse<Booking>;
   },
+
+  getSummary: (params?: { status?: BookingStatus; from?: string; to?: string; search?: string }) =>
+    api.get<BookingSummary>('/bookings/summary', { params: params || {} }),
 
   getById: async (id: string) => {
     const res = await api.get<any>(`/bookings/${id}`);
     return mapBooking(res);
   },
+
+  getMemberOptions: () =>
+    api.get<any[]>('/bookings/members/options'),
 
   create: async (data: CreateBookingData) => {
     const res = await api.post<any>('/bookings', data);

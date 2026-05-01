@@ -2,10 +2,15 @@ import { api, requestWithMeta } from '@/utils/request';
 import type { CoachStatus } from '@/types';
 import type { PaginatedResponse } from './members';
 
-const mapCoach = (raw: any): Coach => ({
-  ...raw,
-  status: raw.status,
-});
+const mapCoach = (raw: any): Coach => {
+  const numericRating = Number(raw.rating);
+
+  return {
+    ...raw,
+    status: raw.status,
+    rating: Number.isFinite(numericRating) ? numericRating : undefined,
+  };
+};
 
 export interface Coach {
   id: string;
@@ -60,10 +65,16 @@ export const coachesApi = {
   },
 
   getPaged: async (params?: CoachesQueryParams) => {
-    const res = await api.get<PaginatedResponse<any>>('/coaches', { params: params || {} });
+    const res = await requestWithMeta<any[]>('/coaches', { params: params || {} });
     return {
       ...res,
       data: (res.data || []).map(mapCoach),
+      meta: res.meta ?? {
+        page: params?.page ?? 1,
+        pageSize: params?.pageSize ?? 10,
+        total: res.data?.length ?? 0,
+        totalPages: res.data?.length ? 1 : 0,
+      },
     } as PaginatedResponse<Coach>;
   },
 
