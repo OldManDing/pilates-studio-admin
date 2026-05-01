@@ -53,13 +53,13 @@ type SecurityDrawerKey = SecurityActionTitle | null;
 type DataDrawerKey = DataActionTitle | null;
 
 const formatStoreAddress = (info: Pick<StoreInfoValues, 'province' | 'city' | 'district' | 'address'>) => {
-  const prefix = [info.province, info.city, info.district].filter(Boolean).join('');
+  const prefix = [info.province, info.city, info.district].filter(Boolean).join(' ');
 
   if (!info.address) {
     return prefix || '待补充门店地址';
   }
 
-  return prefix && info.address.startsWith(prefix) ? info.address : `${prefix}${info.address}`;
+  return prefix && info.address.startsWith(prefix) ? info.address : `${prefix} ${info.address}`.trim();
 };
 
 const todayText = () => new Date().toLocaleString('zh-CN', {
@@ -94,6 +94,52 @@ const defaultStoreInfo: StoreInfoValues = {
   ...PLACEHOLDER_STORE_INFO,
   area: [],
 };
+
+const MAX_RESTORE_FILE_SIZE = 10 * 1024 * 1024;
+const BACKUP_REQUIRED_DATA_KEYS = ['members', 'coaches', 'courses', 'sessions', 'bookings', 'transactions', 'membershipPlans', 'adminUsers'] as const;
+
+function validateRestoreFile(file: File) {
+  const lowerName = file.name.toLowerCase();
+  if (!lowerName.endsWith('.json')) {
+    return '仅支持上传 .json 备份文件';
+  }
+
+  if (file.size <= 0) {
+    return '备份文件为空，请重新选择';
+  }
+
+  if (file.size > MAX_RESTORE_FILE_SIZE) {
+    return '备份文件过大，请上传 10MB 以内文件';
+  }
+
+  return '';
+}
+
+function validateRestorePayload(rawText: string) {
+  try {
+    const payload = JSON.parse(rawText) as { version?: string; data?: Record<string, unknown> };
+    if (!payload || typeof payload !== 'object') {
+      return '备份文件格式无效';
+    }
+
+    if (!payload.version || typeof payload.version !== 'string') {
+      return '备份文件缺少 version 字段';
+    }
+
+    if (!payload.data || typeof payload.data !== 'object') {
+      return '备份文件缺少 data 数据块';
+    }
+
+    const missingKeys = BACKUP_REQUIRED_DATA_KEYS.filter((key) => !(key in payload.data!));
+    if (missingKeys.length > 0) {
+      return `备份文件缺少字段：${missingKeys.join('、')}`;
+    }
+
+    return '';
+  } catch {
+    return '备份文件不是有效 JSON';
+  }
+}
 
 const securityActionsList: Array<{ title: SecurityActionTitle; description: string }> = [
   { title: '修改密码', description: '定期更新管理员账号密码' },
@@ -215,6 +261,11 @@ export default function SettingsPage() {
   const [storeSavedAt, setStoreSavedAt] = useState('');
   const [notifications, setNotifications] = useState<NotificationSetting[]>([]);
   const [notificationSavedAt, setNotificationSavedAt] = useState('');
+  const [isSavingStoreInfo, setIsSavingStoreInfo] = useState(false);
+  const [initializingNotifications, setInitializingNotifications] = useState(false);
+  const [togglingNotificationKey, setTogglingNotificationKey] = useState<string | null>(null);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [isSavingTwoFactor, setIsSavingTwoFactor] = useState(false);
   const [securityState, setSecurityState] = useState<Record<SecurityActionTitle, SecurityActionState>>({
     修改密码: { title: '修改密码', description: '定期更新管理员账号密码', status: '正常', detail: '可在此更新密码' },
     两步验证: { title: '两步验证', description: '为核心账号开启验证器二次校验', status: '待激活', detail: '可在此启用两步验证' },
@@ -421,6 +472,7 @@ export default function SettingsPage() {
 
   const handleSaveStoreInfo = async () => {
     try {
+      setIsSavingStoreInfo(true);
       const values = await storeForm.validateFields();
       // 组合完整地址
       const area = values.area || [];
@@ -458,17 +510,22 @@ export default function SettingsPage() {
       message.success('门店信息已保存');
     } catch (err) {
       message.error(getErrorMessage(err, '保存失败'));
+    } finally {
+      setIsSavingStoreInfo(false);
     }
   };
 
   const handleToggleNotification = async (key: string, checked: boolean) => {
     try {
+      setTogglingNotificationKey(key);
       await settingsApi.updateNotification(key, checked);
       setNotifications((current) => current.map((item) => (item.key === key ? { ...item, enabled: checked } : item)));
       setNotificationSavedAt(todayText());
       message.success('通知设置已自动保存');
     } catch (err) {
       message.error(getErrorMessage(err, '更新失败'));
+    } finally {
+      setTogglingNotificationKey(null);
     }
   };
 
@@ -478,6 +535,7 @@ export default function SettingsPage() {
 
   const handleInitializeNotifications = async () => {
     try {
+      setInitializingNotifications(true);
       await settingsApi.initialize();
       const initialized = await settingsApi.getNotifications();
       setNotifications(initialized);
@@ -485,6 +543,8 @@ export default function SettingsPage() {
       message.success('通知模板已初始化');
     } catch (err) {
       message.error(getErrorMessage(err, '通知模板初始化失败'));
+    } finally {
+      setInitializingNotifications(false);
     }
   };
 
@@ -498,6 +558,7 @@ export default function SettingsPage() {
       return;
     }
     try {
+      setIsSavingPassword(true);
       await authApi.changePassword({
         currentPassword: passwordDraft.current,
         newPassword: passwordDraft.next,
@@ -513,11 +574,14 @@ export default function SettingsPage() {
       setOpenSecurityDrawer(null);
     } catch (err) {
       message.error(getErrorMessage(err, '密码修改失败'));
+    } finally {
+      setIsSavingPassword(false);
     }
   };
 
   const handleSaveTwoFactor = async () => {
     try {
+      setIsSavingTwoFactor(true);
       if (twoFactorEnabled) {
         // Disable 2FA
         await authApi.disableTwoFactor(disablePassword);
@@ -553,6 +617,8 @@ export default function SettingsPage() {
       setOpenSecurityDrawer(null);
     } catch (err) {
       message.error(getErrorMessage(err, '操作失败'));
+    } finally {
+      setIsSavingTwoFactor(false);
     }
   };
 
@@ -568,7 +634,10 @@ export default function SettingsPage() {
 
   const handleRunBackup = async () => {
     try {
-      await handleExportData();
+      const success = await handleExportData('全部', '门店备份');
+      if (!success) {
+        return;
+      }
       const timestamp = todayText();
       setDataState((current) => ({
         ...current,
@@ -579,14 +648,14 @@ export default function SettingsPage() {
     }
   };
 
-  const handleExportData = async () => {
+  const handleExportData = async (range = exportRange, filePrefix = '门店数据') => {
     try {
-      const blob = await settingsApi.exportData(exportRange);
+      const blob = await settingsApi.exportData(range);
       const url = URL.createObjectURL(blob as Blob);
       const link = document.createElement('a');
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       link.href = url;
-      link.download = `门店数据-${timestamp}.json`;
+      link.download = `${filePrefix}-${timestamp}.json`;
       link.click();
       URL.revokeObjectURL(url);
 
@@ -596,8 +665,10 @@ export default function SettingsPage() {
         导出数据: { ...current.导出数据, status: '正常', detail: `最近导出：${now}` }
       }));
       message.success('数据已导出');
+      return true;
     } catch (err) {
       message.error(getErrorMessage(err, '导出失败'));
+      return false;
     }
   };
 
@@ -618,6 +689,19 @@ export default function SettingsPage() {
             if (!file) return;
 
             try {
+              const fileError = validateRestoreFile(file);
+              if (fileError) {
+                message.error(fileError);
+                return;
+              }
+
+              const rawText = await file.text();
+              const payloadError = validateRestorePayload(rawText);
+              if (payloadError) {
+                message.error(payloadError);
+                return;
+              }
+
               const res = await settingsApi.restoreData(file);
               if (res.success) {
                 const timestamp = todayText();
@@ -666,7 +750,8 @@ export default function SettingsPage() {
         metaItems={settingsOverviewMetaItems}
         metrics={settingsOverviewMetrics}
         primaryActionLabel="保存门店信息"
-        primaryActionDisabled={!storeChanged}
+        primaryActionDisabled={!storeChanged || isSavingStoreInfo}
+        primaryActionLoading={isSavingStoreInfo}
         onPrimaryAction={handleSaveStoreInfo}
       />
 
@@ -764,24 +849,40 @@ export default function SettingsPage() {
               <div className={styles.settingsSectionSubnote}>{notificationSavedLabel}</div>
             </div>
             {notifications.length > 0 ? (
-              notifications.map((item) => (
-                <div key={item.key} className={widgetCls.settingRow}>
-                  <div>
-                    <div className={widgetCls.recordTitle}>{item.title}</div>
-                    <div className={widgetCls.smallText}>{item.description}</div>
+              notifications.map((item) => {
+                const switchReadableLabel = `${item.title}，${item.description}`;
+                return (
+                  <div key={item.key} className={widgetCls.settingRow}>
+                    <div>
+                      <div className={widgetCls.recordTitle}>{item.title}</div>
+                      <div className={widgetCls.smallText}>{item.description}</div>
+                    </div>
+                    <span className={pageCls.settingSwitch}>
+                      <Switch
+                        checked={item.enabled}
+                        onChange={(checked) => handleToggleNotification(item.key, checked)}
+                        loading={togglingNotificationKey === item.key}
+                        disabled={initializingNotifications || (togglingNotificationKey !== null && togglingNotificationKey !== item.key)}
+                        aria-label={switchReadableLabel}
+                      />
+                    </span>
                   </div>
-                  <span className={pageCls.settingSwitch}>
-                    <Switch checked={item.enabled} onChange={(checked) => handleToggleNotification(item.key, checked)} />
-                  </span>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className={styles.settingsEmptyStateCard}>
                 <div>
                   <div className={widgetCls.recordTitle}>通知设置暂无内容</div>
                   <div className={widgetCls.smallText}>初始化后即可管理预约、会籍与支付提醒。</div>
                 </div>
-                <Button className={pageCls.cardActionSecondary} onClick={handleInitializeNotifications}>初始化通知模板</Button>
+                <Button
+                  className={pageCls.cardActionSecondary}
+                  onClick={handleInitializeNotifications}
+                  loading={initializingNotifications}
+                  disabled={initializingNotifications || togglingNotificationKey !== null}
+                >
+                  初始化通知模板
+                </Button>
               </div>
             )}
           </div>
@@ -859,7 +960,7 @@ export default function SettingsPage() {
         </SectionCard>
       </div>
 
-      <Drawer open={openSecurityDrawer !== null} width={SETTINGS_DETAIL_DRAWER_WIDTH} title={openSecurityDrawer ?? '安全设置'} onClose={() => setOpenSecurityDrawer(null)}>
+      <Drawer rootClassName={pageCls.responsiveDetailDrawer} open={openSecurityDrawer !== null} width={SETTINGS_DETAIL_DRAWER_WIDTH} title={openSecurityDrawer ?? '安全设置'} onClose={() => setOpenSecurityDrawer(null)}>
         {openSecurityDrawer ? (
           <div className={styles.settingsDrawerStack}>
             <div className={`${widgetCls.detailOverviewPanel} ${styles.settingsDrawerOverview}`}>
@@ -875,12 +976,39 @@ export default function SettingsPage() {
               <div className={styles.settingsDrawerPanel}>
                 <div className={styles.settingsDrawerNotice}>建议定期更换密码，并避免与其他后台账号共用。</div>
                 <div className={styles.settingsDrawerFieldStack}>
-                <Input.Password className={pageCls.settingsInput} placeholder="当前密码" value={passwordDraft.current} onChange={(event) => setPasswordDraft((current) => ({ ...current, current: event.target.value }))} />
-                <Input.Password className={pageCls.settingsInput} placeholder="新密码" value={passwordDraft.next} onChange={(event) => setPasswordDraft((current) => ({ ...current, next: event.target.value }))} />
-                <Input.Password className={pageCls.settingsInput} placeholder="确认新密码" value={passwordDraft.confirm} onChange={(event) => setPasswordDraft((current) => ({ ...current, confirm: event.target.value }))} />
+                <Input.Password
+                  className={pageCls.settingsInput}
+                  placeholder="当前密码"
+                  aria-label="修改密码-当前密码"
+                  value={passwordDraft.current}
+                  onChange={(event) => setPasswordDraft((current) => ({ ...current, current: event.target.value }))}
+                />
+                <Input.Password
+                  className={pageCls.settingsInput}
+                  placeholder="新密码"
+                  aria-label="修改密码-新密码"
+                  value={passwordDraft.next}
+                  onChange={(event) => setPasswordDraft((current) => ({ ...current, next: event.target.value }))}
+                />
+                <Input.Password
+                  className={pageCls.settingsInput}
+                  placeholder="确认新密码"
+                  aria-label="修改密码-确认新密码"
+                  value={passwordDraft.confirm}
+                  onChange={(event) => setPasswordDraft((current) => ({ ...current, confirm: event.target.value }))}
+                />
                 </div>
                 <div className={styles.settingsDrawerActions}>
-                <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleSavePassword}>更新密码</Button>
+                <Button
+                  type="primary"
+                  className={pageCls.cardActionPrimary}
+                  size="large"
+                  onClick={handleSavePassword}
+                  loading={isSavingPassword}
+                  disabled={isSavingPassword}
+                >
+                  更新密码
+                </Button>
                 </div>
               </div>
             ) : null}
@@ -899,7 +1027,16 @@ export default function SettingsPage() {
                           </div>
                         </div>
                         <div className={styles.settingsDrawerActions}>
-                        <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleSaveTwoFactor}>开始设置</Button>
+                        <Button
+                          type="primary"
+                          className={pageCls.cardActionPrimary}
+                          size="large"
+                          onClick={handleSaveTwoFactor}
+                          loading={isSavingTwoFactor}
+                          disabled={isSavingTwoFactor}
+                        >
+                          开始设置
+                        </Button>
                         </div>
                       </div>
                     ) : (
@@ -916,12 +1053,22 @@ export default function SettingsPage() {
                         <Input
                           className={pageCls.settingsInput}
                           placeholder="6 位验证码"
+                          aria-label="两步验证-验证码"
                           value={twoFactorCode}
                           onChange={(e) => setTwoFactorCode(e.target.value)}
                           maxLength={6}
                         />
                         <div className={styles.settingsDrawerActions}>
-                          <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleSaveTwoFactor}>验证并开启</Button>
+                          <Button
+                            type="primary"
+                            className={pageCls.cardActionPrimary}
+                            size="large"
+                            onClick={handleSaveTwoFactor}
+                            loading={isSavingTwoFactor}
+                            disabled={isSavingTwoFactor}
+                          >
+                            验证并开启
+                          </Button>
                         </div>
                       </div>
                     )}
@@ -934,11 +1081,20 @@ export default function SettingsPage() {
                     <Input.Password
                       className={pageCls.settingsInput}
                       placeholder="当前密码"
+                      aria-label="关闭两步验证-当前密码"
                       value={disablePassword}
                       onChange={(e) => setDisablePassword(e.target.value)}
                     />
                     <div className={styles.settingsDrawerActions}>
-                      <Button className={pageCls.cardActionWarning} size="large" onClick={handleSaveTwoFactor}>关闭两步验证</Button>
+                      <Button
+                        className={pageCls.cardActionWarning}
+                        size="large"
+                        onClick={handleSaveTwoFactor}
+                        loading={isSavingTwoFactor}
+                        disabled={isSavingTwoFactor}
+                      >
+                        关闭两步验证
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -961,7 +1117,7 @@ export default function SettingsPage() {
         ) : null}
       </Drawer>
 
-      <Drawer open={openDataDrawer !== null} width={SETTINGS_DETAIL_DRAWER_WIDTH} title={openDataDrawer ?? '数据管理'} onClose={() => setOpenDataDrawer(null)}>
+      <Drawer rootClassName={pageCls.responsiveDetailDrawer} open={openDataDrawer !== null} width={SETTINGS_DETAIL_DRAWER_WIDTH} title={openDataDrawer ?? '数据管理'} onClose={() => setOpenDataDrawer(null)}>
           {openDataDrawer ? (
             <div className={styles.settingsDrawerStack}>
             <div className={`${widgetCls.detailOverviewPanel} ${styles.settingsDrawerOverview}`}>
@@ -988,13 +1144,14 @@ export default function SettingsPage() {
                   <div className={widgetCls.smallText}>导出时间范围</div>
                    <Select
                      value={exportRange}
+                     aria-label="导出数据时间范围"
                      className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`}
                      options={['近 7 天', '近 30 天', '本季度'].map((item) => ({ label: item, value: item }))}
                      onChange={setExportRange}
                    />
                 </div>
                 <div className={styles.settingsDrawerActions}>
-                  <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={handleExportData}>导出并下载</Button>
+                  <Button type="primary" className={pageCls.cardActionPrimary} size="large" onClick={() => { void handleExportData(); }}>导出并下载</Button>
                 </div>
               </div>
             ) : null}

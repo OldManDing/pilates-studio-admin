@@ -26,13 +26,13 @@ import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import { membersApi, type Member } from '@/services/members';
 import { transactionsApi, type Transaction } from '@/services/transactions';
-import { reportsApi } from '@/services/reports';
 import type { AccentTone, TransactionStatus, TransactionKind } from '@/types';
 import { getErrorMessage } from '@/utils/errors';
 import { formatCurrency, getToneColor } from '@/utils/format';
 import { useIsMobile } from '@/utils/useResponsive';
 import { axisTick, chartGrid } from '@/utils/chartTheme';
 import { getToneFromName } from '@/utils/tone';
+import styles from './index.module.css';
 
 const iconMap = {
   wallet: <WalletOutlined />,
@@ -74,7 +74,8 @@ type TransactionFilterDraft = {
 const transactionStatusOptions = Object.entries(statusMap).map(([k, v]) => ({ label: v, value: k }));
 const transactionKindOptions = Object.entries(kindMap).map(([k, v]) => ({ label: v, value: k }));
 
-const SIX_MONTHS_MS = 180 * 24 * 60 * 60 * 1000;
+const TRANSACTION_PAGE_SIZE = 100;
+const FINANCE_TREND_MONTHS = 12;
 
 const transactionKindToneMap: Record<TransactionKind, AccentTone> = {
   MEMBERSHIP_PURCHASE: 'mint',
@@ -84,6 +85,25 @@ const transactionKindToneMap: Record<TransactionKind, AccentTone> = {
   REFUND: 'violet',
   ADJUSTMENT: 'violet',
 };
+
+function padMonth(value: number) {
+  return String(value).padStart(2, '0');
+}
+
+function toMonthKey(date: Date) {
+  return `${date.getFullYear()}-${padMonth(date.getMonth() + 1)}`;
+}
+
+function buildRecentMonthKeys(monthCount: number) {
+  const keys: string[] = [];
+  for (let i = monthCount - 1; i >= 0; i -= 1) {
+    const date = new Date();
+    date.setDate(1);
+    date.setMonth(date.getMonth() - i);
+    keys.push(toMonthKey(date));
+  }
+  return keys;
+}
 
 export default function FinancePage() {
   const isMobile = useIsMobile();
@@ -100,6 +120,8 @@ export default function FinancePage() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
   const [showAllTransactions, setShowAllTransactions] = useState(true);
+  const [isSavingTransaction, setIsSavingTransaction] = useState(false);
+  const [statusUpdatingTransactionId, setStatusUpdatingTransactionId] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [revenueStructure, setRevenueStructure] = useState<Array<{ name: string; value: number; fill: string }>>([]);
   const [financeBar, setFinanceBar] = useState<Array<{ month: string; revenue: number }>>([]);
@@ -110,27 +132,50 @@ export default function FinancePage() {
     netRevenue: 0,
   });
 
+  const fetchAllTransactions = useCallback(async (params: { kind?: string; status?: TransactionStatus } = {}) => {
+    const now = new Date();
+    const defaultFrom = new Date(now.getFullYear(), now.getMonth() - 12, now.getDate()).toISOString().split('T')[0];
+    const defaultTo = now.toISOString().split('T')[0];
+    const firstPage = await transactionsApi.getAll({
+      page: 1,
+      pageSize: TRANSACTION_PAGE_SIZE,
+      from: defaultFrom,
+      to: defaultTo,
+      ...params,
+    });
+    const allRows = [...firstPage.data];
+    const totalPages = Math.max(1, firstPage.meta?.totalPages || 1);
+
+    for (let nextPage = 2; nextPage <= totalPages; nextPage += 1) {
+      const nextData = await transactionsApi.getAll({
+        page: nextPage,
+        pageSize: TRANSACTION_PAGE_SIZE,
+        from: defaultFrom,
+        to: defaultTo,
+        ...params,
+      });
+      allRows.push(...nextData.data);
+    }
+
+    return allRows;
+  }, []);
+
   const fetchTransactions = useCallback(async () => {
     try {
-      const from = new Date(Date.now() - SIX_MONTHS_MS).toISOString().split('T')[0];
-      const to = new Date().toISOString().split('T')[0];
-      const [firstTxPage, summaryRes, reportsRes] = await Promise.all([
-        transactionsApi.getAll({ page: 1, pageSize: 100, from, to }),
-        transactionsApi.getSummary().catch(() => ({ totalRevenueCents: 0, pendingAmountCents: 0, refundedAmountCents: 0, todayRevenueCents: 0 })),
-        reportsApi.getTransactions(from, to).catch(() => null),
-      ]);
-
-      const allTransactions = [...firstTxPage.data];
-      for (let nextPage = 2; nextPage <= firstTxPage.meta.totalPages; nextPage += 1) {
-        const pageData = await transactionsApi.getAll({ page: nextPage, pageSize: 100, from, to });
-        allTransactions.push(...pageData.data);
-      }
+      setLoading(true);
+      const allTransactions = await fetchAllTransactions();
 
       setTransactionList(allTransactions);
 
-      const totalRevenue = summaryRes.totalRevenueCents / 100;
-      const refundedAmount = summaryRes.refundedAmountCents / 100;
-      const pendingAmount = summaryRes.pendingAmountCents / 100;
+      const totalRevenue = allTransactions
+        .filter((item) => item.status === 'COMPLETED')
+        .reduce((sum, item) => sum + item.amountCents / 100, 0);
+      const refundedAmount = allTransactions
+        .filter((item) => item.status === 'REFUNDED')
+        .reduce((sum, item) => sum + item.amountCents / 100, 0);
+      const pendingAmount = allTransactions
+        .filter((item) => item.status === 'PENDING')
+        .reduce((sum, item) => sum + item.amountCents / 100, 0);
       setStats({
         totalRevenue,
         refundedAmount,
@@ -138,40 +183,46 @@ export default function FinancePage() {
         netRevenue: totalRevenue - refundedAmount,
       });
 
-      // Build pie chart data from reports
-      if (reportsRes?.transactionsByKind) {
-        const structure = reportsRes.transactionsByKind.map((item: any) => {
-          const tone = transactionKindToneMap[item.kind as TransactionKind] || 'mint';
+      const revenueByKind = new Map<string, number>();
+      allTransactions.forEach((transaction) => {
+        const currentValue = revenueByKind.get(transaction.kind) || 0;
+        revenueByKind.set(transaction.kind, currentValue + transaction.amountCents / 100);
+      });
+
+      const structure = Array.from(revenueByKind.entries())
+        .map(([kind, amount]) => {
+          const tone = transactionKindToneMap[kind as TransactionKind] || 'mint';
           const colors = getToneColor(tone);
 
           return {
-            name: kindMap[item.kind as TransactionKind] || item.kind,
-            value: Number(item._sum?.amountCents || 0) / 100,
+            name: kindMap[kind as TransactionKind] || kind,
+            value: amount,
             fill: colors.solid,
           };
-        });
+        })
+        .sort((left, right) => right.value - left.value);
 
-        setRevenueStructure(structure);
-      }
+      setRevenueStructure(structure);
 
-      // Build bar chart data (aggregate by month from transactions)
       const monthlyData: Record<string, { revenue: number }> = {};
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setMonth(d.getMonth() - i);
-        const key = `${d.getMonth() + 1}月`;
+      buildRecentMonthKeys(FINANCE_TREND_MONTHS).forEach((key) => {
         monthlyData[key] = { revenue: 0 };
-      }
+      });
+
       allTransactions.forEach((tx) => {
         const date = new Date(tx.happenedAt);
-        const key = `${date.getMonth() + 1}月`;
+        if (Number.isNaN(date.getTime())) {
+          return;
+        }
+
+        const key = toMonthKey(date);
         if (monthlyData[key]) {
           const amount = tx.amountCents / 100;
           monthlyData[key].revenue += amount;
         }
       });
-      const barData = Object.entries(monthlyData).map(([month, values]) => ({
-        month,
+      const barData = Object.entries(monthlyData).map(([monthKey, values]) => ({
+        month: monthKey,
         revenue: Math.round(values.revenue),
       }));
       setFinanceBar(barData);
@@ -182,7 +233,7 @@ export default function FinancePage() {
     } finally {
       setLoading(false);
     }
-  }, [messageApi]);
+  }, [fetchAllTransactions, messageApi]);
 
   useEffect(() => {
     setLoading(true);
@@ -192,8 +243,13 @@ export default function FinancePage() {
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        const firstPage = await membersApi.getAll(1, 100);
-        setMembers(firstPage.data || []);
+        const firstPage = await membersApi.getAll(1, 500);
+        const allRows = [...(firstPage.data || [])];
+        for (let nextPage = 2; nextPage <= firstPage.meta.totalPages; nextPage += 1) {
+          const nextData = await membersApi.getAll(nextPage, 500);
+          allRows.push(...nextData.data);
+        }
+        setMembers(allRows);
       } catch {
         // keep transaction UI usable even if member lookup fails
       }
@@ -211,6 +267,8 @@ export default function FinancePage() {
         (item.member?.name || '').toLowerCase().includes(keyword) ||
         (kindMap[item.kind] || item.kind).toLowerCase().includes(keyword) ||
         String(item.amountCents).includes(keyword) ||
+        String(item.amountCents / 100).includes(keyword.replace('¥', '').replace(',', '')) ||
+        formatCurrency(item.amountCents / 100).toLowerCase().includes(keyword) ||
         item.happenedAt.includes(keyword);
       const matchesStatus = statusFilter === '全部' || item.status === statusFilter;
       const matchesKind = kindFilter === '全部' || item.kind === kindFilter;
@@ -336,6 +394,7 @@ export default function FinancePage() {
 
   const handleSaveTransaction = async () => {
     try {
+      setIsSavingTransaction(true);
       const values = await form.validateFields();
       const data = {
         memberId: values.memberId,
@@ -364,11 +423,14 @@ export default function FinancePage() {
       closeFormModal();
     } catch (err) {
       messageApi.error(getErrorMessage(err, '保存失败'));
+    } finally {
+      setIsSavingTransaction(false);
     }
   };
 
   const handleUpdateTransactionStatus = async (transaction: Transaction, status: TransactionStatus) => {
     try {
+      setStatusUpdatingTransactionId(transaction.id);
       await transactionsApi.updateStatus(transaction.id, status);
       messageApi.success(`交易状态已更新为${statusMap[status]}`);
       const refreshedTransactions = await fetchTransactions();
@@ -379,6 +441,8 @@ export default function FinancePage() {
       }
     } catch (err) {
       messageApi.error(getErrorMessage(err, '更新交易状态失败'));
+    } finally {
+      setStatusUpdatingTransactionId(null);
     }
   };
 
@@ -418,19 +482,51 @@ export default function FinancePage() {
   const showPendingRenewals = async () => {
     try {
       setLoading(true);
-      const response = await transactionsApi.getAll({
-        page: 1,
-        pageSize: 100,
+      const pendingRenewals = await fetchAllTransactions({
         kind: 'MEMBERSHIP_RENEWAL',
         status: 'PENDING',
       });
 
-      setTransactionList(response.data);
+      setTransactionList(pendingRenewals);
       setSearchValue('');
       setStatusFilter('PENDING');
       setKindFilter('MEMBERSHIP_RENEWAL');
       setFilterDraft({ status: 'PENDING', kind: 'MEMBERSHIP_RENEWAL' });
       setShowAllTransactions(true);
+
+      const totalRevenue = pendingRenewals.reduce((sum, item) => sum + item.amountCents / 100, 0);
+      setStats({
+        totalRevenue,
+        refundedAmount: 0,
+        pendingAmount: totalRevenue,
+        netRevenue: totalRevenue,
+      });
+
+      setRevenueStructure([
+        {
+          name: kindMap.MEMBERSHIP_RENEWAL,
+          value: totalRevenue,
+          fill: getToneColor('orange').solid,
+        },
+      ]);
+
+      const pendingMonthData: Record<string, { revenue: number }> = {};
+      buildRecentMonthKeys(FINANCE_TREND_MONTHS).forEach((key) => {
+        pendingMonthData[key] = { revenue: 0 };
+      });
+      pendingRenewals.forEach((tx) => {
+        const date = new Date(tx.happenedAt);
+        if (Number.isNaN(date.getTime())) return;
+        const key = toMonthKey(date);
+        if (pendingMonthData[key]) {
+          pendingMonthData[key].revenue += tx.amountCents / 100;
+        }
+      });
+      setFinanceBar(Object.entries(pendingMonthData).map(([month, values]) => ({
+        month,
+        revenue: Math.round(values.revenue),
+      })));
+
       messageApi.success('已加载待处理续费申请');
     } catch (err) {
       messageApi.error(getErrorMessage(err, '加载待处理续费失败'));
@@ -445,6 +541,8 @@ export default function FinancePage() {
     ? `已按${transactionFilterLabels.join('、')}筛选。`
     : '当前展示全部最近交易，支持继续筛选、编辑与查看详情。';
   const viewAllLabel = searchValue.trim().length > 0 || statusFilter !== '全部' || kindFilter !== '全部' ? '查看全部' : '';
+  const hasFinanceTrendData = financeBar.some((item) => item.revenue > 0);
+  const hasRevenueStructureData = revenueStructure.length > 0;
 
   const FinanceTrendTooltip = createChartTooltip({
     labelMap: { revenue: '营收' },
@@ -487,59 +585,79 @@ export default function FinancePage() {
       </div>
 
       <div className={pageCls.financeTwoCol}>
-        <SectionCard title="营收趋势" subtitle="过去 7 个月营收变化">
-          <div className={pageCls.chartPanelTall}>
-            <ResponsiveContainer>
-              <BarChart data={financeBar} margin={{ top: 18, right: 8, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="financeRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--mint)" stopOpacity={0.96} />
-                    <stop offset="100%" stopColor="var(--control-primary-end)" stopOpacity={0.78} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} tick={axisTick} />
-                <YAxis axisLine={false} tickLine={false} tick={axisTick} />
-                <Tooltip cursor={{ fill: 'var(--mint-soft)' }} content={<FinanceTrendTooltip />} />
-                <Bar dataKey="revenue" fill="url(#financeRevenue)" radius={[10, 10, 0, 0]} barSize={isMobile ? 16 : 24} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        <SectionCard title="营收趋势" subtitle="过去 12 个月营收变化">
+          {hasFinanceTrendData ? (
+            <div className={pageCls.chartPanelTall}>
+              <ResponsiveContainer>
+                <BarChart data={financeBar} margin={{ top: 18, right: 8, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="financeRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--mint)" stopOpacity={0.96} />
+                      <stop offset="100%" stopColor="var(--control-primary-end)" stopOpacity={0.78} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} tick={axisTick} />
+                  <YAxis axisLine={false} tickLine={false} tick={axisTick} />
+                  <Tooltip cursor={{ fill: 'var(--mint-soft)' }} content={<FinanceTrendTooltip />} />
+                  <Bar dataKey="revenue" fill="url(#financeRevenue)" radius={[10, 10, 0, 0]} barSize={isMobile ? 16 : 24} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className={pageCls.sectionEmptyState}>
+              <EmptyState
+                title="暂无营收趋势数据"
+                description="当前时间范围内尚无可展示的营收记录。"
+              />
+            </div>
+          )}
         </SectionCard>
 
         <SectionCard title="营收构成" subtitle="按交易类型拆分">
-          <div className={pageCls.chartPanelTall}>
-            <ResponsiveContainer>
-              <PieChart>
-                <Pie
-                  data={revenueStructure}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={isMobile ? 52 : 74}
-                  outerRadius={isMobile ? 82 : 108}
-                  paddingAngle={3}
-                  stroke="rgba(255,255,255,0.9)"
-                >
-                  {revenueStructure.map((item) => (
-                    <Cell key={item.name} fill={item.fill} />
-                  ))}
-                </Pie>
-                <Tooltip content={<FinanceStructureTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className={widgetCls.recordList}>
-            {revenueStructure.map((item) => (
-              <div key={item.name} className={pageCls.rowBetween}>
-                <div className={pageCls.legendLabelRow}>
-                  <span className={pageCls.legendDot} style={{ background: item.fill }} />
-                  <span>{item.name}</span>
-                </div>
-                <strong>{formatCurrency(item.value)}</strong>
+          {hasRevenueStructureData ? (
+            <>
+              <div className={pageCls.chartPanelTall}>
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={revenueStructure}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={isMobile ? 52 : 74}
+                      outerRadius={isMobile ? 82 : 108}
+                      paddingAngle={3}
+                      stroke="rgba(255,255,255,0.9)"
+                    >
+                      {revenueStructure.map((item) => (
+                        <Cell key={item.name} fill={item.fill} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<FinanceStructureTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
-            ))}
-          </div>
+
+              <div className={widgetCls.recordList}>
+                {revenueStructure.map((item) => (
+                  <div key={item.name} className={pageCls.rowBetween}>
+                    <div className={pageCls.legendLabelRow}>
+                      <span className={pageCls.legendDot} style={{ background: item.fill }} />
+                      <span>{item.name}</span>
+                    </div>
+                    <strong>{formatCurrency(item.value)}</strong>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className={pageCls.sectionEmptyState}>
+              <EmptyState
+                title="暂无营收构成数据"
+                description="当前尚未形成可拆分的交易结构。"
+              />
+            </div>
+          )}
         </SectionCard>
       </div>
 
@@ -547,10 +665,11 @@ export default function FinancePage() {
         title="交易工作台"
         extra={viewAllLabel ? <Button type="text" className={pageCls.textAction} onClick={handleViewAll}>{viewAllLabel}</Button> : null}
       >
-        <div className={pageCls.sectionContentStack}>
+        <Spin spinning={loading}>
+          <div className={pageCls.sectionContentStack}>
           <div className={pageCls.sectionSummaryRow}>
             <div className={pageCls.sectionSummaryText}>{transactionResultSummary}</div>
-            <div className={pageCls.statusMetaWrap}>
+            <div className={`${pageCls.statusMetaWrap} ${styles.financeMetaWrap}`}>
               {stats.pendingAmount > 0 ? <span className={pageCls.sectionMetaPill}>待处理 ¥{stats.pendingAmount.toLocaleString('zh-CN')}</span> : null}
               {pendingRenewalCount > 0 ? <span className={pageCls.sectionMetaPill}>待处理续费 {pendingRenewalCount} 笔</span> : null}
               {stats.refundedAmount > 0 ? <span className={pageCls.sectionMetaPill}>退款 ¥{stats.refundedAmount.toLocaleString('zh-CN')}</span> : null}
@@ -558,7 +677,7 @@ export default function FinancePage() {
             </div>
           </div>
 
-          <div className={`${pageCls.toolbar} ${pageCls.toolbarCompact}`}>
+          <div className={`${pageCls.toolbar} ${pageCls.toolbarCompact} ${styles.financeToolbar}`}>
             <div className={pageCls.toolbarLeft}>
               <Input
                 className={pageCls.toolbarSearch}
@@ -585,7 +704,7 @@ export default function FinancePage() {
           {visibleTransactions.length ? (
             <div className={`${widgetCls.recordList} ${pageCls.sectionListStack}`}>
               {visibleTransactions.map((item) => (
-                <div key={item.id} className={`${widgetCls.recordItem} ${pageCls.surface} ${pageCls.memberRecordItem}`}>
+                <div key={item.id} className={`${widgetCls.recordItem} ${pageCls.surface} ${pageCls.memberRecordItem} ${styles.financeRecordCard}`}>
                   <div className={widgetCls.recordMeta}>
                     <MemberAvatar name={item.member?.name || '未知'} tone={getToneFromName(item.member?.name || '未知')} />
                     <div className={pageCls.memberRecordHead}>
@@ -608,15 +727,49 @@ export default function FinancePage() {
                     </div>
                   </div>
 
-                  <div className={`${pageCls.actionRowWrap} ${pageCls.actionRowWrapEnd}`}>
+                  <div className={`${pageCls.actionRowWrap} ${pageCls.actionRowWrapEnd} ${styles.financeActionRow}`}>
                     {item.kind === 'MEMBERSHIP_RENEWAL' && item.status === 'PENDING' ? (
-                      <Button size="large" className={pageCls.cardActionHalf} onClick={() => handleUpdateTransactionStatus(item, 'PROCESSING')}>开始处理</Button>
+                      <Button
+                        size="large"
+                        className={pageCls.cardActionHalf}
+                        onClick={() => handleUpdateTransactionStatus(item, 'PROCESSING')}
+                        loading={statusUpdatingTransactionId === item.id}
+                        disabled={statusUpdatingTransactionId !== null && statusUpdatingTransactionId !== item.id}
+                      >
+                        开始处理
+                      </Button>
                     ) : null}
                     {item.kind === 'MEMBERSHIP_RENEWAL' && item.status === 'PROCESSING' ? (
-                      <Button type="primary" size="large" className={pageCls.cardActionHalf} onClick={() => handleUpdateTransactionStatus(item, 'COMPLETED')}>完成续费</Button>
+                      <Button
+                        type="primary"
+                        size="large"
+                        className={pageCls.cardActionHalf}
+                        onClick={() => handleUpdateTransactionStatus(item, 'COMPLETED')}
+                        loading={statusUpdatingTransactionId === item.id}
+                        disabled={statusUpdatingTransactionId !== null && statusUpdatingTransactionId !== item.id}
+                      >
+                        完成续费
+                      </Button>
                     ) : null}
-                    <Button type="primary" size="large" className={pageCls.cardActionHalf} icon={<EyeOutlined />} onClick={() => setDetailTransaction(item)}>核对详情</Button>
-                    <Button size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={() => openEditModal(item)}>调整记录</Button>
+                    <Button
+                      type="primary"
+                      size="large"
+                      className={pageCls.cardActionHalf}
+                      icon={<EyeOutlined />}
+                      onClick={() => setDetailTransaction(item)}
+                      disabled={statusUpdatingTransactionId !== null}
+                    >
+                      核对详情
+                    </Button>
+                    <Button
+                      size="large"
+                      className={pageCls.cardActionHalf}
+                      icon={<EditOutlined />}
+                      onClick={() => openEditModal(item)}
+                      disabled={statusUpdatingTransactionId !== null}
+                    >
+                      调整记录
+                    </Button>
                   </div>
                   </div>
                 ))}
@@ -631,7 +784,8 @@ export default function FinancePage() {
               />
             </div>
           )}
-        </div>
+          </div>
+        </Spin>
       </SectionCard>
 
       <Modal
@@ -641,6 +795,7 @@ export default function FinancePage() {
         width={CRUD_MODAL_WIDTH}
         onCancel={closeFormModal}
         onOk={handleSaveTransaction}
+        confirmLoading={isSavingTransaction}
         okText={editingTransaction ? '保存修改' : '新增交易'}
         cancelText="取消"
         destroyOnHidden
@@ -717,6 +872,7 @@ export default function FinancePage() {
       </Modal>
 
       <Drawer
+        rootClassName={pageCls.responsiveDetailDrawer}
         open={detailTransaction !== null}
         width={NARROW_DETAIL_DRAWER_WIDTH}
         title={detailTransaction?.member?.name ?? '交易详情'}
@@ -724,12 +880,31 @@ export default function FinancePage() {
         extra={detailTransaction ? (
           <div className={pageCls.drawerActionGroup}>
             {detailTransaction.kind === 'MEMBERSHIP_RENEWAL' && detailTransaction.status === 'PENDING' ? (
-              <Button onClick={() => handleUpdateTransactionStatus(detailTransaction, 'PROCESSING')}>开始处理</Button>
+              <Button
+                onClick={() => handleUpdateTransactionStatus(detailTransaction, 'PROCESSING')}
+                loading={statusUpdatingTransactionId === detailTransaction.id}
+                disabled={statusUpdatingTransactionId !== null && statusUpdatingTransactionId !== detailTransaction.id}
+              >
+                开始处理
+              </Button>
             ) : null}
             {detailTransaction.kind === 'MEMBERSHIP_RENEWAL' && detailTransaction.status === 'PROCESSING' ? (
-              <Button type="primary" onClick={() => handleUpdateTransactionStatus(detailTransaction, 'COMPLETED')}>完成续费</Button>
+              <Button
+                type="primary"
+                onClick={() => handleUpdateTransactionStatus(detailTransaction, 'COMPLETED')}
+                loading={statusUpdatingTransactionId === detailTransaction.id}
+                disabled={statusUpdatingTransactionId !== null && statusUpdatingTransactionId !== detailTransaction.id}
+              >
+                完成续费
+              </Button>
             ) : null}
-            <Button icon={<EditOutlined />} onClick={() => openEditModal(detailTransaction)}>调整记录</Button>
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => openEditModal(detailTransaction)}
+              disabled={statusUpdatingTransactionId !== null}
+            >
+              调整记录
+            </Button>
           </div>
         ) : null}
       >

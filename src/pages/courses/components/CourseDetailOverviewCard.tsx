@@ -44,15 +44,15 @@ export default function CourseDetailOverviewCard({
             <span className={statusTone === 'active' ? styles.courseStatusChipActive : styles.courseStatusChipInactive}>
               {statusLabel}
             </span>
+            <span className={styles.courseScheduleBadge}>{sessionCountText}</span>
           </div>
-          <span className={styles.courseScheduleBadge}>{sessionCountText}</span>
         </div>
       </div>
 
-      <div className={widgetCls.detailOverviewStatGrid}>
-        <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatMint}`}>
+      <div className={`${widgetCls.detailOverviewStatGrid} ${styles.courseOverviewStatGrid}`}>
+        <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatMint} ${styles.courseOverviewPrimaryStat}`}>
           <div className={widgetCls.detailInsightLabel}>授课教练</div>
-          <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>{coachName}</div>
+          <div className={`${widgetCls.detailOverviewStatValue} ${styles.courseOverviewCoachValue}`}>{coachName}</div>
         </div>
         <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatViolet}`}>
           <div className={widgetCls.detailInsightLabel}>课程时长</div>

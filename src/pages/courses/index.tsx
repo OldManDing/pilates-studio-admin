@@ -9,8 +9,8 @@ import { COURSE_DETAIL_DRAWER_WIDTH, CRUD_MODAL_WIDTH } from '@/styles/dimension
 import pageCls from '@/styles/page.module.css';
 import { coursesApi, type Course } from '@/services/courses';
 import { coachesApi, type Coach } from '@/services/coaches';
-import { reportsApi } from '@/services/reports';
 import { getErrorMessage } from '@/utils/errors';
+import { useDebouncedValue } from '@/utils/useDebouncedValue';
 import {
   CourseBrowseShell,
   CourseDetailOverviewCard,
@@ -34,6 +34,18 @@ type CourseFormValues = {
   isActive: boolean;
 };
 
+const DEFAULT_COURSE_TYPE_OPTIONS = [
+  'MAT',
+  'REFORMER',
+  'CADILLAC',
+  'CHAIR',
+  'BARREL',
+  'PRIVATE',
+  'YOGA',
+  'FLOW',
+  'STRETCH',
+];
+
 export default function CoursesPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm<CourseFormValues>();
@@ -42,6 +54,7 @@ export default function CoursesPage() {
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState('');
+  const debouncedSearchValue = useDebouncedValue(searchValue, 350);
   const [typeFilter, setTypeFilter] = useState<string>('全部');
   const [levelFilter, setLevelFilter] = useState<string>('全部');
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -61,20 +74,16 @@ export default function CoursesPage() {
   const fetchCourses = useCallback(async (page = 1) => {
     try {
       setLoading(true);
-      const [coursesResponse, allCoursesData, coachesData, reportsData] = await Promise.all([
+      const [coursesResponse, allCoursesData, coachesData] = await Promise.all([
           coursesApi.getPaged({
             page,
             pageSize,
-            search: searchValue.trim() || undefined,
+            search: debouncedSearchValue.trim() || undefined,
             type: typeFilter === '全部' ? undefined : typeFilter,
             level: levelFilter === '全部' ? undefined : levelFilter,
           }),
           coursesApi.getAll(),
           coachesApi.getAll(),
-          reportsApi.getBookings(
-            new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            new Date().toISOString().split('T')[0]
-          ).catch(() => null),
         ]);
         const coursesData = coursesResponse.data;
         setCourseList(coursesData);
@@ -89,12 +98,10 @@ export default function CoursesPage() {
           ? allCoursesData.reduce((max, c) => ((c._count?.sessions || 0) > (max._count?.sessions || 0) ? c : max), allCoursesData[0])?.name || '-'
           : '-';
 
-        // 从报告数据计算真实的上座率
-        let avgOccupancy = '-';
-        if (reportsData && reportsData.totalBookings > 0) {
-          const occupancyRate = ((reportsData.confirmedBookings / reportsData.totalBookings) * 100).toFixed(1);
-          avgOccupancy = `${occupancyRate}%`;
-        }
+        const activeCourses = allCoursesData.filter((course) => course.isActive).length;
+        const avgOccupancy = totalCourses > 0
+          ? `${((activeCourses / totalCourses) * 100).toFixed(1)}%`
+          : '-';
 
         setStats({
           totalCourses: coursesResponse.meta.total,
@@ -107,7 +114,7 @@ export default function CoursesPage() {
       } finally {
         setLoading(false);
       }
-  }, [levelFilter, messageApi, pageSize, searchValue, typeFilter]);
+  }, [debouncedSearchValue, levelFilter, messageApi, pageSize, typeFilter]);
 
   useEffect(() => {
     void fetchCourses(currentPage);
@@ -116,6 +123,11 @@ export default function CoursesPage() {
   const courseTypeOptions = useMemo(
     () => Array.from(new Set(allCourses.map((course) => course.type))),
     [allCourses]
+  );
+
+  const normalizedCourseTypeOptions = useMemo(
+    () => Array.from(new Set([...DEFAULT_COURSE_TYPE_OPTIONS, ...courseTypeOptions])),
+    [courseTypeOptions],
   );
 
   const courseLevelOptions = useMemo(
@@ -148,7 +160,7 @@ export default function CoursesPage() {
   const courseStats = useMemo(() => [
     { title: '课程总数', value: String(stats.totalCourses), hint: '当前课程池', tone: 'mint' as const, icon: 'calendar' as const },
     { title: '本周课程', value: String(stats.weeklySessions), hint: '本周排期课时', tone: 'violet' as const, icon: 'app' as const },
-    { title: '平均上座率', value: stats.avgOccupancy, hint: '当前排班摘要', tone: 'orange' as const, icon: 'percent' as const },
+    { title: '开课活跃度', value: stats.avgOccupancy, hint: '启用课程占比', tone: 'orange' as const, icon: 'percent' as const },
     { title: '重点课程', value: stats.popularCourse, hint: '优先关注排期', tone: 'pink' as const, icon: 'star' as const },
   ], [stats]);
 
@@ -181,7 +193,7 @@ export default function CoursesPage() {
     setEditingCourse(null);
     form.setFieldsValue({
       name: '',
-      type: '',
+      type: DEFAULT_COURSE_TYPE_OPTIONS[0],
       level: '初级',
       coachId: undefined,
       durationMinutes: 50,
@@ -287,16 +299,22 @@ export default function CoursesPage() {
       setAllCourses(refreshedAllCourses);
       setTotal(refreshed.meta.total);
 
-      const totalCourses = refreshed.meta.total;
-      const weeklySessions = refreshed.data.reduce((sum, c) => sum + (c._count?.sessions || 0), 0);
+      const totalCourses = refreshedAllCourses.length;
+      const weeklySessions = refreshedAllCourses.reduce((sum, c) => sum + (c._count?.sessions || 0), 0);
       const popularCourse = totalCourses > 0
-        ? refreshed.data.reduce((max, c) => ((c._count?.sessions || 0) > (max._count?.sessions || 0) ? c : max), refreshed.data[0])?.name || '-'
+        ? refreshedAllCourses.reduce((max, c) => ((c._count?.sessions || 0) > (max._count?.sessions || 0) ? c : max), refreshedAllCourses[0])?.name || '-'
+        : '-';
+
+      const activeCourses = refreshedAllCourses.filter((course) => course.isActive).length;
+      const avgOccupancy = totalCourses > 0
+        ? `${((activeCourses / totalCourses) * 100).toFixed(1)}%`
         : '-';
 
       setStats((current) => ({
         ...current,
         totalCourses,
         weeklySessions,
+        avgOccupancy,
         popularCourse,
       }));
 
@@ -380,6 +398,7 @@ export default function CoursesPage() {
         confirmLoading={isSaving}
         okText={editingCourse ? '保存修改' : '新增课程'}
         cancelText="取消"
+        forceRender
         destroyOnHidden
       >
         <Form form={form} className={pageCls.crudModalForm} layout="vertical">
@@ -391,7 +410,12 @@ export default function CoursesPage() {
             </Col>
             <Col xs={24} md={12}>
               <Form.Item name="type" label="课程类型" rules={[{ required: true, message: '请输入课程类型' }]}>
-                <Input className={pageCls.settingsInput} placeholder="例如：Reformer" />
+                <Select
+                  className={pageCls.settingsInput}
+                  showSearch
+                  placeholder="请选择课程类型"
+                  options={normalizedCourseTypeOptions.map((item) => ({ label: item, value: item }))}
+                />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
@@ -441,6 +465,7 @@ export default function CoursesPage() {
       </Modal>
 
       <Drawer
+        rootClassName={pageCls.responsiveDetailDrawer}
         open={detailCourse !== null}
         width={COURSE_DETAIL_DRAWER_WIDTH}
         title={detailCourse?.name ?? '课程详情'}

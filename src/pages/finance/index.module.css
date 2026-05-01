@@ -1,0 +1,36 @@
+.financeToolbar {
+  margin-bottom: 14px;
+}
+
+.financeMetaWrap {
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .financeMetaWrap {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .financeToolbar {
+    gap: 10px;
+  }
+
+  .financeRecordCard {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .financeActionRow {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .financeActionRow button {
+    width: 100%;
+    min-height: 42px;
+    margin: 0;
+  }
+}

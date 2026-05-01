@@ -29,6 +29,7 @@ export type SettingsOverviewCardProps = {
   metrics: SettingsOverviewMetric[];
   primaryActionLabel?: string;
   primaryActionDisabled?: boolean;
+  primaryActionLoading?: boolean;
   onPrimaryAction?: () => void;
 };
 
@@ -48,6 +49,7 @@ export default function SettingsOverviewCard({
   metrics,
   primaryActionLabel,
   primaryActionDisabled = false,
+  primaryActionLoading = false,
   onPrimaryAction,
 }: SettingsOverviewCardProps) {
   return (
@@ -73,6 +75,7 @@ export default function SettingsOverviewCard({
               icon={<SaveOutlined />}
               onClick={onPrimaryAction}
               disabled={primaryActionDisabled}
+              loading={primaryActionLoading}
             >
               {primaryActionLabel}
             </ActionButton>

@@ -90,7 +90,7 @@ const actionLabelMap: Record<string, string> = {
 };
 
 export default function RolesPage() {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -98,6 +98,7 @@ export default function RolesPage() {
   const [detailRole, setDetailRole] = useState<Role | null>(null);
   const [editingPermissionRole, setEditingPermissionRole] = useState<Role | null>(null);
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([]);
+  const [initialPermissionIds, setInitialPermissionIds] = useState<string[]>([]);
   const [permissionSearch, setPermissionSearch] = useState('');
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
 
@@ -152,10 +153,41 @@ export default function RolesPage() {
 
   const openPermissionEditor = (role: Role) => {
     setEditingPermissionRole(role);
-    setSelectedPermissionIds(role.permissions.map((rp) => rp.permission.id));
+    const nextPermissionIds = role.permissions.map((rp) => rp.permission.id);
+    setSelectedPermissionIds(nextPermissionIds);
+    setInitialPermissionIds(nextPermissionIds);
     setPermissionSearch('');
     setShowSelectedOnly(false);
   };
+
+  const hasPermissionDraftChanged = useMemo(() => {
+    const normalize = (items: string[]) => [...items].sort().join('|');
+    return normalize(initialPermissionIds) !== normalize(selectedPermissionIds);
+  }, [initialPermissionIds, selectedPermissionIds]);
+
+  const closePermissionEditor = useCallback(() => {
+    if (!editingPermissionRole) {
+      return;
+    }
+
+    if (!hasPermissionDraftChanged) {
+      setEditingPermissionRole(null);
+      setInitialPermissionIds([]);
+      return;
+    }
+
+    modal.confirm({
+      title: '存在未保存的权限修改',
+      content: '关闭后将丢失当前抽屉内的权限改动，是否继续关闭？',
+      okText: '放弃修改',
+      cancelText: '继续编辑',
+      okButtonProps: { danger: true },
+      onOk: () => {
+        setEditingPermissionRole(null);
+        setInitialPermissionIds([]);
+      },
+    });
+  }, [editingPermissionRole, hasPermissionDraftChanged, modal]);
 
   const handlePermissionToggle = (permissionId: string, checked: boolean) => {
     setSelectedPermissionIds((current) => {
@@ -173,6 +205,7 @@ export default function RolesPage() {
       await rolesApi.assignPermissions(editingPermissionRole.id, selectedPermissionIds);
       message.success('权限模板已保存并生效');
       setEditingPermissionRole(null);
+      setInitialPermissionIds([]);
       await fetchData();
     } catch (err) {
       message.error(getErrorMessage(err, '保存权限失败'));
@@ -262,10 +295,11 @@ export default function RolesPage() {
       </SectionCard>
 
       <Drawer
+        rootClassName={pageCls.responsiveDetailDrawer}
         open={editingPermissionRole !== null}
         width={ROLE_PERMISSION_DRAWER_WIDTH}
         title={editingPermissionRole ? `编辑权限 · ${editingPermissionRole.name}` : '编辑权限'}
-        onClose={() => setEditingPermissionRole(null)}
+        onClose={closePermissionEditor}
         extra={(
           <ActionButton icon={<SaveOutlined />} onClick={savePermissions} disabled={saving}>
             保存
@@ -329,6 +363,7 @@ export default function RolesPage() {
       </Drawer>
 
       <Drawer
+        rootClassName={pageCls.responsiveDetailDrawer}
         open={detailRole !== null}
         width={NARROW_DETAIL_DRAWER_WIDTH}
         title={detailRole?.name || '角色详情'}
@@ -342,7 +377,7 @@ export default function RolesPage() {
                 <div className={widgetCls.detailOverviewLead}>{detailRole.name}</div>
                 <div className={widgetCls.detailOverviewText}>{detailRole.description || '暂无角色说明，可在角色设置中补充职责范围。'}</div>
               </div>
-              <div className={widgetCls.detailOverviewStatGrid}>
+              <div className={`${widgetCls.detailOverviewStatGrid} ${roleCss.roleDetailStatGrid}`}>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatMint}`}>
                   <div className={widgetCls.detailInsightLabel}>角色类型</div>
                   <div className={`${widgetCls.detailOverviewStatValue} ${widgetCls.detailOverviewStatValueLarge}`}>

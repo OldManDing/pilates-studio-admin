@@ -19,7 +19,7 @@ import {
   Spin,
   message,
 } from 'antd';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
 import PageHeader from '@/components/PageHeader';
@@ -75,7 +75,7 @@ type ComposerFormValues = {
 };
 
 const PAGE_SIZE = 10;
-const RECIPIENT_PAGE_SIZE = 100;
+const RECIPIENT_PAGE_SIZE = 500;
 const emptyRecipientOptions: Record<RecipientType, RecipientSelectOption[]> = {
   member: [],
   miniUser: [],
@@ -110,6 +110,21 @@ const recipientTypeLabelMap: Record<RecipientType, string> = {
   member: '会员',
   miniUser: '小程序用户',
   admin: '管理员',
+};
+
+const recipientChannelOptions: Record<RecipientType, Array<{ label: string; value: Extract<NotificationChannel, 'INTERNAL' | 'MINI_PROGRAM' | 'EMAIL'> }>> = {
+  member: [
+    { label: channelLabelMap.INTERNAL, value: 'INTERNAL' },
+    { label: channelLabelMap.MINI_PROGRAM, value: 'MINI_PROGRAM' },
+    { label: channelLabelMap.EMAIL, value: 'EMAIL' },
+  ],
+  miniUser: [
+    { label: channelLabelMap.INTERNAL, value: 'INTERNAL' },
+    { label: channelLabelMap.MINI_PROGRAM, value: 'MINI_PROGRAM' },
+  ],
+  admin: [
+    { label: channelLabelMap.INTERNAL, value: 'INTERNAL' },
+  ],
 };
 
 const iconMap = {
@@ -248,6 +263,7 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [markingNotificationId, setMarkingNotificationId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL');
   const [channelFilter, setChannelFilter] = useState<FilterChannel>('ALL');
   const [typeFilter, setTypeFilter] = useState<FilterType>('ALL');
@@ -258,6 +274,8 @@ export default function NotificationsPage() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [recipientOptions, setRecipientOptions] = useState<Record<RecipientType, RecipientSelectOption[]>>(emptyRecipientOptions);
   const [recipientOptionsLoading, setRecipientOptionsLoading] = useState<Record<RecipientType, boolean>>(emptyRecipientLoadingState);
+  const recipientRequestSeqRef = useRef<Record<RecipientType, number>>({ member: 0, miniUser: 0, admin: 0 });
+  const detailRequestSeqRef = useRef(0);
   const recipientType = Form.useWatch('recipientType', composerForm) || 'member';
 
   const loadNotifications = useCallback(async (page = currentPage) => {
@@ -294,6 +312,9 @@ export default function NotificationsPage() {
   }, [currentPage, loadNotifications]);
 
   const loadRecipientOptions = useCallback(async (type: RecipientType, search?: string) => {
+    const requestSeq = recipientRequestSeqRef.current[type] + 1;
+    recipientRequestSeqRef.current[type] = requestSeq;
+
     try {
       setRecipientOptionsLoading((current) => ({
         ...current,
@@ -302,18 +323,24 @@ export default function NotificationsPage() {
 
       if (type === 'member') {
         const members = await membersApi.getAll(1, RECIPIENT_PAGE_SIZE, { search });
+        if (recipientRequestSeqRef.current[type] !== requestSeq) return;
         setRecipientOptions((current) => ({
           ...current,
           member: members.data.map(mapMemberToOption),
         }));
       } else if (type === 'miniUser') {
         const miniUsers = await miniUsersApi.getAll(1, RECIPIENT_PAGE_SIZE, search);
+        if (recipientRequestSeqRef.current[type] !== requestSeq) return;
+        const miniUserRows = Array.isArray((miniUsers as unknown as { data?: unknown[] }).data)
+          ? (miniUsers as unknown as { data: MiniUserRecord[] }).data
+          : (Array.isArray(miniUsers as unknown as unknown[]) ? (miniUsers as unknown as MiniUserRecord[]) : []);
         setRecipientOptions((current) => ({
           ...current,
-          miniUser: miniUsers.data.map(mapMiniUserToOption),
+          miniUser: miniUserRows.map(mapMiniUserToOption),
         }));
       } else {
         const admins = await adminsApi.getAll(search);
+        if (recipientRequestSeqRef.current[type] !== requestSeq) return;
         setRecipientOptions((current) => ({
           ...current,
           admin: admins.map(mapAdminToOption),
@@ -322,10 +349,12 @@ export default function NotificationsPage() {
     } catch (err) {
       messageApi.error(getErrorMessage(err, `加载${recipientTypeLabelMap[type]}列表失败`));
     } finally {
-      setRecipientOptionsLoading((current) => ({
-        ...current,
-        [type]: false,
-      }));
+      if (recipientRequestSeqRef.current[type] === requestSeq) {
+        setRecipientOptionsLoading((current) => ({
+          ...current,
+          [type]: false,
+        }));
+      }
     }
   }, [messageApi]);
 
@@ -436,17 +465,23 @@ export default function NotificationsPage() {
   };
 
   const openDetailDrawer = async (notification: NotificationRecord) => {
+    const requestSeq = detailRequestSeqRef.current + 1;
+    detailRequestSeqRef.current = requestSeq;
     setDetailOpen(true);
     setDetailNotification(notification);
 
     try {
       setDetailLoading(true);
       const detail = await notificationsApi.getById(notification.id);
+      if (detailRequestSeqRef.current !== requestSeq) return;
       setDetailNotification(detail);
     } catch (err) {
+      if (detailRequestSeqRef.current !== requestSeq) return;
       messageApi.error(getErrorMessage(err, '加载通知详情失败'));
     } finally {
-      setDetailLoading(false);
+      if (detailRequestSeqRef.current === requestSeq) {
+        setDetailLoading(false);
+      }
     }
   };
 
@@ -456,6 +491,7 @@ export default function NotificationsPage() {
     }
 
     try {
+      setMarkingNotificationId(notification.id);
       const updated = await notificationsApi.markAsRead(notification.id);
       messageApi.success(isFeedbackNotification(notification) ? '反馈已标记为已处理' : '通知已标记为已读');
 
@@ -466,6 +502,8 @@ export default function NotificationsPage() {
       await loadNotifications(currentPage);
     } catch (err) {
       messageApi.error(getErrorMessage(err, '标记已读失败'));
+    } finally {
+      setMarkingNotificationId(null);
     }
   };
 
@@ -509,7 +547,8 @@ export default function NotificationsPage() {
       </div>
 
       <SectionCard title="通知队列">
-        <div className={pageCls.sectionContentStack}>
+        <Spin spinning={loading}>
+          <div className={pageCls.sectionContentStack}>
           <div className={pageCls.sectionSummaryRow}>
             <div className={pageCls.sectionSummaryText}>{notificationResultSummary}</div>
             <div className={pageCls.statusMetaWrap}>
@@ -521,10 +560,10 @@ export default function NotificationsPage() {
           </div>
 
           <div className={pageCls.toolbar}>
-            <div className={pageCls.toolbarLeft}>
+            <div className={`${pageCls.toolbarLeft} ${styles.queueFilters}`}>
               <Select
                 value={statusFilter}
-                className={`${pageCls.settingsInput} ${pageCls.toolbarSelect} ${pageCls.toolbarSelectWide}`}
+                className={`${pageCls.settingsInput} ${pageCls.toolbarSelect} ${styles.queueFilterSelect}`}
                 options={[
                   { label: '全部状态', value: 'ALL' },
                   { label: statusLabelMap.PENDING, value: 'PENDING' },
@@ -539,7 +578,7 @@ export default function NotificationsPage() {
               />
               <Select
                 value={channelFilter}
-                className={`${pageCls.settingsInput} ${pageCls.toolbarSelect} ${pageCls.toolbarSelectWide}`}
+                className={`${pageCls.settingsInput} ${pageCls.toolbarSelect} ${styles.queueFilterSelect}`}
                 options={[
                   { label: '全部渠道', value: 'ALL' },
                   { label: channelLabelMap.INTERNAL, value: 'INTERNAL' },
@@ -554,7 +593,7 @@ export default function NotificationsPage() {
               />
               <Select
                 value={typeFilter}
-                className={`${pageCls.settingsInput} ${pageCls.toolbarSelect} ${pageCls.toolbarSelectWide}`}
+                className={`${pageCls.settingsInput} ${pageCls.toolbarSelect} ${styles.queueFilterSelect}`}
                 options={(
                   Object.keys(typeLabelMap) as FilterType[]
                 ).map((key) => ({ label: typeLabelMap[key], value: key }))}
@@ -563,7 +602,7 @@ export default function NotificationsPage() {
                   setTypeFilter(value);
                 }}
               />
-              <Button type="text" className={widgetCls.dashboardCardAction} onClick={showMiniProgramFeedback}>小程序反馈</Button>
+              <Button type="text" className={`${widgetCls.dashboardCardAction} ${styles.queueQuickAction}`} onClick={showMiniProgramFeedback}>小程序反馈</Button>
             </div>
           </div>
 
@@ -590,10 +629,10 @@ export default function NotificationsPage() {
                           <span className={styles.timestampPill}>创建于 {formatDateTime(notification.createdAt)}</span>
                         </div>
 
-                        <div className={styles.notificationPreview}>{notification.content}</div>
+                        <p className={styles.notificationPreview}>{notification.content}</p>
                       </div>
 
-                      <div className={styles.notificationAside}>
+                      <aside className={styles.notificationAside}>
                         <Descriptions column={1} size="small">
                           <Descriptions.Item label="接收对象">{recipient.meta}</Descriptions.Item>
                           <Descriptions.Item label="已发送">{formatDateTime(notification.sentAt)}</Descriptions.Item>
@@ -614,19 +653,20 @@ export default function NotificationsPage() {
                             size="large"
                             className={pageCls.cardActionPrimary}
                             icon={<CheckCircleOutlined />}
-                            disabled={!canMarkAsRead(notification)}
+                            loading={markingNotificationId === notification.id}
+                            disabled={!canMarkAsRead(notification) || (markingNotificationId !== null && markingNotificationId !== notification.id)}
                             onClick={() => handleMarkAsRead(notification)}
                           >
                             {getMarkAsReadLabel(notification)}
                           </Button>
                         </div>
-                      </div>
+                      </aside>
                     </div>
                   );
                 })}
               </div>
 
-              <div className={pageCls.sectionPagination}>
+              <div className={`${pageCls.sectionPagination} ${styles.notificationPagination}`}>
                 <Pagination
                   current={currentPage}
                   pageSize={PAGE_SIZE}
@@ -646,7 +686,8 @@ export default function NotificationsPage() {
               />
             </div>
           )}
-        </div>
+          </div>
+        </Spin>
       </SectionCard>
 
       <Modal
@@ -671,6 +712,7 @@ export default function NotificationsPage() {
               className={pageCls.settingsInput}
               onChange={() => {
                 composerForm.resetFields(['recipientId']);
+                composerForm.setFieldValue('channel', 'INTERNAL');
               }}
               options={(
                 Object.keys(recipientTypeLabelMap) as RecipientType[]
@@ -708,12 +750,7 @@ export default function NotificationsPage() {
           >
             <Select
               className={pageCls.settingsInput}
-              options={[
-                { label: channelLabelMap.INTERNAL, value: 'INTERNAL' },
-                { label: channelLabelMap.MINI_PROGRAM, value: 'MINI_PROGRAM' },
-                { label: channelLabelMap.EMAIL, value: 'EMAIL' },
-                { label: channelLabelMap.SMS, value: 'SMS' },
-              ]}
+              options={recipientChannelOptions[recipientType]}
             />
           </Form.Item>
 
@@ -732,6 +769,7 @@ export default function NotificationsPage() {
       </Modal>
 
       <Drawer
+        rootClassName={pageCls.responsiveDetailDrawer}
         open={detailOpen}
         width={NARROW_DETAIL_DRAWER_WIDTH}
         title={detailNotification?.title || '通知详情'}
@@ -743,7 +781,8 @@ export default function NotificationsPage() {
           <Button
             type="primary"
             icon={<MailOutlined />}
-            disabled={!canMarkAsRead(detailNotification)}
+            loading={markingNotificationId === detailNotification.id}
+            disabled={!canMarkAsRead(detailNotification) || (markingNotificationId !== null && markingNotificationId !== detailNotification.id)}
             onClick={() => handleMarkAsRead(detailNotification)}
           >
             {getMarkAsReadLabel(detailNotification)}

@@ -14,6 +14,7 @@ import { coachStatusLabels, type CoachStatus } from '@/types';
 import { coachesApi, type Coach } from '@/services/coaches';
 import { getErrorMessage } from '@/utils/errors';
 import { getToneFromName } from '@/utils/tone';
+import { useDebouncedValue } from '@/utils/useDebouncedValue';
 import { CoachProfileOverviewCard, CoachProfileStats, CoachRecordCard, type CoachProfileStatItem } from './components';
 
 const { TextArea } = Input;
@@ -80,12 +81,15 @@ export default function CoachesPage() {
   const [coachList, setCoachList] = useState<Coach[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState('');
+  const debouncedSearchValue = useDebouncedValue(searchValue, 350);
   const [statusFilter, setStatusFilter] = useState<CoachStatus | '全部'>('全部');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filterDraft, setFilterDraft] = useState<CoachFilterDraft>({ status: '全部' });
   const [editingCoach, setEditingCoach] = useState<Coach | null>(null);
   const [detailCoach, setDetailCoach] = useState<Coach | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isSavingCoach, setIsSavingCoach] = useState(false);
+  const [deletingCoachId, setDeletingCoachId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
@@ -117,37 +121,24 @@ export default function CoachesPage() {
   const fetchCoaches = useCallback(async (page = 1) => {
     try {
       setLoading(true);
-      const [response, allCoaches] = await Promise.all([
-        coachesApi.getPaged({
-          page,
-          pageSize,
-          search: searchValue.trim() || undefined,
-          status: statusFilter === '全部' ? undefined : statusFilter,
-        }),
-        coachesApi.getAll(),
-      ]);
+      const response = await coachesApi.getPaged({
+        page,
+        pageSize,
+        search: debouncedSearchValue.trim() || undefined,
+        status: statusFilter === '全部' ? undefined : statusFilter,
+      });
       const coachesData = response.data;
       setCoachList(coachesData);
       setCurrentPage(response.meta.page);
       setTotal(response.meta.total);
 
-      const keyword = searchValue.trim();
-      const matchingCoaches = allCoaches.filter((coach) => {
-        const matchesSearch = !keyword
-          || coach.name.includes(keyword)
-          || coach.phone.includes(keyword)
-          || (coach.email || '').includes(keyword);
-        const matchesStatus = statusFilter === '全部' || coach.status === statusFilter;
-        return matchesSearch && matchesStatus;
-      });
-
-      syncCoachStats(matchingCoaches, response.meta.total);
+      syncCoachStats(coachesData, response.meta.total);
     } catch (err) {
       messageApi.error('获取教练数据失败');
     } finally {
       setLoading(false);
     }
-  }, [messageApi, pageSize, searchValue, statusFilter, syncCoachStats]);
+  }, [debouncedSearchValue, messageApi, pageSize, statusFilter, syncCoachStats]);
 
   useEffect(() => {
     void fetchCoaches(currentPage);
@@ -198,6 +189,7 @@ export default function CoachesPage() {
 
   const handleSaveCoach = async () => {
     try {
+      setIsSavingCoach(true);
       const values = await form.validateFields();
       const data = {
         name: values.name,
@@ -224,21 +216,9 @@ export default function CoachesPage() {
         search: searchValue.trim() || undefined,
         status: statusFilter === '全部' ? undefined : statusFilter,
       });
-      const allMatchingCoaches = await coachesApi.getAll();
       setCoachList(refreshed.data);
       setTotal(refreshed.meta.total);
-      syncCoachStats(
-        allMatchingCoaches.filter((coach) => {
-          const keyword = searchValue.trim();
-          const matchesSearch = !keyword
-            || coach.name.includes(keyword)
-            || coach.phone.includes(keyword)
-            || (coach.email || '').includes(keyword);
-          const matchesStatus = statusFilter === '全部' || coach.status === statusFilter;
-          return matchesSearch && matchesStatus;
-        }),
-        refreshed.meta.total,
-      );
+      syncCoachStats(refreshed.data, refreshed.meta.total);
 
       if (detailCoach && editingCoach) {
         const updated = refreshed.data.find((c) => c.id === detailCoach.id) || null;
@@ -248,12 +228,15 @@ export default function CoachesPage() {
       closeFormModal();
     } catch (err) {
       messageApi.error(getErrorMessage(err, '保存失败'));
+    } finally {
+      setIsSavingCoach(false);
     }
   };
 
   const handleDeleteCoach = async (coach: Coach) => {
     const previousList = coachList;
     try {
+      setDeletingCoachId(coach.id);
       setCoachList((current) => current.filter((item) => item.id !== coach.id));
       await coachesApi.delete(coach.id);
       await fetchCoaches(currentPage);
@@ -266,6 +249,8 @@ export default function CoachesPage() {
     } catch (err) {
       setCoachList(previousList);
       messageApi.error(getErrorMessage(err, '删除失败'));
+    } finally {
+      setDeletingCoachId(null);
     }
   };
 
@@ -356,71 +341,73 @@ export default function CoachesPage() {
       <SectionCard
         title="教练列表"
       >
-        <div className={pageCls.sectionContentStack}>
-          <div className={pageCls.sectionSummaryRow}>
-            <div className={pageCls.sectionSummaryText}>{coachResultSummary}</div>
-            <span className={pageCls.sectionMetaPill}>{coachCountText}</span>
-          </div>
-
-          <div className={pageCls.toolbar}>
-            <div className={pageCls.toolbarLeft}>
-              <Input
-                className={pageCls.toolbarSearch}
-                size="large"
-                value={searchValue}
-                prefix={<SearchOutlined />}
-                placeholder="按教练姓名、电话或邮箱搜索"
-                onChange={(event) => handleSearchChange(event.target.value)}
-              />
+        <Spin spinning={loading}>
+          <div className={pageCls.sectionContentStack}>
+            <div className={pageCls.sectionSummaryRow}>
+              <div className={pageCls.sectionSummaryText}>{coachResultSummary}</div>
+              <span className={pageCls.sectionMetaPill}>{coachCountText}</span>
             </div>
-            <div className={pageCls.toolbarRight}>
-              <ActionButton icon={<FilterOutlined />} ghost onClick={openFilterModal}>筛选条件</ActionButton>
-            </div>
-          </div>
 
-          {coachList.length ? (
-            <>
-              <div className={`${widgetCls.recordList} ${pageCls.sectionListStack}`}>
-                {coachList.map((coach) => (
-                  <CoachRecordCard
-                    key={coach.id}
-                    name={coach.name}
-                    coachCodeText={coach.coachCode || '未设置编号'}
-                    statusLabel={coachStatusLabels[coach.status] || coach.status}
-                    experienceText={coach.experience || '经验信息待补充'}
-                    phoneText={coach.phone}
-                    ratingText={formatCoachRating(coach.rating)}
-                    specialtiesText={getDisplayListText(coach.specialties, '待补充擅长方向', 2)}
-                    tone={getToneFromName(coach.name)}
-                    onEdit={() => openEditModal(coach)}
-                    onViewDetail={() => setDetailCoach(coach)}
-                  />
-                ))}
-              </div>
-              <div className={pageCls.sectionPagination}>
-                <Pagination
-                  current={currentPage}
-                  pageSize={pageSize}
-                  total={total}
-                  onChange={setCurrentPage}
-                  showSizeChanger={false}
+            <div className={pageCls.toolbar}>
+              <div className={pageCls.toolbarLeft}>
+                <Input
+                  className={pageCls.toolbarSearch}
+                  size="large"
+                  value={searchValue}
+                  prefix={<SearchOutlined />}
+                  placeholder="按教练姓名、电话或邮箱搜索"
+                  onChange={(event) => handleSearchChange(event.target.value)}
                 />
               </div>
-            </>
-          ) : (
-            <div className={pageCls.sectionEmptyState}>
-              <EmptyState
-                title="暂无符合条件的教练"
-                description="调整搜索词或筛选条件后再试。"
-                actionText="重置筛选"
-                onAction={() => {
-                  setSearchValue('');
-                  resetFilters();
-                }}
-              />
+              <div className={pageCls.toolbarRight}>
+                <ActionButton icon={<FilterOutlined />} ghost onClick={openFilterModal}>筛选条件</ActionButton>
+              </div>
             </div>
-          )}
-        </div>
+
+            {coachList.length ? (
+              <>
+                <div className={`${widgetCls.recordList} ${pageCls.sectionListStack}`}>
+                  {coachList.map((coach) => (
+                    <CoachRecordCard
+                      key={coach.id}
+                      name={coach.name}
+                      coachCodeText={coach.coachCode || '未设置编号'}
+                      statusLabel={coachStatusLabels[coach.status] || coach.status}
+                      experienceText={coach.experience || '经验信息待补充'}
+                      phoneText={coach.phone}
+                      ratingText={formatCoachRating(coach.rating)}
+                      specialtiesText={getDisplayListText(coach.specialties, '待补充擅长方向', 2)}
+                      tone={getToneFromName(coach.name)}
+                      onEdit={() => openEditModal(coach)}
+                      onViewDetail={() => setDetailCoach(coach)}
+                    />
+                  ))}
+                </div>
+                <div className={pageCls.sectionPagination}>
+                  <Pagination
+                    current={currentPage}
+                    pageSize={pageSize}
+                    total={total}
+                    onChange={setCurrentPage}
+                    showSizeChanger={false}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className={pageCls.sectionEmptyState}>
+                <EmptyState
+                  title="暂无符合条件的教练"
+                  description="调整搜索词或筛选条件后再试。"
+                  actionText="重置筛选"
+                  onAction={() => {
+                    setSearchValue('');
+                    resetFilters();
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </Spin>
       </SectionCard>
 
       <Modal
@@ -452,8 +439,10 @@ export default function CoachesPage() {
         width={CRUD_MODAL_WIDTH}
         onCancel={closeFormModal}
         onOk={handleSaveCoach}
+        confirmLoading={isSavingCoach}
         okText={editingCoach ? '保存修改' : '新增教练'}
         cancelText="取消"
+        forceRender
         destroyOnHidden
       >
         <Form form={form} className={pageCls.crudModalForm} layout="vertical">
@@ -503,6 +492,7 @@ export default function CoachesPage() {
       </Modal>
 
       <Drawer
+        rootClassName={pageCls.responsiveDetailDrawer}
         open={detailCoach !== null}
         width={DETAIL_DRAWER_WIDTH}
         title={detailCoach?.name ?? '教练详情'}
@@ -510,8 +500,25 @@ export default function CoachesPage() {
         extra={detailCoach ? (
           <div className={pageCls.drawerActionGroup}>
             <Button icon={<EditOutlined />} onClick={() => openEditModal(detailCoach)}>编辑</Button>
-            <Popconfirm title="确认删除该教练吗？" okText="删除" cancelText="取消" okButtonProps={{ danger: true }} onConfirm={() => handleDeleteCoach(detailCoach)}>
-              <Button className={pageCls.cardActionWarning} icon={<DeleteOutlined />}>删除</Button>
+            <Popconfirm
+              title="确认删除该教练吗？"
+              okText="删除"
+              cancelText="取消"
+              okButtonProps={{
+                danger: true,
+                loading: deletingCoachId === detailCoach.id,
+                disabled: deletingCoachId !== null && deletingCoachId !== detailCoach.id,
+              }}
+              onConfirm={() => handleDeleteCoach(detailCoach)}
+            >
+              <Button
+                className={pageCls.cardActionWarning}
+                icon={<DeleteOutlined />}
+                loading={deletingCoachId === detailCoach.id}
+                disabled={deletingCoachId !== null && deletingCoachId !== detailCoach.id}
+              >
+                删除
+              </Button>
             </Popconfirm>
           </div>
       ) : null}
