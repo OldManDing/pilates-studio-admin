@@ -1,5 +1,5 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { AttendanceStatus, BookingStatus } from '../../common/enums/domain.enums';
+import { AttendanceStatus, BookingStatus, MembershipPlanCategory } from '../../common/enums/domain.enums';
 import { AttendanceService } from './attendance.service';
 
 const createBooking = (overrides: Partial<Record<string, unknown>> = {}) => ({
@@ -8,7 +8,7 @@ const createBooking = (overrides: Partial<Record<string, unknown>> = {}) => ({
   memberId: 'member-1',
   sessionId: 'session-1',
   status: BookingStatus.CONFIRMED,
-  member: { id: 'member-1', name: '林若溪' },
+  member: { id: 'member-1', name: '林若溪', remainingCredits: 10, plan: { category: MembershipPlanCategory.TIME_CARD } },
   session: { id: 'session-1', course: { id: 'course-1', name: 'Morning Flow' } },
   ...overrides,
 });
@@ -41,6 +41,10 @@ describe('AttendanceService', () => {
     prisma = {
       booking: {
         findUnique: jest.fn(),
+        update: jest.fn(),
+      },
+      member: {
+        update: jest.fn(),
       },
       attendance: {
         findUnique: jest.fn(),
@@ -62,6 +66,8 @@ describe('AttendanceService', () => {
     prisma.booking.findUnique.mockResolvedValue(createBooking());
     prisma.attendance.findUnique.mockResolvedValue(null);
     prisma.attendance.create.mockResolvedValue(createAttendance());
+    prisma.member.update.mockResolvedValue({});
+    prisma.booking.update.mockResolvedValue({});
 
     const result = await service.checkIn({ bookingId: 'booking-1', notes: 'Arrived early' } as never);
 
@@ -92,6 +98,7 @@ describe('AttendanceService', () => {
   it('completes a checked-in session', async () => {
     prisma.attendance.findUnique.mockResolvedValue(createAttendance({ status: AttendanceStatus.CHECKED_IN }));
     prisma.attendance.update.mockResolvedValue(createAttendance({ status: AttendanceStatus.COMPLETED }));
+    prisma.booking.update.mockResolvedValue({});
 
     const result = await service.completeSession('attendance-1', 'Completed');
 

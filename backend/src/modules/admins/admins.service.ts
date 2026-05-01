@@ -146,10 +146,23 @@ export class AdminsService {
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    return this.prisma.adminUser.update({
-      where: { id },
-      data: { passwordHash },
-      select: { id: true, email: true, updatedAt: true },
-    });
+    const [updatedAdmin] = await this.prisma.$transaction([
+      this.prisma.adminUser.update({
+        where: { id },
+        data: { passwordHash },
+        select: { id: true, email: true, updatedAt: true },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: {
+          adminUserId: id,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+        },
+      }),
+    ]);
+
+    return updatedAdmin;
   }
 }

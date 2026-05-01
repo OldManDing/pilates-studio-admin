@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CheckInDto } from './dto/check-in.dto';
 import { SubmitCourseReviewDto } from './dto/submit-course-review.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
-import { AttendanceStatus, BookingStatus } from '../../common/enums/domain.enums';
+import { AttendanceStatus, BookingStatus, MembershipPlanCategory } from '../../common/enums/domain.enums';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -18,7 +18,15 @@ export class AttendanceService {
     const booking = await this.prisma.booking.findUnique({
       where: { id: dto.bookingId },
       include: {
-        member: true,
+        member: {
+          include: {
+            plan: {
+              select: {
+                category: true,
+              },
+            },
+          },
+        },
         session: true,
       },
     });
@@ -27,8 +35,26 @@ export class AttendanceService {
       throw new NotFoundException('Booking not found');
     }
 
-    if (booking.status === BookingStatus.CANCELLED) {
-      throw new ConflictException('Cannot check in for a cancelled booking');
+    if (booking.status === BookingStatus.CANCELLED || booking.status === BookingStatus.NO_SHOW) {
+      throw new ConflictException('Cannot check in for a cancelled or no-show booking');
+    }
+
+    if (booking.status !== BookingStatus.COMPLETED && this.shouldConsumeCredit(booking.member?.plan?.category)) {
+      if (booking.member.remainingCredits <= 0) {
+        throw new ConflictException('Insufficient remaining credits');
+      }
+
+      await this.prisma.member.update({
+        where: { id: booking.memberId },
+        data: { remainingCredits: { decrement: 1 } },
+      });
+    }
+
+    if (booking.status !== BookingStatus.COMPLETED) {
+      await this.prisma.booking.update({
+        where: { id: booking.id },
+        data: { status: BookingStatus.COMPLETED },
+      });
     }
 
     const existingAttendance = await this.prisma.attendance.findUnique({
@@ -115,7 +141,7 @@ export class AttendanceService {
       throw new ConflictException('Session must be checked in before completing');
     }
 
-    return this.prisma.attendance.update({
+    const updated = await this.prisma.attendance.update({
       where: { id },
       data: {
         status: AttendanceStatus.COMPLETED,
@@ -131,6 +157,13 @@ export class AttendanceService {
         },
       },
     });
+
+    await this.prisma.booking.update({
+      where: { id: attendance.bookingId },
+      data: { status: BookingStatus.COMPLETED },
+    });
+
+    return updated;
   }
 
   async submitReview(id: string, dto: SubmitCourseReviewDto) {
@@ -248,5 +281,9 @@ export class AttendanceService {
         },
       },
     });
+  }
+
+  private shouldConsumeCredit(category?: string) {
+    return category === MembershipPlanCategory.TIME_CARD || category === MembershipPlanCategory.PRIVATE_PACKAGE;
   }
 }

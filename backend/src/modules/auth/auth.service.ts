@@ -155,7 +155,7 @@ export class AuthService {
         data: {
           adminUserId: payload.sub,
           tokenHash: await bcrypt.hash(newRefreshToken, 10),
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          expiresAt: new Date(Date.now() + this.resolveRefreshTokenTtlMs()),
         },
       });
 
@@ -245,10 +245,21 @@ export class AuthService {
     const newPasswordHash = await bcrypt.hash(dto.newPassword, 10);
 
     // Update password
-    await this.prisma.adminUser.update({
-      where: { id: userId },
-      data: { passwordHash: newPasswordHash },
-    });
+    await this.prisma.$transaction([
+      this.prisma.adminUser.update({
+        where: { id: userId },
+        data: { passwordHash: newPasswordHash },
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: {
+          adminUserId: userId,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+        },
+      }),
+    ]);
 
     return { success: true, message: 'Password changed successfully' };
   }
@@ -283,8 +294,6 @@ export class AuthService {
 
     // Generate a TOTP-compatible secret
     const secret = generateSecret();
-    const backupCode = crypto.randomBytes(4).toString('hex').toUpperCase();
-
     // Store the secret (but don't enable 2FA yet)
     await this.prisma.adminUser.update({
       where: { id: userId },
@@ -293,7 +302,6 @@ export class AuthService {
 
     return {
       secret,
-      backupCode,
       message: 'Secret generated. Please verify with a code to enable 2FA.',
     };
   }
@@ -386,7 +394,7 @@ export class AuthService {
       data: {
         adminUserId: admin.id,
         tokenHash: await bcrypt.hash(refreshToken, 10),
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        expiresAt: new Date(Date.now() + this.resolveRefreshTokenTtlMs()),
       },
     });
 
@@ -408,5 +416,19 @@ export class AuthService {
         },
       },
     };
+  }
+
+  private resolveRefreshTokenTtlMs() {
+    const raw = String(this.configService.get('auth.refreshExpiresIn') || '7d').trim();
+    const matched = raw.match(/^(\d+)([smhd])$/i);
+    if (!matched) {
+      return 7 * 24 * 60 * 60 * 1000;
+    }
+    const value = Number(matched[1]);
+    const unit = matched[2].toLowerCase();
+    if (unit === 's') return value * 1000;
+    if (unit === 'm') return value * 60 * 1000;
+    if (unit === 'h') return value * 60 * 60 * 1000;
+    return value * 24 * 60 * 60 * 1000;
   }
 }

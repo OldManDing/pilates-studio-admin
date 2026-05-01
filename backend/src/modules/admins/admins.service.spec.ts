@@ -34,7 +34,12 @@ describe('AdminsService', () => {
         update: jest.fn(),
         delete: jest.fn(),
       },
+      refreshToken: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      $transaction: jest.fn(),
     };
+    prisma.$transaction.mockImplementation(async (ops: Array<Promise<unknown>>) => Promise.all(ops));
     mockedHash.mockReset();
     mockedHash.mockResolvedValue('hashed-secret' as never);
     service = new AdminsService(prisma);
@@ -104,6 +109,11 @@ describe('AdminsService', () => {
       expect.objectContaining({
         where: { id: 'admin-1' },
         data: { passwordHash: 'hashed-secret' },
+      }),
+    );
+    expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ adminUserId: 'admin-1', revokedAt: null }),
       }),
     );
     expect(result.id).toBe('admin-1');

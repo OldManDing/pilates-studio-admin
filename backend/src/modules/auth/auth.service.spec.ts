@@ -56,6 +56,7 @@ describe('AuthService', () => {
       updateMany: jest.Mock;
       create: jest.Mock;
     };
+    $transaction: jest.Mock;
   };
   let jwtService: {
     sign: jest.Mock;
@@ -77,7 +78,9 @@ describe('AuthService', () => {
         updateMany: jest.fn(),
         create: jest.fn(),
       },
+      $transaction: jest.fn(),
     };
+    prisma.$transaction.mockImplementation(async (ops: Array<Promise<unknown>>) => Promise.all(ops));
 
     jwtService = {
       sign: jest.fn().mockReturnValue('signed-token'),
@@ -256,7 +259,23 @@ describe('AuthService', () => {
       data: { twoFactorSecret: 'generated-secret' },
     });
     expect(result.secret).toBe('generated-secret');
-    expect(result.backupCode).toHaveLength(8);
+  });
+
+  it('revokes active refresh tokens when password is changed', async () => {
+    prisma.adminUser.findUnique.mockResolvedValue(createAdmin());
+    mockedCompare.mockResolvedValue(true as never);
+
+    await service.changePassword('admin-1', {
+      currentPassword: 'old-password',
+      newPassword: 'new-password',
+      confirmPassword: 'new-password',
+    });
+
+    expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ adminUserId: 'admin-1', revokedAt: null }),
+      }),
+    );
   });
 
   it('enables two-factor authentication after a valid verification code', async () => {
