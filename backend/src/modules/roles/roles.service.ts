@@ -81,29 +81,50 @@ export class RolesService {
   async assignPermissions(id: string, permissionIds: string[]) {
     await this.findOne(id);
 
-    // Remove existing permissions
-    await this.prisma.rolePermission.deleteMany({
-      where: { roleId: id },
-    });
+    const applyChanges = async (tx: PrismaService) => {
+      await tx.rolePermission.deleteMany({
+        where: { roleId: id },
+      });
 
-    // Add new permissions
-    return this.prisma.role.update({
-      where: { id },
-      data: {
-        permissions: {
-          create: permissionIds.map((permissionId) => ({
-            permission: { connect: { id: permissionId } },
-          })),
-        },
-      },
-      include: {
-        permissions: {
-          include: {
-            permission: true,
-          },
-        },
-      },
-    });
+      if (permissionIds.length > 0) {
+        if (typeof tx.rolePermission.createMany === 'function') {
+          await tx.rolePermission.createMany({
+            data: permissionIds.map((permissionId) => ({
+              roleId: id,
+              permissionId,
+            })),
+          });
+        } else if (typeof tx.rolePermission.create === 'function') {
+          for (const permissionId of permissionIds) {
+            await tx.rolePermission.create({
+              data: {
+                roleId: id,
+                permissionId,
+              },
+            });
+          }
+        } else {
+          await tx.role.update({
+            where: { id },
+            data: {
+              permissions: {
+                create: permissionIds.map((permissionId) => ({
+                  permission: { connect: { id: permissionId } },
+                })),
+              },
+            },
+          });
+        }
+      }
+    };
+
+    if (typeof this.prisma.$transaction === 'function') {
+      await this.prisma.$transaction(async (tx) => applyChanges(tx as unknown as PrismaService));
+    } else {
+      await applyChanges(this.prisma);
+    }
+
+    return this.findOne(id);
   }
 
   async remove(id: string) {

@@ -114,54 +114,62 @@ export class SettingsService {
   }
 
   async exportAllData(range?: string) {
-    const dayCount = range === '近 7 天' ? 7 : range === '本季度' ? 90 : 30;
-    const startsAt = new Date(Date.now() - dayCount * 24 * 60 * 60 * 1000);
+    const dayCount = range === '近 7 天' ? 7 : range === '本季度' ? 90 : range === '近 30 天' ? 30 : null;
+    const startsAt = dayCount ? new Date(Date.now() - dayCount * 24 * 60 * 60 * 1000) : null;
 
     const [
+      studioSettings,
+      notificationSettings,
+      roles,
+      permissions,
+      rolePermissions,
+      miniUsers,
+      membershipPlans,
       members,
       coaches,
       courses,
       sessions,
       bookings,
+      attendance,
+      courseReviews,
       transactions,
-      membershipPlans,
       adminUsers,
     ] = await Promise.all([
-      this.prisma.member.findMany({
-        include: { plan: true },
-      }),
-      this.prisma.coach.findMany({
-        include: { specialties: true, certificates: true },
-      }),
-      this.prisma.course.findMany({
-        include: { coach: true },
-      }),
-      this.prisma.courseSession.findMany({
-        include: { course: true, coach: true },
-      }),
+      this.prisma.studioSetting.findMany(),
+      this.prisma.notificationSetting.findMany(),
+      this.prisma.role.findMany(),
+      this.prisma.permission.findMany(),
+      this.prisma.rolePermission.findMany(),
+      this.prisma.miniUser.findMany(),
+      this.prisma.membershipPlan.findMany(),
+      this.prisma.member.findMany({ include: { plan: true } }),
+      this.prisma.coach.findMany({ include: { specialties: true, certificates: true } }),
+      this.prisma.course.findMany({ include: { coach: true } }),
+      this.prisma.courseSession.findMany({ include: { course: true, coach: true } }),
       this.prisma.booking.findMany({
-        where: {
-          bookedAt: {
-            gte: startsAt,
-          },
-        },
+        where: startsAt ? { bookedAt: { gte: startsAt } } : undefined,
         include: { member: true, session: true },
       }),
+      this.prisma.attendance.findMany({
+        where: startsAt ? { createdAt: { gte: startsAt } } : undefined,
+      }),
+      this.prisma.courseReview.findMany({
+        where: startsAt ? { createdAt: { gte: startsAt } } : undefined,
+      }),
       this.prisma.transaction.findMany({
-        where: {
-          happenedAt: {
-            gte: startsAt,
-          },
-        },
+        where: startsAt ? { happenedAt: { gte: startsAt } } : undefined,
         include: { member: true },
       }),
-      this.prisma.membershipPlan.findMany(),
       this.prisma.adminUser.findMany({
         select: {
           id: true,
           email: true,
+          phone: true,
+          passwordHash: true,
           displayName: true,
-          role: true,
+          roleId: true,
+          twoFactorEnabled: true,
+          twoFactorSecret: true,
           createdAt: true,
         },
       }),
@@ -172,13 +180,21 @@ export class SettingsService {
       version: '1.0',
       exportRange: range || '近 30 天',
       data: {
+        studioSettings,
+        notificationSettings,
+        roles,
+        permissions,
+        rolePermissions,
+        miniUsers,
+        membershipPlans,
         members,
         coaches,
         courses,
         sessions,
         bookings,
+        attendance,
+        courseReviews,
         transactions,
-        membershipPlans,
         adminUsers,
       },
     };
@@ -192,11 +208,82 @@ export class SettingsService {
 
     const { data } = backupData;
 
+    const adminUsers = data.adminUsers ?? [];
+    data.adminUsers = adminUsers.map((admin: any) => ({
+      ...admin,
+      roleId: admin.roleId ?? admin.role?.id,
+    }));
+
     try {
       this.validateBackupPayload(backupData);
 
       // Use transaction to ensure data consistency
       await this.prisma.$transaction(async (prisma) => {
+        if (data.studioSettings?.length) {
+          for (const studioSetting of data.studioSettings) {
+            await prisma.studioSetting.upsert({
+              where: { id: studioSetting.id },
+              update: studioSetting,
+              create: studioSetting,
+            });
+          }
+        }
+
+        if (data.notificationSettings?.length) {
+          for (const notificationSetting of data.notificationSettings) {
+            await prisma.notificationSetting.upsert({
+              where: { key: notificationSetting.key },
+              update: notificationSetting,
+              create: notificationSetting,
+            });
+          }
+        }
+
+        if (data.roles?.length) {
+          for (const role of data.roles) {
+            await prisma.role.upsert({
+              where: { id: role.id },
+              update: role,
+              create: role,
+            });
+          }
+        }
+
+        if (data.permissions?.length) {
+          for (const permission of data.permissions) {
+            await prisma.permission.upsert({
+              where: { id: permission.id },
+              update: permission,
+              create: permission,
+            });
+          }
+        }
+
+        if (data.rolePermissions?.length) {
+          for (const rolePermission of data.rolePermissions) {
+            await prisma.rolePermission.upsert({
+              where: {
+                roleId_permissionId: {
+                  roleId: rolePermission.roleId,
+                  permissionId: rolePermission.permissionId,
+                },
+              },
+              update: rolePermission,
+              create: rolePermission,
+            });
+          }
+        }
+
+        if (data.miniUsers?.length) {
+          for (const miniUser of data.miniUsers) {
+            await prisma.miniUser.upsert({
+              where: { id: miniUser.id },
+              update: miniUser,
+              create: miniUser,
+            });
+          }
+        }
+
         // Restore membership plans first (no dependencies)
         if (data.membershipPlans?.length) {
           for (const plan of data.membershipPlans) {
@@ -299,6 +386,54 @@ export class SettingsService {
             });
           }
         }
+
+        if (data.attendance?.length) {
+          for (const attendance of data.attendance) {
+            await prisma.attendance.upsert({
+              where: { id: attendance.id },
+              update: attendance,
+              create: attendance,
+            });
+          }
+        }
+
+        if (data.courseReviews?.length) {
+          for (const review of data.courseReviews) {
+            await prisma.courseReview.upsert({
+              where: { id: review.id },
+              update: review,
+              create: review,
+            });
+          }
+        }
+
+        // Restore admin users (for internal backups)
+        if (data.adminUsers?.length) {
+          for (const adminUser of data.adminUsers) {
+            await prisma.adminUser.upsert({
+              where: { id: adminUser.id },
+              update: {
+                email: adminUser.email,
+                phone: adminUser.phone ?? null,
+                passwordHash: adminUser.passwordHash,
+                displayName: adminUser.displayName,
+                roleId: adminUser.roleId,
+                twoFactorEnabled: Boolean(adminUser.twoFactorEnabled),
+                twoFactorSecret: adminUser.twoFactorSecret ?? null,
+              },
+              create: {
+                id: adminUser.id,
+                email: adminUser.email,
+                phone: adminUser.phone ?? null,
+                passwordHash: adminUser.passwordHash,
+                displayName: adminUser.displayName,
+                roleId: adminUser.roleId,
+                twoFactorEnabled: Boolean(adminUser.twoFactorEnabled),
+                twoFactorSecret: adminUser.twoFactorSecret ?? null,
+              },
+            });
+          }
+        }
       });
 
       return { success: true, message: '数据恢复成功' };
@@ -312,12 +447,21 @@ export class SettingsService {
     const { data } = backupData;
 
     this.ensureArrayPayload(data.membershipPlans, 'membershipPlans');
+    this.ensureArrayPayload(data.studioSettings, 'studioSettings');
+    this.ensureArrayPayload(data.notificationSettings, 'notificationSettings');
+    this.ensureArrayPayload(data.roles, 'roles');
+    this.ensureArrayPayload(data.permissions, 'permissions');
+    this.ensureArrayPayload(data.rolePermissions, 'rolePermissions');
+    this.ensureArrayPayload(data.miniUsers, 'miniUsers');
     this.ensureArrayPayload(data.coaches, 'coaches');
     this.ensureArrayPayload(data.members, 'members');
     this.ensureArrayPayload(data.courses, 'courses');
     this.ensureArrayPayload(data.sessions, 'sessions');
     this.ensureArrayPayload(data.bookings, 'bookings');
+    this.ensureArrayPayload(data.attendance, 'attendance');
+    this.ensureArrayPayload(data.courseReviews, 'courseReviews');
     this.ensureArrayPayload(data.transactions, 'transactions');
+    this.ensureArrayPayload(data.adminUsers, 'adminUsers');
 
     data.membershipPlans?.forEach((plan: any, index: number) => {
       this.ensureRequired(plan, ['id', 'code', 'name', 'category', 'priceCents'], `membershipPlans[${index}]`);
@@ -358,6 +502,10 @@ export class SettingsService {
       this.ensureEnumValue(transaction.kind, TransactionKind, `transactions[${index}].kind`);
       this.ensureEnumValue(transaction.status, TransactionStatus, `transactions[${index}].status`);
       this.ensureNumber(transaction.amountCents, `transactions[${index}].amountCents`);
+    });
+
+    data.adminUsers?.forEach((adminUser: any, index: number) => {
+      this.ensureRequired(adminUser, ['id', 'email', 'passwordHash', 'displayName', 'roleId'], `adminUsers[${index}]`);
     });
   }
 

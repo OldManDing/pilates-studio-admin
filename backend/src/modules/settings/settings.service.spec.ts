@@ -8,17 +8,17 @@ describe('SettingsService', () => {
 
   beforeEach(() => {
     prisma = {
-      studioSetting: {
-        findFirst: jest.fn(),
-        update: jest.fn(),
-        create: jest.fn(),
-      },
       notificationSetting: {
         findMany: jest.fn(),
         findUnique: jest.fn(),
         update: jest.fn(),
         create: jest.fn(),
+        upsert: jest.fn(),
       },
+      role: { findMany: jest.fn(), upsert: jest.fn() },
+      permission: { findMany: jest.fn(), upsert: jest.fn() },
+      rolePermission: { findMany: jest.fn(), upsert: jest.fn() },
+      miniUser: { findMany: jest.fn(), upsert: jest.fn() },
       membershipPlan: { findMany: jest.fn(), upsert: jest.fn() },
       coach: { findMany: jest.fn(), upsert: jest.fn() },
       coachTag: { deleteMany: jest.fn(), create: jest.fn() },
@@ -27,8 +27,17 @@ describe('SettingsService', () => {
       course: { findMany: jest.fn(), upsert: jest.fn() },
       courseSession: { findMany: jest.fn(), upsert: jest.fn() },
       booking: { findMany: jest.fn(), upsert: jest.fn() },
+      attendance: { findMany: jest.fn(), upsert: jest.fn() },
+      courseReview: { findMany: jest.fn(), upsert: jest.fn() },
       transaction: { findMany: jest.fn(), upsert: jest.fn() },
-      adminUser: { findMany: jest.fn() },
+      studioSetting: {
+        findFirst: jest.fn(),
+        update: jest.fn(),
+        create: jest.fn(),
+        findMany: jest.fn(),
+        upsert: jest.fn(),
+      },
+      adminUser: { findMany: jest.fn(), upsert: jest.fn() },
       $transaction: jest.fn(),
     };
     prisma.$transaction.mockImplementation(async (callback: (tx: typeof prisma) => unknown) => callback(prisma));
