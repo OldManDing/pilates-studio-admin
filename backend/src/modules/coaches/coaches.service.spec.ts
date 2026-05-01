@@ -63,7 +63,7 @@ describe('CoachesService', () => {
     expect(prisma.coach.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          coachCode: 'C000001',
+          coachCode: expect.stringMatching(/^C[A-Z0-9]+$/),
           status: CoachStatus.ACTIVE,
           specialties: { create: [{ value: 'Reformer' }] },
           certificates: { create: [{ value: 'BASI' }] },

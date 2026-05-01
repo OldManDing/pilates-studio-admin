@@ -121,6 +121,10 @@ export class NotificationsScheduler {
         where: {
           type: 'BOOKING_REMINDER',
           memberId: booking.memberId,
+          payload: {
+            path: '$.bookingId',
+            equals: booking.id,
+          },
           createdAt: {
             gte: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0),
             lte: reminderUpperBound,

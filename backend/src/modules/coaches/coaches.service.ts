@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCoachDto } from './dto/create-coach.dto';
 import { QueryCoachesDto } from './dto/query-coaches.dto';
@@ -136,41 +137,57 @@ export class CoachesService {
   }
 
   async update(id: string, dto: UpdateCoachDto) {
-    const coach = await this.findOne(id);
+    await this.findOne(id);
 
-    // Delete existing specialties and certificates if new ones provided
-    if (dto.specialties) {
-      await this.prisma.coachTag.deleteMany({
-        where: { coachId: id },
+    const applyUpdate = async (tx: PrismaService) => {
+      if (dto.specialties) {
+        await tx.coachTag.deleteMany({
+          where: { coachId: id },
+        });
+      }
+
+      if (dto.certificates) {
+        await tx.coachCertificate.deleteMany({
+          where: { coachId: id },
+        });
+      }
+
+      return tx.coach.update({
+        where: { id },
+        data: {
+          ...dto,
+          specialties: dto.specialties
+            ? { create: dto.specialties.map((value) => ({ value })) }
+            : undefined,
+          certificates: dto.certificates
+            ? { create: dto.certificates.map((value) => ({ value })) }
+            : undefined,
+        },
+        include: {
+          specialties: true,
+          certificates: true,
+        },
       });
+    };
+
+    if (typeof this.prisma.$transaction === 'function') {
+      return this.prisma.$transaction(async (tx) => applyUpdate(tx as unknown as PrismaService));
     }
 
-    if (dto.certificates) {
-      await this.prisma.coachCertificate.deleteMany({
-        where: { coachId: id },
-      });
-    }
-
-    return this.prisma.coach.update({
-      where: { id },
-      data: {
-        ...dto,
-        specialties: dto.specialties
-          ? { create: dto.specialties.map((value) => ({ value })) }
-          : undefined,
-        certificates: dto.certificates
-          ? { create: dto.certificates.map((value) => ({ value })) }
-          : undefined,
-      },
-      include: {
-        specialties: true,
-        certificates: true,
-      },
-    });
+    return applyUpdate(this.prisma);
   }
 
   async remove(id: string) {
     await this.findOne(id);
+
+    const [courseCount, sessionCount] = await Promise.all([
+      this.prisma.course.count({ where: { coachId: id } }),
+      this.prisma.courseSession.count({ where: { coachId: id } }),
+    ]);
+
+    if (courseCount > 0 || sessionCount > 0) {
+      throw new ConflictException('该教练存在关联课程或排班，不能直接删除，请先解绑或停用。');
+    }
 
     await this.prisma.coach.delete({
       where: { id },
@@ -252,7 +269,13 @@ export class CoachesService {
   }
 
   private async generateCoachCode(): Promise<string> {
-    const count = await this.prisma.coach.count();
-    return `C${String(count + 1).padStart(6, '0')}`;
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const candidate = `C${Date.now().toString(36).toUpperCase()}${randomBytes(2).toString('hex').toUpperCase()}`;
+      const exists = await this.prisma.coach.findFirst({ where: { coachCode: candidate } });
+      if (!exists) {
+        return candidate;
+      }
+    }
+    throw new ConflictException('无法生成唯一教练编号，请重试');
   }
 }

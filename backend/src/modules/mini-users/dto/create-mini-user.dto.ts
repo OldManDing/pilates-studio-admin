@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString, IsUUID, Matches } from 'class-validator';
+import { IsEnum, IsOptional, IsString, Matches } from 'class-validator';
 import { MiniUserStatus } from '../../../common/enums/domain.enums';
 
 export class CreateMiniUserDto {
@@ -34,6 +34,6 @@ export class CreateMiniUserDto {
 
   @ApiPropertyOptional({ description: 'Member ID to link immediately' })
   @IsOptional()
-  @IsUUID()
+  @IsString()
   memberId?: string;
 }

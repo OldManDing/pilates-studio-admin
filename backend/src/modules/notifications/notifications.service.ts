@@ -198,8 +198,25 @@ export class NotificationsService {
     const processed = [] as Array<{ id: string; status: NotificationStatus }>;
 
     for (const notification of notifications) {
-      const updated = await this.markAsSent(notification.id);
-      processed.push({ id: updated.id, status: updated.status as NotificationStatus });
+      if (typeof this.prisma.notification.updateMany === 'function') {
+        const lockResult = await this.prisma.notification.updateMany({
+          where: {
+            id: notification.id,
+            status: NotificationStatus.PENDING,
+          },
+          data: {
+            status: NotificationStatus.SENT,
+            sentAt: new Date(),
+          },
+        });
+
+        if (lockResult.count > 0) {
+          processed.push({ id: notification.id, status: NotificationStatus.SENT });
+        }
+      } else {
+        const updated = await this.markAsSent(notification.id);
+        processed.push({ id: updated.id, status: updated.status as NotificationStatus });
+      }
     }
 
     return processed;

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsObject, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsEnum, IsObject, IsOptional, IsString } from 'class-validator';
 import { NotificationChannel } from '../../../common/enums/domain.enums';
 
 export class CreateNotificationDto {
@@ -21,17 +21,17 @@ export class CreateNotificationDto {
 
   @ApiPropertyOptional({ description: 'Linked member ID' })
   @IsOptional()
-  @IsUUID()
+  @IsString()
   memberId?: string;
 
   @ApiPropertyOptional({ description: 'Linked mini user ID' })
   @IsOptional()
-  @IsUUID()
+  @IsString()
   miniUserId?: string;
 
   @ApiPropertyOptional({ description: 'Linked admin user ID' })
   @IsOptional()
-  @IsUUID()
+  @IsString()
   adminUserId?: string;
 
   @ApiPropertyOptional({ description: 'Optional JSON payload' })

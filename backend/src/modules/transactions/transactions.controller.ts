@@ -67,11 +67,19 @@ export class TransactionsController {
   }
 
   @Get(':id')
+  @AllowMiniUser()
   @RequirePermissions('READ:TRANSACTIONS')
   @ApiOperation({ summary: 'Get transaction by ID' })
   @ApiParam({ name: 'id', description: 'Transaction ID' })
-  async findOne(@Param('id') id: string) {
-    return this.transactionsService.findOne(id);
+  async findOne(
+    @Param('id') id: string,
+    @CurrentUser('sub') userId?: string,
+    @CurrentUser('principalType') principalType?: string,
+  ) {
+    return this.transactionsService.findOne(
+      id,
+      principalType === 'MINI_USER' ? userId : undefined,
+    );
   }
 
   @Patch(':id')

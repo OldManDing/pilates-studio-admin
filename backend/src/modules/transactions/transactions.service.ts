@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -32,7 +33,7 @@ export class TransactionsService {
         planId: dto.planId,
         kind: dto.kind,
         amountCents: dto.amountCents,
-        status: TransactionStatus.PENDING,
+        status: dto.status ?? TransactionStatus.PENDING,
         happenedAt: new Date(),
         notes: dto.notes,
       },
@@ -127,7 +128,7 @@ export class TransactionsService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, miniUserId?: string) {
     const transaction = await this.prisma.transaction.findUnique({
       where: { id },
       include: {
@@ -138,6 +139,10 @@ export class TransactionsService {
 
     if (!transaction) {
       throw new NotFoundException('Transaction not found');
+    }
+
+    if (miniUserId && transaction.member?.miniUserId !== miniUserId) {
+      throw new ForbiddenException('Cannot access another member transaction');
     }
 
     return transaction;
@@ -325,8 +330,14 @@ export class TransactionsService {
   }
 
   private async generateTransactionCode(): Promise<string> {
-    const count = await this.prisma.transaction.count();
-    return `T${String(count + 1).padStart(8, '0')}`;
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const candidate = `T${Date.now().toString(36).toUpperCase()}${randomBytes(2).toString('hex').toUpperCase()}`;
+      const exists = await this.prisma.transaction.findUnique({ where: { transactionCode: candidate } });
+      if (!exists) {
+        return candidate;
+      }
+    }
+    throw new BadRequestException('无法生成唯一交易编号，请重试');
   }
 
   private calculateRenewedCredits(

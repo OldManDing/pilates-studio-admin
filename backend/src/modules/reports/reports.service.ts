@@ -45,30 +45,45 @@ export class ReportsService {
   }
 
   async getExpiringSoonCount(days = 30) {
-    const now = Date.now();
-    const threshold = now + days * 24 * 60 * 60 * 1000;
-
-    const members = await this.prisma.member.findMany({
-      where: {
-        status: 'ACTIVE',
-        plan: {
-          durationDays: { not: null },
-        },
-      },
-      include: {
-        plan: {
-          select: {
-            durationDays: true,
+    const safeDays = Math.max(1, Math.floor(days));
+    if (typeof this.prisma.$queryRaw !== 'function') {
+      const now = Date.now();
+      const threshold = now + safeDays * 24 * 60 * 60 * 1000;
+      const members = await this.prisma.member.findMany({
+        where: {
+          status: 'ACTIVE',
+          plan: {
+            durationDays: { not: null },
           },
         },
-      },
-    });
+        include: {
+          plan: {
+            select: {
+              durationDays: true,
+            },
+          },
+        },
+      });
 
-    return members.filter((member) => {
-      if (!member.plan?.durationDays) return false;
-      const end = new Date(member.joinedAt).getTime() + Number(member.plan.durationDays) * 24 * 60 * 60 * 1000;
-      return end >= now && end <= threshold;
-    }).length;
+      return members.filter((member) => {
+        if (!member.plan?.durationDays) return false;
+        const end = new Date(member.joinedAt).getTime() + Number(member.plan.durationDays) * 24 * 60 * 60 * 1000;
+        return end >= now && end <= threshold;
+      }).length;
+    }
+
+    const result = await this.prisma.$queryRaw<Array<{ count: bigint | number }>>`
+      SELECT COUNT(*) as count
+      FROM Member m
+      JOIN MembershipPlan p ON m.planId = p.id
+      WHERE m.status = 'ACTIVE'
+        AND p.durationDays IS NOT NULL
+        AND DATE_ADD(m.joinedAt, INTERVAL p.durationDays DAY) >= NOW()
+        AND DATE_ADD(m.joinedAt, INTERVAL p.durationDays DAY) <= DATE_ADD(NOW(), INTERVAL ${safeDays} DAY)
+    `;
+
+    const countValue = result[0]?.count ?? 0;
+    return typeof countValue === 'bigint' ? Number(countValue) : countValue;
   }
 
   async getBookingsReport(from: string, to: string) {

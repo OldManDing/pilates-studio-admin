@@ -24,6 +24,7 @@ describe('CoursesService', () => {
   beforeEach(() => {
     prisma = {
       course: {
+        findFirst: jest.fn(),
         findUnique: jest.fn(),
         count: jest.fn().mockResolvedValue(0),
         create: jest.fn(),
@@ -31,13 +32,16 @@ describe('CoursesService', () => {
         update: jest.fn(),
         delete: jest.fn(),
       },
+      courseSession: {
+        count: jest.fn().mockResolvedValue(0),
+      },
     };
 
     service = new CoursesService(prisma);
   });
 
   it('creates a course with generated course code', async () => {
-    prisma.course.findUnique.mockResolvedValue(null);
+    prisma.course.findFirst.mockResolvedValue(null);
     prisma.course.create.mockResolvedValue(createCourse());
 
     const result = await service.create({
@@ -52,7 +56,7 @@ describe('CoursesService', () => {
     expect(prisma.course.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          courseCode: 'CRS000001',
+          courseCode: expect.stringMatching(/^CRS[A-Z0-9]+$/),
           isActive: true,
         }),
       }),
@@ -61,7 +65,7 @@ describe('CoursesService', () => {
   });
 
   it('rejects create when the derived course code already exists', async () => {
-    prisma.course.findUnique.mockResolvedValue(createCourse());
+    prisma.course.findFirst.mockResolvedValue(createCourse());
 
     await expect(
       service.create({
@@ -80,8 +84,9 @@ describe('CoursesService', () => {
     await expect(service.findOne('missing')).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('prevents deleting courses that still have active sessions', async () => {
+  it('prevents deleting courses that still have related sessions', async () => {
     prisma.course.findUnique.mockResolvedValue(createCourse({ sessions: [{ id: 'session-1' }] }));
+    prisma.courseSession.count.mockResolvedValue(1);
 
     await expect(service.remove('course-1')).rejects.toBeInstanceOf(ConflictException);
   });

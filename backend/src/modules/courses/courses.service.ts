@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { QueryCoursesDto } from './dto/query-courses.dto';
@@ -10,12 +11,13 @@ export class CoursesService {
   constructor(private prisma: PrismaService) {}
 
   async create(dto: CreateCourseDto) {
-    const existing = await this.prisma.course.findUnique({
-      where: { courseCode: dto.name.toUpperCase().replace(/\s+/g, '_') },
+    const existing = await this.prisma.course.findFirst({
+      where: { name: dto.name.trim() },
+      select: { id: true },
     });
 
     if (existing) {
-      throw new ConflictException('Course code already exists');
+      throw new ConflictException('Course name already exists');
     }
 
     const courseCode = await this.generateCourseCode();
@@ -137,11 +139,12 @@ export class CoursesService {
   }
 
   async remove(id: string) {
-    const course = await this.findOne(id);
+    await this.findOne(id);
 
-    if (course.sessions.length > 0) {
+    const sessionCount = await this.prisma.courseSession.count({ where: { courseId: id } });
+    if (sessionCount > 0) {
       throw new ConflictException(
-        'Cannot delete course with active sessions. Disable it instead.',
+        'Cannot delete course with related sessions. Disable it instead.',
       );
     }
 
@@ -153,7 +156,13 @@ export class CoursesService {
   }
 
   private async generateCourseCode(): Promise<string> {
-    const count = await this.prisma.course.count();
-    return `CRS${String(count + 1).padStart(6, '0')}`;
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const candidate = `CRS${Date.now().toString(36).toUpperCase()}${randomBytes(2).toString('hex').toUpperCase()}`;
+      const exists = await this.prisma.course.findUnique({ where: { courseCode: candidate } });
+      if (!exists) {
+        return candidate;
+      }
+    }
+    throw new ConflictException('无法生成唯一课程编号，请重试');
   }
 }

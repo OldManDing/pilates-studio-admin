@@ -34,9 +34,9 @@ describe('TransactionsService', () => {
         create: jest.fn(),
         findMany: jest.fn(),
         findUnique: jest.fn(),
+        findUniqueOrThrow: jest.fn(),
         update: jest.fn(),
         updateMany: jest.fn(),
-        findUniqueOrThrow: jest.fn(),
         aggregate: jest.fn(),
       },
       member: {
@@ -64,7 +64,7 @@ describe('TransactionsService', () => {
     expect(prisma.transaction.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          transactionCode: 'T00000001',
+          transactionCode: expect.stringMatching(/^T[A-Z0-9]+$/),
           status: TransactionStatus.PENDING,
         }),
       }),
@@ -76,7 +76,7 @@ describe('TransactionsService', () => {
         memberId: 'member-1',
       }),
     );
-    expect(result.transactionCode).toBe('T00000001');
+    expect(result.transactionCode).toMatch(/^T[A-Z0-9]+$/);
   });
 
   it('applies happenedAt date filtering in findAll', async () => {

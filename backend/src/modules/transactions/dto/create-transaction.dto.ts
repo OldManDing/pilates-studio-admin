@@ -1,16 +1,16 @@
-import { IsString, IsOptional, IsEnum, IsInt, Min, Max, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsInt, Min, Max } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { TransactionKind } from '../../../common/enums/domain.enums';
+import { TransactionKind, TransactionStatus } from '../../../common/enums/domain.enums';
 
 export class CreateTransactionDto {
   @ApiPropertyOptional({ description: 'Member ID' })
   @IsOptional()
-  @IsUUID()
+  @IsString()
   memberId?: string;
 
   @ApiPropertyOptional({ description: 'Membership Plan ID' })
   @IsOptional()
-  @IsUUID()
+  @IsString()
   planId?: string;
 
   @ApiProperty({ enum: TransactionKind })
@@ -27,4 +27,9 @@ export class CreateTransactionDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({ enum: TransactionStatus, default: TransactionStatus.PENDING })
+  @IsOptional()
+  @IsEnum(TransactionStatus)
+  status?: TransactionStatus = TransactionStatus.PENDING;
 }
