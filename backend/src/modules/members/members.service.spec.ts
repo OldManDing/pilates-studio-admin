@@ -44,6 +44,13 @@ describe('MembersService', () => {
       count: jest.Mock;
       findMany: jest.Mock;
     };
+    miniUser: {
+      findUnique: jest.Mock;
+    };
+    notificationSetting: {
+      findMany: jest.Mock;
+      upsert: jest.Mock;
+    };
   };
 
   beforeEach(() => {
@@ -62,6 +69,13 @@ describe('MembersService', () => {
       transaction: {
         count: jest.fn().mockResolvedValue(0),
         findMany: jest.fn(),
+      },
+      miniUser: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'mini-1' }),
+      },
+      notificationSetting: {
+        findMany: jest.fn().mockResolvedValue([]),
+        upsert: jest.fn().mockResolvedValue(undefined),
       },
     };
 
@@ -156,6 +170,29 @@ describe('MembersService', () => {
     const result = await service.getMembershipsByMiniUserId('missing-mini-user');
 
     expect(result).toEqual({ memberships: [] });
+  });
+
+  it('returns member notification preferences with defaults', async () => {
+    const result = await service.getPreferencesByMiniUserId('mini-1');
+
+    expect(result).toEqual({
+      preferences: {
+        courseReminder: true,
+        systemNotification: true,
+      },
+    });
+  });
+
+  it('updates member notification preferences', async () => {
+    const result = await service.updatePreferencesByMiniUserId('mini-1', { courseReminder: false });
+
+    expect(prisma.notificationSetting.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { key: 'mini-user:mini-1:courseReminder' },
+        update: { enabled: false },
+      }),
+    );
+    expect(result.preferences.systemNotification).toBe(true);
   });
 
   it('throws not found when requesting a missing member', async () => {

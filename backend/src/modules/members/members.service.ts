@@ -9,12 +9,18 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { QueryMembersDto } from './dto/query-members.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
+import { UpdateMemberPreferencesDto } from './dto/update-member-preferences.dto';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
 import { MemberStatus, MembershipPlanCategory, TransactionKind, TransactionStatus } from '../../common/enums/domain.enums';
 
 @Injectable()
 export class MembersService {
   constructor(private prisma: PrismaService) {}
+
+  private readonly memberPreferenceDefaults = {
+    courseReminder: true,
+    systemNotification: true,
+  } as const;
 
   async create(dto: CreateMemberDto) {
     const existing = await this.prisma.member.findUnique({
@@ -266,6 +272,75 @@ export class MembersService {
     };
 
     return { memberships: [membership] };
+  }
+
+  async getPreferencesByMiniUserId(miniUserId: string) {
+    await this.ensureMiniUserExists(miniUserId);
+
+    const settings = await this.prisma.notificationSetting.findMany({
+      where: {
+        key: {
+          in: [
+            this.getPreferenceKey(miniUserId, 'courseReminder'),
+            this.getPreferenceKey(miniUserId, 'systemNotification'),
+          ],
+        },
+      },
+    });
+
+    const map = new Map(settings.map((setting) => [setting.key, setting.enabled]));
+
+    return {
+      preferences: {
+        courseReminder: map.get(this.getPreferenceKey(miniUserId, 'courseReminder')) ?? this.memberPreferenceDefaults.courseReminder,
+        systemNotification: map.get(this.getPreferenceKey(miniUserId, 'systemNotification')) ?? this.memberPreferenceDefaults.systemNotification,
+      },
+    };
+  }
+
+  async updatePreferencesByMiniUserId(miniUserId: string, dto: UpdateMemberPreferencesDto) {
+    await this.ensureMiniUserExists(miniUserId);
+
+    const updates = [
+      ['courseReminder', dto.courseReminder, '会员课程提醒偏好', '控制课程提醒类小程序通知是否继续发送'],
+      ['systemNotification', dto.systemNotification, '会员系统通知偏好', '控制系统类小程序通知是否继续发送'],
+    ] as const;
+
+    for (const [prefKey, enabled, title, description] of updates) {
+      if (enabled === undefined) {
+        continue;
+      }
+
+      await this.prisma.notificationSetting.upsert({
+        where: { key: this.getPreferenceKey(miniUserId, prefKey) },
+        update: { enabled },
+        create: {
+          key: this.getPreferenceKey(miniUserId, prefKey),
+          title,
+          description,
+          channel: 'MINI_PROGRAM',
+          enabled,
+        },
+      });
+    }
+
+    return this.getPreferencesByMiniUserId(miniUserId);
+  }
+
+  private async ensureMiniUserExists(miniUserId: string) {
+    const miniUser = await this.prisma.miniUser.findUnique({
+      where: { id: miniUserId },
+    });
+
+    if (!miniUser) {
+      throw new NotFoundException('Mini user not found');
+    }
+
+    return miniUser;
+  }
+
+  private getPreferenceKey(miniUserId: string, key: keyof typeof this.memberPreferenceDefaults) {
+    return `mini-user:${miniUserId}:${key}`;
   }
 
   private async generateMemberCode(): Promise<string> {

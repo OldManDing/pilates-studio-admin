@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Patch,
   Delete,
   Body,
@@ -20,6 +21,7 @@ import { MembersService } from './members.service';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { QueryMembersDto } from './dto/query-members.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
+import { UpdateMemberPreferencesDto } from './dto/update-member-preferences.dto';
 
 @ApiTags('Members')
 @ApiBearerAuth()
@@ -56,6 +58,25 @@ export class MembersController {
   @ApiOperation({ summary: 'Get current member memberships (mini-program)' })
   async getMyMemberships(@CurrentUser('sub') userId: string) {
     return this.membersService.getMembershipsByMiniUserId(userId);
+  }
+
+  @Get('preferences')
+  @AllowMiniUser()
+  @RequirePermissions('READ:MEMBERS')
+  @ApiOperation({ summary: 'Get current mini-program member preferences' })
+  async getMyPreferences(@CurrentUser('sub') userId: string) {
+    return this.membersService.getPreferencesByMiniUserId(userId);
+  }
+
+  @Put('preferences')
+  @AllowMiniUser()
+  @RequirePermissions('WRITE:MEMBERS')
+  @ApiOperation({ summary: 'Update current mini-program member preferences' })
+  async updateMyPreferences(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: UpdateMemberPreferencesDto,
+  ) {
+    return this.membersService.updatePreferencesByMiniUserId(userId, dto);
   }
 
   @Get(':id')
