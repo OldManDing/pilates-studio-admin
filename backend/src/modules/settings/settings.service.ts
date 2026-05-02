@@ -27,6 +27,7 @@ export class SettingsService {
         email: '',
         businessHours: '',
         address: '',
+        imageUrl: '',
       };
     }
 
@@ -50,6 +51,11 @@ export class SettingsService {
 
   async getNotificationSettings() {
     const settings = await this.prisma.notificationSetting.findMany({
+      where: {
+        key: {
+          in: this.defaultNotificationSettings.map((item) => item.key),
+        },
+      },
       orderBy: { createdAt: 'asc' },
     });
 

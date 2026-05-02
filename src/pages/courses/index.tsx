@@ -1,6 +1,6 @@
 import { AppstoreOutlined, CalendarOutlined, DeleteOutlined, EditOutlined, PlusOutlined, StarOutlined } from '@ant-design/icons';
 import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Pagination, Popconfirm, Row, Select, Spin, message } from 'antd';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import ActionButton from '@/components/ActionButton';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
@@ -31,8 +31,18 @@ type CourseFormValues = {
   coachId?: string;
   durationMinutes: number;
   capacity: number;
+  coverImageUrl?: string;
   isActive: boolean;
 };
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('图片读取失败'));
+    reader.readAsDataURL(file);
+  });
+}
 
 const DEFAULT_COURSE_TYPE_OPTIONS = [
   'MAT',
@@ -61,6 +71,7 @@ export default function CoursesPage() {
   const [detailCourse, setDetailCourse] = useState<Course | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const courseImageInputRef = useRef<HTMLInputElement | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
@@ -198,6 +209,7 @@ export default function CoursesPage() {
       coachId: undefined,
       durationMinutes: 50,
       capacity: 8,
+      coverImageUrl: '',
       isActive: true,
     });
     setIsFormOpen(true);
@@ -212,6 +224,7 @@ export default function CoursesPage() {
       coachId: course.coach?.id,
       durationMinutes: course.durationMinutes,
       capacity: course.capacity,
+      coverImageUrl: course.coverImageUrl || '',
       isActive: course.isActive,
     });
     setIsFormOpen(true);
@@ -221,6 +234,27 @@ export default function CoursesPage() {
     setIsFormOpen(false);
     setEditingCourse(null);
     form.resetFields();
+  };
+
+  const handleSelectCourseImage = () => {
+    courseImageInputRef.current?.click();
+  };
+
+  const handleCourseImageChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const imageUrl = await readFileAsDataUrl(file);
+      form.setFieldValue('coverImageUrl', imageUrl);
+      messageApi.success('课程图片已载入，保存后生效');
+    } catch (err) {
+      messageApi.error(getErrorMessage(err, '课程图片读取失败'));
+    } finally {
+      event.target.value = '';
+    }
   };
 
   const handleSaveCourse = async () => {
@@ -451,7 +485,7 @@ export default function CoursesPage() {
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="isActive" label="课程状态" rules={[{ required: true, message: '请选择课程状态' }]}>
+              <Form.Item name="isActive" label="课程状态" rules={[{ required: true, message: '请选择课程状态' }]}> 
                 <Select
                   className={pageCls.settingsInput}
                   options={[
@@ -459,6 +493,28 @@ export default function CoursesPage() {
                     { label: '已停用', value: false },
                   ]}
                 />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item name="coverImageUrl" label="课程图片">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <input
+                    ref={courseImageInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleCourseImageChange}
+                  />
+                  <Button onClick={handleSelectCourseImage}>上传课程图片</Button>
+                  <Form.Item noStyle shouldUpdate>
+                    {() => {
+                      const imageUrl = form.getFieldValue('coverImageUrl');
+                      return imageUrl ? (
+                        <img src={imageUrl} alt="课程图片预览" style={{ width: '100%', maxWidth: 220, borderRadius: 12, border: '1px solid var(--border-subtle)' }} />
+                      ) : null;
+                    }}
+                  </Form.Item>
+                </div>
               </Form.Item>
             </Col>
           </Row>
@@ -497,6 +553,12 @@ export default function CoursesPage() {
               capacityText={`${detailCourse.capacity} 人`}
               sessionCountText={`已排 ${detailCourse._count?.sessions || 0} 节`}
             />
+
+            {detailCourse.coverImageUrl ? (
+              <SectionCard title="课程图片" subtitle="当前课程展示图片。">
+                <img src={detailCourse.coverImageUrl} alt={detailCourse.name} style={{ width: '100%', maxWidth: 280, borderRadius: 16, border: '1px solid var(--border-subtle)' }} />
+              </SectionCard>
+            ) : null}
 
             <SectionCard
               title="课程档案"

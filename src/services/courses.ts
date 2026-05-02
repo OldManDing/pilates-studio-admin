@@ -9,6 +9,7 @@ export interface Course {
   level: string;
   durationMinutes: number;
   capacity: number;
+  coverImageUrl?: string;
   isActive: boolean;
   coach?: {
     id: string;
@@ -26,6 +27,7 @@ export interface CreateCourseData {
   durationMinutes: number;
   capacity: number;
   coachId?: string;
+  coverImageUrl?: string;
   isActive?: boolean;
 }
 

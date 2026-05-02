@@ -7,6 +7,7 @@ export interface StudioSetting {
   email: string;
   businessHours: string;
   address: string;
+  imageUrl?: string;
 }
 
 export interface NotificationSetting {

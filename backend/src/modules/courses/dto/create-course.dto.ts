@@ -29,6 +29,11 @@ export class CreateCourseDto {
   @IsString()
   coachId?: string;
 
+  @ApiPropertyOptional({ description: 'Course cover image as URL or data URL' })
+  @IsOptional()
+  @IsString()
+  coverImageUrl?: string;
+
   @ApiPropertyOptional({ default: true })
   @IsOptional()
   @IsBoolean()

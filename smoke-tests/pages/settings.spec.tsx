@@ -47,5 +47,6 @@ describe('SettingsPage smoke test', () => {
     expect(await screen.findByRole('heading', { name: '系统设置' })).toBeInTheDocument();
     expect(await screen.findByText('门店信息')).toBeInTheDocument();
     expect(await screen.findByText('通知设置')).toBeInTheDocument();
+    expect(await screen.findByText('上传店面图片')).toBeInTheDocument();
   });
 });

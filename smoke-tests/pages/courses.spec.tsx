@@ -50,6 +50,7 @@ describe('CoursesPage smoke test', () => {
       expect(screen.getByRole('heading', { name: '课程管理' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /新增课程/ })).toBeInTheDocument();
       expect(screen.getByText('课程总数')).toBeInTheDocument();
+      expect(screen.getByText('上传课程图片')).toBeInTheDocument();
     });
   });
 });

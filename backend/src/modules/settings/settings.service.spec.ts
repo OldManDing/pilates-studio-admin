@@ -55,6 +55,7 @@ describe('SettingsService', () => {
       email: '',
       businessHours: '',
       address: '',
+      imageUrl: '',
     });
   });
 

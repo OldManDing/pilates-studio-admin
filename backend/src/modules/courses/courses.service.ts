@@ -30,6 +30,7 @@ export class CoursesService {
         level: dto.level,
         durationMinutes: dto.durationMinutes,
         capacity: dto.capacity,
+        coverImageUrl: dto.coverImageUrl,
         coachId: dto.coachId,
         isActive: dto.isActive ?? true,
       },

@@ -1,5 +1,5 @@
 import { App, Button, Cascader, Col, Descriptions, Drawer, Form, Input, Row, Select, Spin, Switch, TimePicker, message as antdMessage } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '@/components/PageHeader';
@@ -28,8 +28,18 @@ interface StoreInfoValues {
   city: string;
   district: string;
   address: string;
+  imageUrl?: string;
   area?: string[];
   hours?: [dayjs.Dayjs, dayjs.Dayjs];
+}
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('图片读取失败'));
+    reader.readAsDataURL(file);
+  });
 }
 
 type SecurityActionTitle = '修改密码' | '两步验证' | '权限管理';
@@ -254,6 +264,7 @@ const provinceCityDistrictData = [
 export default function SettingsPage() {
   const navigate = useNavigate();
   const [storeForm] = Form.useForm<StoreInfoValues>();
+  const storeImageInputRef = useRef<HTMLInputElement | null>(null);
   const { message, modal } = App.useApp();
   const [loading, setLoading] = useState(true);
   const [storeInfo, setStoreInfo] = useState<StoreInfoValues>(defaultStoreInfo);
@@ -333,6 +344,7 @@ export default function SettingsPage() {
             city,
             district,
             address: remainingAddress || addressStr,
+            imageUrl: studioData.imageUrl || '',
             area: [province, city, district].filter(Boolean),
             hours: parseHoursToDayjs(studioData.businessHours || PLACEHOLDER_STORE_INFO.businessHours),
           };
@@ -489,7 +501,8 @@ export default function SettingsPage() {
         phone: values.phone,
         email: values.email,
         businessHours: dayjsToHoursString(values.hours as [dayjs.Dayjs, dayjs.Dayjs]),
-        address: fullAddress
+        address: fullAddress,
+        imageUrl: values.imageUrl || '',
       };
       
       await settingsApi.updateStudio(saveData);
@@ -500,6 +513,7 @@ export default function SettingsPage() {
         city,
         district,
         address: values.address,
+        imageUrl: values.imageUrl || '',
         area: values.area || [province, city, district].filter(Boolean),
         hours: values.hours,
       };
@@ -531,6 +545,27 @@ export default function SettingsPage() {
 
   const handleGoToNotifications = () => {
     navigate('/notifications');
+  };
+
+  const handleSelectStoreImage = () => {
+    storeImageInputRef.current?.click();
+  };
+
+  const handleStoreImageChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const imageUrl = await readFileAsDataUrl(file);
+      storeForm.setFieldValue('imageUrl', imageUrl);
+      message.success('店面图片已载入，保存后生效');
+    } catch (err) {
+      message.error(getErrorMessage(err, '店面图片读取失败'));
+    } finally {
+      event.target.value = '';
+    }
   };
 
   const handleInitializeNotifications = async () => {
@@ -784,8 +819,30 @@ export default function SettingsPage() {
                     </Form.Item>
                   </Col>
                   <Col span={24}>
-                    <Form.Item label="邮箱地址" name="email" rules={[{ required: true, message: '请输入邮箱地址' }, { type: 'email', message: '请输入有效邮箱地址' }]}>
+                    <Form.Item label="邮箱地址" name="email" rules={[{ required: true, message: '请输入邮箱地址' }, { type: 'email', message: '请输入有效邮箱地址' }]}> 
                       <Input className={pageCls.settingsInput} size="large" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={24}>
+                    <Form.Item label="店面图片" name="imageUrl">
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <input
+                          ref={storeImageInputRef}
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={handleStoreImageChange}
+                        />
+                        <Button onClick={handleSelectStoreImage}>上传店面图片</Button>
+                        <Form.Item noStyle shouldUpdate>
+                          {() => {
+                            const imageUrl = storeForm.getFieldValue('imageUrl');
+                            return imageUrl ? (
+                              <img src={imageUrl} alt="店面图片预览" style={{ width: '100%', maxWidth: 260, borderRadius: 16, border: '1px solid var(--border-subtle)' }} />
+                            ) : null;
+                          }}
+                        </Form.Item>
+                      </div>
                     </Form.Item>
                   </Col>
                 </Row>

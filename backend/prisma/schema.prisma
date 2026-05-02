@@ -236,6 +236,7 @@ model Course {
   level           String
   durationMinutes Int
   capacity        Int
+  coverImageUrl   String?
   coachId         String?
   coach           Coach?          @relation(fields: [coachId], references: [id])
   isActive        Boolean         @default(true)
@@ -332,6 +333,7 @@ model StudioSetting {
   email         String
   businessHours String
   address       String
+  imageUrl      String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
