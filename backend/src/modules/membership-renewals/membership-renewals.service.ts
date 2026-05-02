@@ -1,5 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import {
+  MemberStatus,
+  MembershipPlanCategory,
   NotificationChannel,
   NotificationStatus,
   TransactionKind,
@@ -16,6 +18,7 @@ export class MembershipRenewalsService {
     const [member, plan] = await Promise.all([
       this.prisma.member.findUnique({
         where: { miniUserId },
+        include: { plan: true },
       }),
       this.prisma.membershipPlan.findUnique({
         where: { id: dto.planId },
@@ -28,6 +31,31 @@ export class MembershipRenewalsService {
 
     if (!plan || !plan.isActive) {
       throw new NotFoundException('Active membership plan not found');
+    }
+
+    if (member.planId && member.plan && member.planId !== plan.id) {
+      const completedRenewalCount = await this.prisma.transaction.count({
+        where: {
+          memberId: member.id,
+          planId: member.planId,
+          kind: TransactionKind.MEMBERSHIP_RENEWAL,
+          status: TransactionStatus.COMPLETED,
+        },
+      });
+
+      const currentMembershipExpiresAt = this.getMembershipExpiresAt(
+        member.joinedAt,
+        member.plan.durationDays,
+        completedRenewalCount,
+      );
+
+      if (
+        member.status === MemberStatus.ACTIVE
+        && currentMembershipExpiresAt
+        && currentMembershipExpiresAt > new Date()
+      ) {
+        throw new BadRequestException('Current membership has not expired; only same-plan renewal is supported');
+      }
     }
 
     const transactionCode = this.generateTransactionCode();
@@ -80,5 +108,18 @@ export class MembershipRenewalsService {
     const timestamp = Date.now().toString(36).toUpperCase();
     const random = Math.floor(Math.random() * 1_000_000).toString(36).toUpperCase().padStart(4, '0');
     return `T${timestamp}${random}`;
+  }
+
+  private getMembershipExpiresAt(
+    joinedAt: Date,
+    durationDays?: number | null,
+    completedRenewalCount = 0,
+  ) {
+    if (!durationDays) {
+      return null;
+    }
+
+    const cycles = 1 + Math.max(completedRenewalCount, 0);
+    return new Date(joinedAt.getTime() + durationDays * cycles * 24 * 60 * 60 * 1000);
   }
 }

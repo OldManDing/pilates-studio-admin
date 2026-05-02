@@ -10,7 +10,7 @@ import { CreateMemberDto } from './dto/create-member.dto';
 import { QueryMembersDto } from './dto/query-members.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
-import { MemberStatus, MembershipPlanCategory } from '../../common/enums/domain.enums';
+import { MemberStatus, MembershipPlanCategory, TransactionKind, TransactionStatus } from '../../common/enums/domain.enums';
 
 @Injectable()
 export class MembersService {
@@ -233,11 +233,20 @@ export class MembersService {
       return { memberships: [] };
     }
 
+    const completedRenewalCount = await this.prisma.transaction.count({
+      where: {
+        memberId: member.id,
+        planId: member.planId,
+        kind: TransactionKind.MEMBERSHIP_RENEWAL,
+        status: TransactionStatus.COMPLETED,
+      },
+    });
+
     // Map current plan to membership shape expected by mini-program
     const now = new Date();
     const startDate = member.joinedAt;
     const endDate = member.plan.durationDays
-      ? new Date(startDate.getTime() + member.plan.durationDays * 24 * 60 * 60 * 1000)
+      ? new Date(startDate.getTime() + member.plan.durationDays * (1 + completedRenewalCount) * 24 * 60 * 60 * 1000)
       : new Date('2099-12-31');
 
     const membership = {

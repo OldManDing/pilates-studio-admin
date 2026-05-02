@@ -15,6 +15,9 @@ describe('ReportsService date range filtering', () => {
       count: jest.Mock;
       groupBy: jest.Mock;
     };
+    transaction: {
+      count: jest.Mock;
+    };
   };
 
   beforeEach(() => {
@@ -29,6 +32,9 @@ describe('ReportsService date range filtering', () => {
       booking: {
         count: jest.fn().mockResolvedValue(0),
         groupBy: jest.fn().mockResolvedValue([]),
+      },
+      transaction: {
+        count: jest.fn().mockResolvedValue(0),
       },
     };
 
@@ -60,12 +66,16 @@ describe('ReportsService date range filtering', () => {
   it('counts members expiring within the requested window', async () => {
     const now = Date.now();
     const activeExpiringSoon = {
+      id: 'member-1',
+      planId: 'plan-1',
       joinedAt: new Date(now - (365 - 20) * 24 * 60 * 60 * 1000),
-      plan: { durationDays: 365 },
+      plan: { id: 'plan-1', durationDays: 365 },
     };
     const activeNotSoon = {
+      id: 'member-2',
+      planId: 'plan-2',
       joinedAt: new Date(now - (365 - 90) * 24 * 60 * 60 * 1000),
-      plan: { durationDays: 365 },
+      plan: { id: 'plan-2', durationDays: 365 },
     };
     prisma.member.findMany.mockResolvedValue([activeExpiringSoon, activeNotSoon]);
 

@@ -41,6 +41,7 @@ describe('MembersService', () => {
       findMany: jest.Mock;
     };
     transaction: {
+      count: jest.Mock;
       findMany: jest.Mock;
     };
   };
@@ -59,6 +60,7 @@ describe('MembersService', () => {
         findMany: jest.fn(),
       },
       transaction: {
+        count: jest.fn().mockResolvedValue(0),
         findMany: jest.fn(),
       },
     };
