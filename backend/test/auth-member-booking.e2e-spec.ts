@@ -64,6 +64,7 @@ describe('Auth -> Members -> Bookings integration flow', () => {
       update: jest.fn(),
     },
     transaction: {
+      count: jest.fn().mockResolvedValue(0),
       findMany: jest.fn(),
     },
     $transaction: jest.fn(),

@@ -16,6 +16,7 @@ const createBooking = (overrides: Partial<Record<string, unknown>> = {}) => ({
     id: 'member-1',
     name: 'Alice',
     phone: '13800000000',
+    planId: 'plan-1',
     remainingCredits: 8,
     status: MemberStatus.ACTIVE,
     joinedAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -65,6 +66,9 @@ describe('BookingsService', () => {
     attendance: {
       upsert: jest.Mock;
     };
+    transaction: {
+      count: jest.Mock;
+    };
     $transaction: jest.Mock;
   };
 
@@ -94,10 +98,14 @@ describe('BookingsService', () => {
       attendance: {
         upsert: jest.fn(),
       },
+      transaction: {
+        count: jest.fn().mockResolvedValue(0),
+      },
       $transaction: jest.fn(),
     };
 
     prisma.$transaction.mockImplementation(async (callback: (tx: typeof prisma) => unknown) => callback(prisma));
+    prisma.member.updateMany.mockResolvedValue({ count: 1 });
 
     service = new BookingsService(prisma as unknown as never, notificationsService as never);
   });
@@ -223,6 +231,44 @@ describe('BookingsService', () => {
       await expect(
         service.create({ memberId: 'SELF', sessionId: 'session-1', source: BookingSource.MINI_PROGRAM }),
       ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('converts mini late cancellation to no-show and consumes one credit', async () => {
+      const startsAt = new Date(Date.now() + 60 * 60 * 1000);
+      const lateBooking = createBooking({
+        status: BookingStatus.CONFIRMED,
+        member: {
+          id: 'member-1',
+          name: 'Alice',
+          miniUserId: 'mini-user-1',
+          planId: 'plan-1',
+          remainingCredits: 8,
+          status: MemberStatus.ACTIVE,
+          joinedAt: new Date('2026-01-01T00:00:00.000Z'),
+          plan: { category: MembershipPlanCategory.TIME_CARD, durationDays: 365 },
+        },
+        session: {
+          id: 'session-1',
+          startsAt,
+        },
+      });
+      prisma.booking.findUnique.mockResolvedValueOnce(lateBooking).mockResolvedValueOnce(lateBooking);
+      prisma.booking.update.mockResolvedValue(createBooking({ status: BookingStatus.NO_SHOW }));
+
+      const result = await service.cancel('booking-1', 'late', 'mini-user-1');
+
+      expect(prisma.booking.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { status: BookingStatus.NO_SHOW },
+        }),
+      );
+      expect(prisma.member.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: 'member-1' }),
+          data: { remainingCredits: { decrement: 1 } },
+        }),
+      );
+      expect(result.status).toBe(BookingStatus.NO_SHOW);
     });
 
     it('cancels a booking and decrements bookedCount', async () => {

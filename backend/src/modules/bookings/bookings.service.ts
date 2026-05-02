@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { QueryBookingsDto } from './dto/query-bookings.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
-import { AttendanceStatus, BookingStatus, MemberStatus, MembershipPlanCategory } from '../../common/enums/domain.enums';
+import { AttendanceStatus, BookingStatus, MemberStatus, MembershipPlanCategory, TransactionKind, TransactionStatus } from '../../common/enums/domain.enums';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
 import { buildDateRange } from '../../common/utils/date-range';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -84,7 +84,7 @@ export class BookingsService {
         throw new NotFoundException('Member not found');
       }
 
-      this.assertBookableMember(member);
+      await this.assertBookableMember(member, tx);
 
       const session = await tx.courseSession.findUnique({
         where: { id: dto.sessionId },
@@ -366,7 +366,22 @@ export class BookingsService {
         where: { id },
         include: {
           member: {
-            select: { id: true, name: true, phone: true, miniUserId: true },
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              miniUserId: true,
+              planId: true,
+              remainingCredits: true,
+              status: true,
+              joinedAt: true,
+              plan: {
+                select: {
+                  category: true,
+                  durationDays: true,
+                },
+              },
+            },
           },
           session: true,
         },
@@ -398,6 +413,27 @@ export class BookingsService {
           where: { id: booking.sessionId },
           data: { bookedCount: { decrement: 1 } },
         });
+      }
+
+      if (
+        dto.status === BookingStatus.NO_SHOW
+        && booking.status !== BookingStatus.NO_SHOW
+        && booking.member?.plan
+        && this.shouldConsumeCredit(booking.member.plan.category)
+      ) {
+        const creditUpdate = await tx.member.updateMany({
+          where: {
+            id: booking.memberId,
+            remainingCredits: { gt: 0 },
+          },
+          data: {
+            remainingCredits: { decrement: 1 },
+          },
+        });
+
+        if (creditUpdate.count === 0) {
+          throw new BadRequestException('Insufficient remaining credits');
+        }
       }
 
       return updated;
@@ -513,6 +549,10 @@ export class BookingsService {
       if (booking.member?.miniUserId !== miniUserId) {
         throw new ForbiddenException('Cannot cancel another member booking');
       }
+
+      if (this.isLateCancellationWindow(booking.session?.startsAt)) {
+        return this.updateStatus(id, { status: BookingStatus.NO_SHOW });
+      }
     }
 
     return this.updateStatus(id, { status: BookingStatus.CANCELLED });
@@ -574,7 +614,7 @@ export class BookingsService {
         throw new NotFoundException('Member not found');
       }
 
-      this.assertBookableMember(booking.member);
+      await this.assertBookableMember(booking.member, tx);
 
       if (this.shouldConsumeCredit(booking.member?.plan?.category)) {
         const creditUpdate = await tx.member.updateMany({
@@ -665,7 +705,7 @@ export class BookingsService {
     throw new ConflictException('Unable to generate a unique booking code');
   }
 
-  private assertBookableMember(member: BookableMember) {
+  private async assertBookableMember(member: BookableMember & { id: string; planId?: string | null }, tx: Prisma.TransactionClient) {
     if (member.status !== MemberStatus.ACTIVE) {
       throw new BadRequestException('Member is not active');
     }
@@ -679,7 +719,15 @@ export class BookingsService {
     }
 
     if (member.plan.durationDays) {
-      const expiresAt = new Date(member.joinedAt.getTime() + member.plan.durationDays * 24 * 60 * 60 * 1000);
+      const completedRenewalCount = await tx.transaction.count({
+        where: {
+          memberId: member.id,
+          planId: member.planId,
+          kind: TransactionKind.MEMBERSHIP_RENEWAL,
+          status: TransactionStatus.COMPLETED,
+        },
+      });
+      const expiresAt = new Date(member.joinedAt.getTime() + member.plan.durationDays * (1 + completedRenewalCount) * 24 * 60 * 60 * 1000);
 
       if (expiresAt <= new Date()) {
         throw new BadRequestException('Membership has expired');
@@ -693,5 +741,19 @@ export class BookingsService {
 
   private occupiesSeat(status: string) {
     return status !== BookingStatus.CANCELLED && status !== BookingStatus.NO_SHOW;
+  }
+
+  private isLateCancellationWindow(startsAt?: Date | string) {
+    if (!startsAt) {
+      return false;
+    }
+
+    const startTime = new Date(startsAt).getTime();
+
+    if (Number.isNaN(startTime)) {
+      return false;
+    }
+
+    return startTime - Date.now() < 4 * 60 * 60 * 1000;
   }
 }
