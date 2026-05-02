@@ -19,7 +19,7 @@ vi.mock('@/services/members', () => ({
           remainingCredits: 12,
         },
       ],
-      meta: { page: 1, pageSize: 500, total: 1, totalPages: 1 },
+      meta: { page: 1, pageSize: 100, total: 1, totalPages: 1 },
     }),
   },
 }));
@@ -125,7 +125,7 @@ describe('NotificationsPage smoke test', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: '新建通知' })).toBeInTheDocument();
       expect(screen.getByText('仅向当前选择对象发送。')).toBeInTheDocument();
-      expect(membersApi.getAll).toHaveBeenCalledWith(1, 500, { search: undefined });
+      expect(membersApi.getAll).toHaveBeenCalledWith(1, 100, { search: undefined });
     }, { timeout: 20000 });
   }, 30000);
 });
