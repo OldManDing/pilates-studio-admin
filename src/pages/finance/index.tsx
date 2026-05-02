@@ -9,7 +9,7 @@ import {
   SearchOutlined,
   WalletOutlined
 } from '@ant-design/icons';
-import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Row, Select, Spin, message } from 'antd';
+import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Pagination, Row, Select, Spin, message } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import ActionButton from '@/components/ActionButton';
@@ -120,6 +120,8 @@ export default function FinancePage() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
   const [showAllTransactions, setShowAllTransactions] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
   const [isSavingTransaction, setIsSavingTransaction] = useState(false);
   const [statusUpdatingTransactionId, setStatusUpdatingTransactionId] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -277,12 +279,23 @@ export default function FinancePage() {
     });
   }, [searchValue, statusFilter, kindFilter, transactionList]);
 
-  const visibleTransactions = useMemo(() => {
+  const workbenchSourceTransactions = useMemo(() => {
     if (showAllTransactions || searchValue.trim().length > 0 || statusFilter !== '全部' || kindFilter !== '全部') {
       return filteredTransactions;
     }
     return filteredTransactions.slice(0, 4);
   }, [filteredTransactions, searchValue, showAllTransactions, statusFilter, kindFilter]);
+
+  const workbenchPageSize = showAllTransactions || searchValue.trim().length > 0 || statusFilter !== '全部' || kindFilter !== '全部'
+    ? pageSize
+    : 4;
+
+  const workbenchTotal = workbenchSourceTransactions.length;
+
+  const visibleTransactions = useMemo(() => {
+    const startIndex = (currentPage - 1) * workbenchPageSize;
+    return workbenchSourceTransactions.slice(startIndex, startIndex + workbenchPageSize);
+  }, [currentPage, workbenchPageSize, workbenchSourceTransactions]);
 
   const financeStats = useMemo(() => [
     {
@@ -465,6 +478,7 @@ export default function FinancePage() {
     setKindFilter(nextDraft.kind);
     setSearchValue('');
     setShowAllTransactions(true);
+    setCurrentPage(1);
     setIsFilterOpen(false);
   };
 
@@ -493,6 +507,7 @@ export default function FinancePage() {
       setKindFilter('MEMBERSHIP_RENEWAL');
       setFilterDraft({ status: 'PENDING', kind: 'MEMBERSHIP_RENEWAL' });
       setShowAllTransactions(true);
+      setCurrentPage(1);
 
       const totalRevenue = pendingRenewals.reduce((sum, item) => sum + item.amountCents / 100, 0);
       setStats({
@@ -702,6 +717,7 @@ export default function FinancePage() {
           </div>
 
           {visibleTransactions.length ? (
+            <>
             <div className={`${widgetCls.recordList} ${pageCls.sectionListStack}`}>
               {visibleTransactions.map((item) => (
                 <div key={item.id} className={`${widgetCls.recordItem} ${pageCls.surface} ${pageCls.memberRecordItem} ${styles.financeRecordCard}`}>
@@ -774,6 +790,18 @@ export default function FinancePage() {
                   </div>
                 ))}
             </div>
+            {workbenchTotal > workbenchPageSize ? (
+              <div className={pageCls.sectionPagination}>
+                <Pagination
+                  current={currentPage}
+                  pageSize={workbenchPageSize}
+                  total={workbenchTotal}
+                  onChange={setCurrentPage}
+                  showSizeChanger={false}
+                />
+              </div>
+            ) : null}
+            </>
           ) : (
             <div className={pageCls.sectionEmptyState}>
               <EmptyState
