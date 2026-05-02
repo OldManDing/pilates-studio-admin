@@ -65,4 +65,12 @@ export class NotificationsController {
   async markAsRead(@Param('id') id: string) {
     return this.notificationsService.markAsRead(id);
   }
+
+  @Post(':id/process-account-deletion')
+  @RequirePermissions('WRITE:MEMBERS', 'WRITE:MINI_USERS', 'WRITE:NOTIFICATIONS')
+  @ApiOperation({ summary: 'Process account deletion request and suspend linked identities' })
+  @ApiParam({ name: 'id', description: 'Notification ID' })
+  async processAccountDeletionRequest(@Param('id') id: string) {
+    return this.notificationsService.processAccountDeletionRequest(id);
+  }
 }

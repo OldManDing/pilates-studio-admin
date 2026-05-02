@@ -27,6 +27,7 @@ import SectionCard from '@/components/SectionCard';
 import StatCard from '@/components/StatCard';
 import StatusTag from '@/components/StatusTag';
 import { adminsApi, type AdminRecord } from '@/services/admins';
+import { authApi } from '@/services/auth';
 import { membersApi, type Member } from '@/services/members';
 import { miniUsersApi, type MiniUserRecord } from '@/services/miniUsers';
 import {
@@ -40,25 +41,29 @@ import { CRUD_MODAL_WIDTH, NARROW_DETAIL_DRAWER_WIDTH } from '@/styles/dimension
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import { getErrorMessage } from '@/utils/errors';
+import { hasRequiredPermissions } from '@/utils/menu';
 import styles from './index.module.css';
 
 type RecipientType = 'member' | 'miniUser' | 'admin';
 
 const isFeedbackNotification = (notification: NotificationRecord) => notification.type === 'MINI_PROGRAM_FEEDBACK';
+const isAccountDeletionRequest = (notification: NotificationRecord) => notification.type === 'ACCOUNT_DELETION_REQUEST';
+const isOperationalRequestNotification = (notification: NotificationRecord) =>
+  isFeedbackNotification(notification) || isAccountDeletionRequest(notification);
 
 const canMarkAsRead = (notification: NotificationRecord) =>
-  notification.status === 'SENT' || (isFeedbackNotification(notification) && notification.status === 'PENDING');
+  notification.status === 'SENT' || (isOperationalRequestNotification(notification) && notification.status === 'PENDING');
 
 const getMarkAsReadLabel = (notification: NotificationRecord) => {
-  if (notification.status === 'READ') return isFeedbackNotification(notification) ? '已处理' : '已读';
-  if (isFeedbackNotification(notification)) return '标记已处理';
+  if (notification.status === 'READ') return isOperationalRequestNotification(notification) ? '已处理' : '已读';
+  if (isOperationalRequestNotification(notification)) return '标记已处理';
   if (notification.status === 'SENT') return '标记已读';
   if (notification.status === 'PENDING') return '待发送';
   return '发送失败';
 };
 type FilterStatus = NotificationStatus | 'ALL';
 type FilterChannel = NotificationChannel | 'ALL';
-type FilterType = 'ALL' | 'MINI_PROGRAM_FEEDBACK' | 'MEMBERSHIP_RENEWAL_REQUEST';
+type FilterType = 'ALL' | 'MINI_PROGRAM_FEEDBACK' | 'MEMBERSHIP_RENEWAL_REQUEST' | 'ACCOUNT_DELETION_REQUEST';
 type RecipientSelectOption = {
   value: string;
   label: string;
@@ -104,6 +109,7 @@ const typeLabelMap: Record<FilterType, string> = {
   ALL: '全部类型',
   MINI_PROGRAM_FEEDBACK: '小程序反馈',
   MEMBERSHIP_RENEWAL_REQUEST: '续费申请',
+  ACCOUNT_DELETION_REQUEST: '注销申请',
 };
 
 const recipientTypeLabelMap: Record<RecipientType, string> = {
@@ -264,6 +270,8 @@ export default function NotificationsPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [markingNotificationId, setMarkingNotificationId] = useState<string | null>(null);
+  const [processingDeletionNotificationId, setProcessingDeletionNotificationId] = useState<string | null>(null);
+  const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL');
   const [channelFilter, setChannelFilter] = useState<FilterChannel>('ALL');
   const [typeFilter, setTypeFilter] = useState<FilterType>('ALL');
@@ -507,6 +515,29 @@ export default function NotificationsPage() {
     }
   };
 
+  const handleProcessDeletionRequest = async (notification: NotificationRecord) => {
+    if (!canProcessDeletionRequest) {
+      messageApi.error('当前账号没有处理注销申请的权限');
+      return;
+    }
+
+    try {
+      setProcessingDeletionNotificationId(notification.id);
+      const updated = await notificationsApi.processAccountDeletionRequest(notification.id);
+      messageApi.success('已停用账号并标记申请为已处理');
+
+      if (detailNotification?.id === updated.id) {
+        setDetailNotification(updated);
+      }
+
+      await loadNotifications(currentPage);
+    } catch (err) {
+      messageApi.error(getErrorMessage(err, '处理注销申请失败'));
+    } finally {
+      setProcessingDeletionNotificationId(null);
+    }
+  };
+
   const currentRecipientPlaceholder = recipientType === 'member'
     ? '搜索并选择会员'
     : recipientType === 'miniUser'
@@ -514,6 +545,20 @@ export default function NotificationsPage() {
       : '搜索并选择管理员';
   const currentRecipientOptions = recipientOptions[recipientType];
   const currentRecipientLoading = recipientOptionsLoading[recipientType];
+  const canProcessDeletionRequest = hasRequiredPermissions(currentUserPermissions, ['WRITE:MEMBERS', 'WRITE:MINI_USERS', 'WRITE:NOTIFICATIONS']);
+
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const me = await authApi.getMe();
+        setCurrentUserPermissions(me.role?.permissions || []);
+      } catch {
+        setCurrentUserPermissions([]);
+      }
+    };
+
+    void fetchCurrentUser();
+  }, []);
 
   if (loading && notifications.length === 0) {
     return (
@@ -659,6 +704,17 @@ export default function NotificationsPage() {
                           >
                             {getMarkAsReadLabel(notification)}
                           </Button>
+                          {isAccountDeletionRequest(notification) && canProcessDeletionRequest ? (
+                            <Button
+                              size="large"
+                              className={pageCls.cardActionSecondary}
+                              loading={processingDeletionNotificationId === notification.id}
+                              disabled={notification.status === 'READ' || (processingDeletionNotificationId !== null && processingDeletionNotificationId !== notification.id)}
+                              onClick={() => handleProcessDeletionRequest(notification)}
+                            >
+                              停用账号
+                            </Button>
+                          ) : null}
                         </div>
                       </aside>
                     </div>
@@ -779,15 +835,26 @@ export default function NotificationsPage() {
           setDetailNotification(null);
         }}
         extra={detailNotification ? (
-          <Button
-            type="primary"
-            icon={<MailOutlined />}
-            loading={markingNotificationId === detailNotification.id}
-            disabled={!canMarkAsRead(detailNotification) || (markingNotificationId !== null && markingNotificationId !== detailNotification.id)}
-            onClick={() => handleMarkAsRead(detailNotification)}
-          >
-            {getMarkAsReadLabel(detailNotification)}
-          </Button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {isAccountDeletionRequest(detailNotification) && canProcessDeletionRequest ? (
+              <Button
+                loading={processingDeletionNotificationId === detailNotification.id}
+                disabled={detailNotification.status === 'READ' || (processingDeletionNotificationId !== null && processingDeletionNotificationId !== detailNotification.id)}
+                onClick={() => handleProcessDeletionRequest(detailNotification)}
+              >
+                停用账号
+              </Button>
+            ) : null}
+            <Button
+              type="primary"
+              icon={<MailOutlined />}
+              loading={markingNotificationId === detailNotification.id}
+              disabled={!canMarkAsRead(detailNotification) || (markingNotificationId !== null && markingNotificationId !== detailNotification.id)}
+              onClick={() => handleMarkAsRead(detailNotification)}
+            >
+              {getMarkAsReadLabel(detailNotification)}
+            </Button>
+          </div>
         ) : null}
       >
         {detailLoading && !detailNotification ? (

@@ -40,4 +40,7 @@ export const miniUsersApi = {
         search,
       },
     }),
+
+  disable: (id: string) =>
+    api.post<MiniUserRecord>(`/mini-users/${id}/disable`, {}),
 };

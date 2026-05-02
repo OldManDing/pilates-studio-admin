@@ -26,6 +26,7 @@ const createNotification = (overrides: Partial<Record<string, unknown>> = {}) =>
 describe('NotificationsService', () => {
   let service: NotificationsService;
   let prisma: any;
+  let notificationDeliveryService: { deliver: jest.Mock };
 
   beforeEach(() => {
     prisma = {
@@ -33,14 +34,19 @@ describe('NotificationsService', () => {
         create: jest.fn(),
         findMany: jest.fn(),
         count: jest.fn().mockResolvedValue(0),
+        findFirst: jest.fn(),
         findUnique: jest.fn(),
         update: jest.fn(),
       },
       notificationSetting: {
         findUnique: jest.fn(),
+        findMany: jest.fn(),
       },
     };
-    service = new NotificationsService(prisma);
+    notificationDeliveryService = {
+      deliver: jest.fn(),
+    };
+    service = new NotificationsService(prisma, notificationDeliveryService as never);
   });
 
   it('creates a notification with pending status', async () => {
@@ -63,7 +69,7 @@ describe('NotificationsService', () => {
         }),
       }),
     );
-    expect(result.status).toBe(NotificationStatus.PENDING);
+    expect(result?.status).toBe(NotificationStatus.PENDING);
   });
 
   it('returns paginated notifications', async () => {
@@ -117,10 +123,10 @@ describe('NotificationsService', () => {
       createNotification({ id: 'notification-1' }),
       createNotification({ id: 'notification-2' }),
     ]);
-    prisma.notification.findUnique.mockResolvedValue(createNotification());
-    prisma.notification.update
-      .mockResolvedValueOnce(createNotification({ id: 'notification-1', status: NotificationStatus.SENT }))
-      .mockResolvedValueOnce(createNotification({ id: 'notification-2', status: NotificationStatus.SENT }));
+    prisma.notification.updateMany = jest.fn().mockResolvedValue({ count: 1 });
+    notificationDeliveryService.deliver
+      .mockResolvedValueOnce({ id: 'notification-1', status: NotificationStatus.SENT })
+      .mockResolvedValueOnce({ id: 'notification-2', status: NotificationStatus.SENT });
 
     const result = await service.processPendingNotifications();
 
@@ -172,5 +178,69 @@ describe('NotificationsService', () => {
 
     expect(result).toBeNull();
     expect(prisma.notification.create).not.toHaveBeenCalled();
+  });
+
+  it('skips mini notification creation when member preference disables it', async () => {
+    prisma.notificationSetting.findUnique.mockResolvedValueOnce({ enabled: false });
+
+    const result = await service.create({
+      channel: NotificationChannel.MINI_PROGRAM,
+      type: 'BOOKING_REMINDER',
+      title: '课程提醒',
+      content: '提醒',
+      miniUserId: 'mini-1',
+    });
+
+    expect(result).toBeNull();
+    expect(prisma.notification.create).not.toHaveBeenCalled();
+  });
+
+  it('filters mini notification list to sent and read by default', async () => {
+    prisma.notification.findMany.mockResolvedValue([createNotification({ status: NotificationStatus.SENT, miniUserId: 'mini-1', channel: NotificationChannel.MINI_PROGRAM })]);
+    prisma.notification.count.mockResolvedValue(1);
+
+    await service.findMine('mini-1', { page: 1, pageSize: 10 } as never);
+
+    expect(prisma.notification.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          miniUserId: 'mini-1',
+          channel: NotificationChannel.MINI_PROGRAM,
+          status: { in: [NotificationStatus.SENT, NotificationStatus.READ] },
+        }),
+      }),
+    );
+  });
+
+  it('processes account deletion request in one service call', async () => {
+    prisma.notification.findUnique.mockResolvedValue(createNotification({
+      id: 'notification-3',
+      type: 'ACCOUNT_DELETION_REQUEST',
+      memberId: 'member-1',
+      miniUserId: 'mini-1',
+    }));
+    prisma.notification.update.mockResolvedValue(createNotification({
+      id: 'notification-3',
+      type: 'ACCOUNT_DELETION_REQUEST',
+      status: NotificationStatus.READ,
+      memberId: 'member-1',
+      miniUserId: 'mini-1',
+      readAt: new Date(),
+    }));
+    prisma.member = { update: jest.fn().mockResolvedValue({ id: 'member-1', status: 'SUSPENDED' }) };
+    prisma.miniUser = { update: jest.fn().mockResolvedValue({ id: 'mini-1', status: 'DISABLED' }) };
+    prisma.$transaction = jest.fn().mockImplementation(async (callback: (tx: any) => unknown) => callback(prisma));
+
+    const result = await service.processAccountDeletionRequest('notification-3');
+
+    expect(prisma.member.update).toHaveBeenCalledWith({
+      where: { id: 'member-1' },
+      data: { status: 'SUSPENDED' },
+    });
+    expect(prisma.miniUser.update).toHaveBeenCalledWith({
+      where: { id: 'mini-1' },
+      data: { status: 'DISABLED' },
+    });
+    expect(result.status).toBe(NotificationStatus.READ);
   });
 });

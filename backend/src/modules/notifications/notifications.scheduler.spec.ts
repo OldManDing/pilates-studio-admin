@@ -1,4 +1,3 @@
-import { NotificationChannel, NotificationStatus } from '../../common/enums/domain.enums';
 import { NotificationsScheduler } from './notifications.scheduler';
 
 describe('NotificationsScheduler', () => {
@@ -6,7 +5,6 @@ describe('NotificationsScheduler', () => {
   let prisma: any;
   let configService: any;
   let notificationsService: any;
-  let notificationDeliveryService: any;
 
   beforeEach(() => {
     prisma = {
@@ -35,15 +33,15 @@ describe('NotificationsScheduler', () => {
       createFromSetting: jest.fn(),
     };
 
-    notificationDeliveryService = {
-      deliver: jest.fn(),
+    notificationsService = {
+      createFromSetting: jest.fn(),
+      processPendingNotifications: jest.fn(),
     };
 
     scheduler = new NotificationsScheduler(
       prisma,
       configService,
       notificationsService,
-      notificationDeliveryService,
     );
   });
 
@@ -110,20 +108,17 @@ describe('NotificationsScheduler', () => {
   });
 
   it('processes pending notifications through the delivery service', async () => {
-    prisma.notification.findMany.mockResolvedValue([
-      { id: 'notification-1', channel: NotificationChannel.MINI_PROGRAM },
-      { id: 'notification-2', channel: NotificationChannel.INTERNAL },
+    notificationsService.processPendingNotifications.mockResolvedValue([
+      { id: 'notification-1', status: 'SENT' },
+      { id: 'notification-2', status: 'SENT' },
     ]);
-    notificationDeliveryService.deliver
-      .mockResolvedValueOnce({ id: 'notification-1', status: NotificationStatus.SENT })
-      .mockResolvedValueOnce({ id: 'notification-2', status: NotificationStatus.SENT });
 
     const result = await scheduler.processPendingNotifications();
 
-    expect(notificationDeliveryService.deliver).toHaveBeenCalledTimes(2);
+    expect(notificationsService.processPendingNotifications).toHaveBeenCalledWith(50);
     expect(result).toEqual([
-      { id: 'notification-1', status: NotificationStatus.SENT },
-      { id: 'notification-2', status: NotificationStatus.SENT },
+      { id: 'notification-1', status: 'SENT' },
+      { id: 'notification-2', status: 'SENT' },
     ]);
   });
 });

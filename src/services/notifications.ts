@@ -98,4 +98,7 @@ export const notificationsApi = {
 
   markAsRead: (id: string) =>
     api.patch<NotificationRecord>(`/notifications/${id}/read`, {}),
+
+  processAccountDeletionRequest: (id: string) =>
+    api.post<NotificationRecord>(`/notifications/${id}/process-account-deletion`, {}),
 };

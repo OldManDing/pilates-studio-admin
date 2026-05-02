@@ -1,9 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { NotificationChannel, NotificationStatus } from '../../common/enums/domain.enums';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotificationDeliveryService } from './notification-delivery.service';
 import { NotificationsService } from './notifications.service';
 
 @Injectable()
@@ -12,7 +10,6 @@ export class NotificationsScheduler {
     private prisma: PrismaService,
     private configService: ConfigService,
     private notificationsService: NotificationsService,
-    private notificationDeliveryService: NotificationDeliveryService,
   ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_9AM)
@@ -162,40 +159,6 @@ export class NotificationsScheduler {
   @Cron(CronExpression.EVERY_10_MINUTES)
   async processPendingNotifications() {
     const limit = this.configService.get<number>('notifications.processingBatchSize') ?? 50;
-    const notifications = await this.prisma.notification.findMany({
-      where: { status: NotificationStatus.PENDING },
-      take: limit,
-      orderBy: { createdAt: 'asc' },
-      select: {
-        id: true,
-        channel: true,
-        type: true,
-        title: true,
-        content: true,
-        payload: true,
-        miniUser: {
-          select: {
-            openId: true,
-          },
-        },
-      },
-    });
-
-    const processed = [] as Array<{ id: string; status: NotificationStatus }>;
-
-    for (const notification of notifications) {
-      const result = await this.notificationDeliveryService.deliver({
-        id: notification.id,
-        channel: notification.channel as NotificationChannel,
-        type: notification.type,
-        title: notification.title,
-        content: notification.content,
-        payload: notification.payload as Record<string, unknown> | null,
-        miniUser: notification.miniUser,
-      });
-      processed.push(result);
-    }
-
-    return processed;
+    return this.notificationsService.processPendingNotifications(limit);
   }
 }
