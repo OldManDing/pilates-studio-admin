@@ -153,7 +153,11 @@ export class TransactionsService {
       const transaction = await tx.transaction.findUnique({
         where: { id },
         include: {
-          member: true,
+          member: {
+            include: {
+              plan: true,
+            },
+          },
           plan: true,
         },
       });
@@ -182,6 +186,31 @@ export class TransactionsService {
         throw new BadRequestException('Membership renewal transaction must include member and plan');
       }
 
+      const completedRenewalCount = await tx.transaction.count({
+        where: {
+          memberId: transaction.memberId,
+          planId: transaction.member.planId ?? transaction.planId,
+          kind: TransactionKind.MEMBERSHIP_RENEWAL,
+          status: TransactionStatus.COMPLETED,
+        },
+      });
+
+      const currentMembershipExpiresAt = this.getMembershipExpiresAt(
+        transaction.member.joinedAt,
+        transaction.member.plan?.durationDays,
+        completedRenewalCount,
+      );
+      const hasActiveMembership = Boolean(
+        transaction.member.status === MemberStatus.ACTIVE
+        && currentMembershipExpiresAt
+        && currentMembershipExpiresAt > new Date(),
+      );
+      const isSamePlanRenewal = transaction.member.planId === transaction.planId;
+
+      if (hasActiveMembership && !isSamePlanRenewal) {
+        throw new BadRequestException('Current membership has not expired; only same-plan renewal is supported');
+      }
+
       const statusUpdate = await tx.transaction.updateMany({
         where: {
           id,
@@ -204,7 +233,7 @@ export class TransactionsService {
         where: { id: transaction.memberId },
         data: {
           planId: transaction.planId,
-          joinedAt: new Date(),
+          joinedAt: hasActiveMembership && isSamePlanRenewal ? transaction.member.joinedAt : new Date(),
           status: MemberStatus.ACTIVE,
           remainingCredits: this.calculateRenewedCredits(
             transaction.member.remainingCredits,
@@ -352,5 +381,18 @@ export class TransactionsService {
     }
 
     return safeCurrentCredits + (planCredits ?? 0);
+  }
+
+  private getMembershipExpiresAt(
+    joinedAt: Date,
+    durationDays?: number | null,
+    completedRenewalCount = 0,
+  ) {
+    if (!durationDays) {
+      return null;
+    }
+
+    const cycles = 1 + Math.max(completedRenewalCount, 0);
+    return new Date(joinedAt.getTime() + durationDays * cycles * 24 * 60 * 60 * 1000);
   }
 }

@@ -1,5 +1,5 @@
-import { NotFoundException } from '@nestjs/common';
-import { TransactionStatus } from '../../common/enums/domain.enums';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { MemberStatus, MembershipPlanCategory, TransactionKind, TransactionStatus } from '../../common/enums/domain.enums';
 import { TransactionsService } from './transactions.service';
 
 const createTransaction = (overrides: Partial<Record<string, unknown>> = {}) => ({
@@ -47,6 +47,7 @@ describe('TransactionsService', () => {
     };
 
     prisma.$transaction.mockImplementation(async (callback: (tx: typeof prisma) => unknown) => callback(prisma));
+    prisma.transaction.count.mockResolvedValue(0);
 
     service = new TransactionsService(prisma, notificationsService as never);
   });
@@ -103,6 +104,58 @@ describe('TransactionsService', () => {
     await expect(
       service.updateStatus('missing', { status: TransactionStatus.COMPLETED }),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('keeps joinedAt when completing same-plan renewal during active period', async () => {
+    const joinedAt = new Date('2026-01-01T00:00:00.000Z');
+    prisma.transaction.findUnique.mockResolvedValue(createTransaction({
+      kind: TransactionKind.MEMBERSHIP_RENEWAL,
+      planId: 'plan-1',
+      plan: { id: 'plan-1', name: '年卡会员', category: MembershipPlanCategory.PERIOD_CARD, totalCredits: null, durationDays: 365 },
+      member: {
+        id: 'member-1',
+        name: '林若溪',
+        phone: '13800000000',
+        status: MemberStatus.ACTIVE,
+        joinedAt,
+        remainingCredits: 0,
+        planId: 'plan-1',
+        plan: { id: 'plan-1', category: MembershipPlanCategory.PERIOD_CARD, durationDays: 365, totalCredits: null },
+      },
+      status: TransactionStatus.PENDING,
+    }));
+    prisma.transaction.updateMany.mockResolvedValue({ count: 1 });
+    prisma.member.update.mockResolvedValue({});
+    prisma.transaction.findUniqueOrThrow.mockResolvedValue(createTransaction({ status: TransactionStatus.COMPLETED }));
+
+    await service.updateStatus('transaction-1', { status: TransactionStatus.COMPLETED });
+
+    expect(prisma.member.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        joinedAt,
+      }),
+    }));
+  });
+
+  it('rejects different-plan renewal when current membership is still active', async () => {
+    prisma.transaction.findUnique.mockResolvedValue(createTransaction({
+      kind: TransactionKind.MEMBERSHIP_RENEWAL,
+      planId: 'plan-2',
+      plan: { id: 'plan-2', name: '季度会员', category: MembershipPlanCategory.PERIOD_CARD, totalCredits: null, durationDays: 90 },
+      member: {
+        id: 'member-1',
+        name: '林若溪',
+        phone: '13800000000',
+        status: MemberStatus.ACTIVE,
+        joinedAt: new Date(),
+        remainingCredits: 0,
+        planId: 'plan-1',
+        plan: { id: 'plan-1', category: MembershipPlanCategory.PERIOD_CARD, durationDays: 365, totalCredits: null },
+      },
+      status: TransactionStatus.PENDING,
+    }));
+
+    await expect(service.updateStatus('transaction-1', { status: TransactionStatus.COMPLETED })).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('updates transaction member binding and fields', async () => {
