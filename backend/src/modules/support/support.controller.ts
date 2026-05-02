@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AllowMiniUser } from '../../common/decorators/allow-mini-user.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
+import { SubmitAccountDeletionRequestDto } from './dto/submit-account-deletion-request.dto';
 import { SubmitFeedbackDto } from './dto/submit-feedback.dto';
 import { SupportService } from './support.service';
 
@@ -21,5 +22,16 @@ export class SupportController {
     @CurrentUser('sub') miniUserId: string,
   ) {
     return this.supportService.submitFeedback(dto, miniUserId);
+  }
+
+  @Post('account-deletion-request')
+  @AllowMiniUser()
+  @RequirePermissions('WRITE:NOTIFICATIONS')
+  @ApiOperation({ summary: 'Submit mini-program account deletion request' })
+  async submitAccountDeletionRequest(
+    @Body() dto: SubmitAccountDeletionRequestDto,
+    @CurrentUser('sub') miniUserId: string,
+  ) {
+    return this.supportService.submitAccountDeletionRequest(dto, miniUserId);
   }
 }
