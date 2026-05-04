@@ -48,14 +48,30 @@ type RecipientType = 'member' | 'miniUser' | 'admin';
 
 const isFeedbackNotification = (notification: NotificationRecord) => notification.type === 'MINI_PROGRAM_FEEDBACK';
 const isAccountDeletionRequest = (notification: NotificationRecord) => notification.type === 'ACCOUNT_DELETION_REQUEST';
+const isMembershipRenewalRequest = (notification: NotificationRecord) => notification.type === 'MEMBERSHIP_RENEWAL_REQUEST';
 const isOperationalRequestNotification = (notification: NotificationRecord) =>
-  isFeedbackNotification(notification) || isAccountDeletionRequest(notification);
+  isFeedbackNotification(notification) || isAccountDeletionRequest(notification) || isMembershipRenewalRequest(notification);
+
+const getDeletionProcessedAt = (notification: NotificationRecord) => {
+  const payload = notification.payload;
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+
+  const processedAt = payload.accountDeletionProcessedAt;
+  return typeof processedAt === 'string' ? processedAt : null;
+};
+
+const isDeletionProcessed = (notification: NotificationRecord) =>
+  isAccountDeletionRequest(notification) && Boolean(getDeletionProcessedAt(notification) || notification.readAt);
 
 const canMarkAsRead = (notification: NotificationRecord) =>
-  notification.status === 'SENT' || (isOperationalRequestNotification(notification) && notification.status === 'PENDING');
+  notification.status === 'SENT' || (isOperationalRequestNotification(notification) && notification.status === 'PENDING' && !isAccountDeletionRequest(notification));
 
 const getMarkAsReadLabel = (notification: NotificationRecord) => {
+  if (isDeletionProcessed(notification)) return '已处理';
   if (notification.status === 'READ') return isOperationalRequestNotification(notification) ? '已处理' : '已读';
+  if (isAccountDeletionRequest(notification) && notification.status === 'PENDING') return '需停用账号';
   if (isOperationalRequestNotification(notification)) return '标记已处理';
   if (notification.status === 'SENT') return '标记已读';
   if (notification.status === 'PENDING') return '待发送';
@@ -97,6 +113,15 @@ const statusLabelMap: Record<NotificationStatus, string> = {
   READ: '已读',
   FAILED: '失败',
 };
+
+const getStatusLabel = (notification: NotificationRecord) =>
+  isDeletionProcessed(notification) ? '已处理' : statusLabelMap[notification.status];
+
+const getCompletionTimeLabel = (notification: NotificationRecord) =>
+  isAccountDeletionRequest(notification) ? '处理时间' : '已读时间';
+
+const getCompletionTimeValue = (notification: NotificationRecord) =>
+  isDeletionProcessed(notification) ? getDeletionProcessedAt(notification) || notification.readAt : notification.readAt;
 
 const channelLabelMap: Record<NotificationChannel, string> = {
   INTERNAL: '站内通知',
@@ -272,6 +297,7 @@ export default function NotificationsPage() {
   const [markingNotificationId, setMarkingNotificationId] = useState<string | null>(null);
   const [processingDeletionNotificationId, setProcessingDeletionNotificationId] = useState<string | null>(null);
   const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
+  const [currentUserRoleCode, setCurrentUserRoleCode] = useState('');
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL');
   const [channelFilter, setChannelFilter] = useState<FilterChannel>('ALL');
   const [typeFilter, setTypeFilter] = useState<FilterType>('ALL');
@@ -285,6 +311,8 @@ export default function NotificationsPage() {
   const recipientRequestSeqRef = useRef<Record<RecipientType, number>>({ member: 0, miniUser: 0, admin: 0 });
   const detailRequestSeqRef = useRef(0);
   const recipientType = Form.useWatch('recipientType', composerForm) || 'member';
+  const canWriteNotifications = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['WRITE:NOTIFICATIONS']);
+  const canReadAdmins = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['READ:ADMINS']);
 
   const loadNotifications = useCallback(async (page = currentPage) => {
     try {
@@ -347,6 +375,14 @@ export default function NotificationsPage() {
           miniUser: miniUserRows.map(mapMiniUserToOption),
         }));
       } else {
+        if (!canReadAdmins) {
+          setRecipientOptions((current) => ({
+            ...current,
+            admin: [],
+          }));
+          return;
+        }
+
         const admins = await adminsApi.getAll(search);
         if (recipientRequestSeqRef.current[type] !== requestSeq) return;
         setRecipientOptions((current) => ({
@@ -364,7 +400,7 @@ export default function NotificationsPage() {
         }));
       }
     }
-  }, [messageApi]);
+  }, [canReadAdmins, messageApi]);
 
   useEffect(() => {
     if (!composerOpen) {
@@ -373,6 +409,14 @@ export default function NotificationsPage() {
 
     void loadRecipientOptions(recipientType);
   }, [composerOpen, loadRecipientOptions, recipientType]);
+
+  useEffect(() => {
+    if (composerOpen && recipientType === 'admin' && !canReadAdmins) {
+      composerForm.setFieldValue('recipientType', 'member');
+      composerForm.resetFields(['recipientId']);
+      composerForm.setFieldValue('channel', 'INTERNAL');
+    }
+  }, [canReadAdmins, composerForm, composerOpen, recipientType]);
 
   const summaryStats = useMemo(
     () => [
@@ -398,9 +442,9 @@ export default function NotificationsPage() {
         icon: 'sent' as const,
       },
       {
-        title: '当前页已读',
+        title: '当前页已确认',
         value: String(notifications.filter((item) => item.status === 'READ').length),
-        hint: '已完成确认',
+        hint: '已读或已处理',
         tone: 'pink' as const,
         icon: 'read' as const,
       },
@@ -418,9 +462,14 @@ export default function NotificationsPage() {
 
   const notificationResultSummary = notificationFilterLabels.length
     ? `已按${notificationFilterLabels.join('、')}筛选，当前匹配 ${total} 条通知。`
-    : `当前共 ${total} 条通知，按待发送、已发送、已读三个阶段跟进。`;
+    : `当前共 ${total} 条通知，按待发送、已发送、已确认三个阶段跟进。`;
 
   const openComposerModal = () => {
+    if (!canWriteNotifications) {
+      messageApi.warning('当前账号没有通知写入权限');
+      return;
+    }
+
     composerForm.setFieldsValue({
       recipientType: 'member',
       recipientId: '',
@@ -445,6 +494,11 @@ export default function NotificationsPage() {
   };
 
   const handleCreateNotification = async () => {
+    if (!canWriteNotifications) {
+      messageApi.warning('当前账号没有通知写入权限');
+      return;
+    }
+
     let values: ComposerFormValues;
 
     try {
@@ -494,7 +548,12 @@ export default function NotificationsPage() {
   };
 
   const handleMarkAsRead = async (notification: NotificationRecord) => {
-    if (notification.status === 'READ') {
+    if (!canWriteNotifications) {
+      messageApi.error('当前账号没有通知处理权限');
+      return;
+    }
+
+    if (notification.status === 'READ' || isDeletionProcessed(notification)) {
       return;
     }
 
@@ -545,15 +604,17 @@ export default function NotificationsPage() {
       : '搜索并选择管理员';
   const currentRecipientOptions = recipientOptions[recipientType];
   const currentRecipientLoading = recipientOptionsLoading[recipientType];
-  const canProcessDeletionRequest = hasRequiredPermissions(currentUserPermissions, ['WRITE:MEMBERS', 'WRITE:MINI_USERS', 'WRITE:NOTIFICATIONS']);
+  const canProcessDeletionRequest = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['WRITE:MEMBERS', 'WRITE:MINI_USERS', 'WRITE:NOTIFICATIONS']);
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
         const me = await authApi.getMe();
         setCurrentUserPermissions(me.role?.permissions || []);
+        setCurrentUserRoleCode(me.role?.code || '');
       } catch {
         setCurrentUserPermissions([]);
+        setCurrentUserRoleCode('');
       }
     };
 
@@ -567,7 +628,7 @@ export default function NotificationsPage() {
         <PageHeader
           title="通知管理"
           subtitle="查看通知记录、筛选状态与渠道，并支持最小化手动发送。"
-          extra={<ActionButton icon={<PlusOutlined />} onClick={openComposerModal}>新建通知</ActionButton>}
+          extra={canWriteNotifications ? <ActionButton icon={<PlusOutlined />} onClick={openComposerModal}>新建通知</ActionButton> : null}
         />
         <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
           <Spin size="large" />
@@ -582,7 +643,7 @@ export default function NotificationsPage() {
 
       <PageHeader
         title="通知管理"
-        extra={<ActionButton icon={<PlusOutlined />} onClick={openComposerModal}>新建通知</ActionButton>}
+        extra={canWriteNotifications ? <ActionButton icon={<PlusOutlined />} onClick={openComposerModal}>新建通知</ActionButton> : null}
       />
 
       <div className={pageCls.heroGrid}>
@@ -600,7 +661,7 @@ export default function NotificationsPage() {
               {feedbackCount > 0 ? <span className={pageCls.sectionMetaPill}>当前页反馈 {feedbackCount} 条</span> : null}
               <span className={pageCls.sectionMetaPill}>待发送</span>
               <span className={pageCls.sectionMetaPill}>已发送</span>
-              <span className={pageCls.sectionMetaPill}>已读</span>
+              <span className={pageCls.sectionMetaPill}>已确认</span>
             </div>
           </div>
 
@@ -665,7 +726,7 @@ export default function NotificationsPage() {
                             <span className={styles.typePill}>{notification.type}</span>
                             <h3 className={styles.notificationTitle}>{notification.title}</h3>
                           </div>
-                          <StatusTag status={statusLabelMap[notification.status]} />
+                          <StatusTag status={getStatusLabel(notification)} />
                         </div>
 
                         <div className={styles.notificationMetaRow}>
@@ -681,7 +742,7 @@ export default function NotificationsPage() {
                         <Descriptions column={1} size="small">
                           <Descriptions.Item label="接收对象">{recipient.meta}</Descriptions.Item>
                           <Descriptions.Item label="已发送">{formatDateTime(notification.sentAt)}</Descriptions.Item>
-                          <Descriptions.Item label="已读时间">{formatDateTime(notification.readAt)}</Descriptions.Item>
+                          <Descriptions.Item label={getCompletionTimeLabel(notification)}>{formatDateTime(getCompletionTimeValue(notification))}</Descriptions.Item>
                         </Descriptions>
 
                         <div className={styles.notificationActions}>
@@ -693,23 +754,25 @@ export default function NotificationsPage() {
                           >
                             查看详情
                           </Button>
-                          <Button
-                            type="primary"
-                            size="large"
-                            className={pageCls.cardActionPrimary}
-                            icon={<CheckCircleOutlined />}
-                            loading={markingNotificationId === notification.id}
-                            disabled={!canMarkAsRead(notification) || (markingNotificationId !== null && markingNotificationId !== notification.id)}
-                            onClick={() => handleMarkAsRead(notification)}
-                          >
-                            {getMarkAsReadLabel(notification)}
-                          </Button>
+                          {canWriteNotifications ? (
+                            <Button
+                              type="primary"
+                              size="large"
+                              className={pageCls.cardActionPrimary}
+                              icon={<CheckCircleOutlined />}
+                              loading={markingNotificationId === notification.id}
+                              disabled={!canMarkAsRead(notification) || (markingNotificationId !== null && markingNotificationId !== notification.id)}
+                              onClick={() => handleMarkAsRead(notification)}
+                            >
+                              {getMarkAsReadLabel(notification)}
+                            </Button>
+                          ) : null}
                           {isAccountDeletionRequest(notification) && canProcessDeletionRequest ? (
                             <Button
                               size="large"
                               className={pageCls.cardActionSecondary}
                               loading={processingDeletionNotificationId === notification.id}
-                              disabled={notification.status === 'READ' || (processingDeletionNotificationId !== null && processingDeletionNotificationId !== notification.id)}
+                              disabled={isDeletionProcessed(notification) || (processingDeletionNotificationId !== null && processingDeletionNotificationId !== notification.id)}
                               onClick={() => handleProcessDeletionRequest(notification)}
                             >
                               停用账号
@@ -737,8 +800,8 @@ export default function NotificationsPage() {
               <EmptyState
                 title="暂无通知记录"
                 description="当前筛选条件下暂无通知。"
-                actionText="新建通知"
-                onAction={openComposerModal}
+                actionText={canWriteNotifications ? '新建通知' : undefined}
+                onAction={canWriteNotifications ? openComposerModal : undefined}
               />
             </div>
           )}
@@ -757,6 +820,7 @@ export default function NotificationsPage() {
         okText="立即发送"
         cancelText="取消"
         zIndex={1600}
+        forceRender
         destroyOnHidden
       >
         <Form form={composerForm} className={pageCls.crudModalForm} layout="vertical">
@@ -771,9 +835,9 @@ export default function NotificationsPage() {
                 composerForm.resetFields(['recipientId']);
                 composerForm.setFieldValue('channel', 'INTERNAL');
               }}
-              options={(
-                Object.keys(recipientTypeLabelMap) as RecipientType[]
-              ).map((key) => ({ label: recipientTypeLabelMap[key], value: key }))}
+              options={(Object.keys(recipientTypeLabelMap) as RecipientType[])
+                .filter((key) => key !== 'admin' || canReadAdmins)
+                .map((key) => ({ label: recipientTypeLabelMap[key], value: key }))}
             />
           </Form.Item>
 
@@ -839,21 +903,23 @@ export default function NotificationsPage() {
             {isAccountDeletionRequest(detailNotification) && canProcessDeletionRequest ? (
               <Button
                 loading={processingDeletionNotificationId === detailNotification.id}
-                disabled={detailNotification.status === 'READ' || (processingDeletionNotificationId !== null && processingDeletionNotificationId !== detailNotification.id)}
+                disabled={isDeletionProcessed(detailNotification) || (processingDeletionNotificationId !== null && processingDeletionNotificationId !== detailNotification.id)}
                 onClick={() => handleProcessDeletionRequest(detailNotification)}
               >
                 停用账号
               </Button>
             ) : null}
-            <Button
-              type="primary"
-              icon={<MailOutlined />}
-              loading={markingNotificationId === detailNotification.id}
-              disabled={!canMarkAsRead(detailNotification) || (markingNotificationId !== null && markingNotificationId !== detailNotification.id)}
-              onClick={() => handleMarkAsRead(detailNotification)}
-            >
-              {getMarkAsReadLabel(detailNotification)}
-            </Button>
+            {canWriteNotifications ? (
+              <Button
+                type="primary"
+                icon={<MailOutlined />}
+                loading={markingNotificationId === detailNotification.id}
+                disabled={!canMarkAsRead(detailNotification) || (markingNotificationId !== null && markingNotificationId !== detailNotification.id)}
+                onClick={() => handleMarkAsRead(detailNotification)}
+              >
+                {getMarkAsReadLabel(detailNotification)}
+              </Button>
+            ) : null}
           </div>
         ) : null}
       >
@@ -867,7 +933,7 @@ export default function NotificationsPage() {
                   <span className={styles.typePill}>{detailNotification.type}</span>
                   <h2 className={styles.overviewTitle}>{detailNotification.title}</h2>
                 </div>
-                <StatusTag status={statusLabelMap[detailNotification.status]} />
+                <StatusTag status={getStatusLabel(detailNotification)} />
               </div>
 
               <div className={styles.overviewMetaGrid}>
@@ -884,8 +950,8 @@ export default function NotificationsPage() {
                   <div className={styles.overviewMetaValue}>{formatDateTime(detailNotification.createdAt)}</div>
                 </div>
                 <div className={styles.overviewMetaCard}>
-                  <div className={styles.overviewMetaLabel}>已读时间</div>
-                  <div className={styles.overviewMetaValue}>{formatDateTime(detailNotification.readAt)}</div>
+                  <div className={styles.overviewMetaLabel}>{getCompletionTimeLabel(detailNotification)}</div>
+                  <div className={styles.overviewMetaValue}>{formatDateTime(getCompletionTimeValue(detailNotification))}</div>
                 </div>
               </div>
             </div>
@@ -898,10 +964,10 @@ export default function NotificationsPage() {
             </SectionCard>
 
             <SectionCard title="投递状态">
-              <Descriptions column={1} size="small" bordered>
+              <Descriptions column={1} size="small" bordered className={pageCls.detailDescriptions}>
                 <Descriptions.Item label="发送时间">{formatDateTime(detailNotification.sentAt)}</Descriptions.Item>
                 <Descriptions.Item label="更新时间">{formatDateTime(detailNotification.updatedAt)}</Descriptions.Item>
-                <Descriptions.Item label="当前状态">{statusLabelMap[detailNotification.status]}</Descriptions.Item>
+                <Descriptions.Item label="当前状态">{getStatusLabel(detailNotification)}</Descriptions.Item>
               </Descriptions>
             </SectionCard>
           </div>

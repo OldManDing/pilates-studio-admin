@@ -34,6 +34,7 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: ['local-config', '.env'],
       load: [appConfig, authConfig, databaseConfig]
     }),
     ScheduleModule.forRoot(),

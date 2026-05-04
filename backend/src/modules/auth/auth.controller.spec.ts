@@ -5,6 +5,10 @@ jest.mock('otplib', () => ({
 
 import { AuthController } from './auth.controller';
 
+const ADMIN_LOGIN_SECRET = 'Admin123!';
+const CURRENT_SECRET = 'old';
+const REPLACEMENT_SECRET = 'new-pass';
+
 describe('AuthController', () => {
   const authService = {
     login: jest.fn(),
@@ -25,7 +29,7 @@ describe('AuthController', () => {
 
   it('delegates login to auth service', async () => {
     authService.login.mockResolvedValue({ success: true });
-    const dto = { email: 'owner@pilates.com', password: 'Admin123!' };
+    const dto = { email: 'owner@pilates.com', password: ADMIN_LOGIN_SECRET };
 
     await expect(controller.login(dto as never)).resolves.toEqual({ success: true });
     expect(authService.login).toHaveBeenCalledWith(dto);
@@ -53,7 +57,11 @@ describe('AuthController', () => {
   it('delegates getMe and changePassword to auth service', async () => {
     authService.getMe.mockResolvedValue({ id: 'admin-1', email: 'owner@pilates.com' });
     authService.changePassword.mockResolvedValue({ success: true });
-    const dto = { currentPassword: 'old', newPassword: 'new-pass', confirmPassword: 'new-pass' };
+    const dto = {
+      currentPassword: CURRENT_SECRET,
+      newPassword: REPLACEMENT_SECRET,
+      confirmPassword: REPLACEMENT_SECRET,
+    };
 
     await expect(controller.getMe('admin-1')).resolves.toEqual({ id: 'admin-1', email: 'owner@pilates.com' });
     await expect(controller.changePassword('admin-1', dto as never)).resolves.toEqual({ success: true });
@@ -71,11 +79,11 @@ describe('AuthController', () => {
     await expect(controller.getTwoFactorStatus('admin-1')).resolves.toEqual({ enabled: false, hasSecret: false });
     await expect(controller.generateTwoFactorSecret('admin-1')).resolves.toEqual({ secret: 'secret', backupCode: 'BACKUP' });
     await expect(controller.verifyTwoFactor('admin-1', '123456')).resolves.toEqual({ success: true });
-    await expect(controller.disableTwoFactor('admin-1', 'Admin123!')).resolves.toEqual({ success: true });
+    await expect(controller.disableTwoFactor('admin-1', ADMIN_LOGIN_SECRET)).resolves.toEqual({ success: true });
 
     expect(authService.getTwoFactorStatus).toHaveBeenCalledWith('admin-1');
     expect(authService.generateTwoFactorSecret).toHaveBeenCalledWith('admin-1');
     expect(authService.verifyTwoFactor).toHaveBeenCalledWith('admin-1', '123456');
-    expect(authService.disableTwoFactor).toHaveBeenCalledWith('admin-1', 'Admin123!');
+    expect(authService.disableTwoFactor).toHaveBeenCalledWith('admin-1', ADMIN_LOGIN_SECRET);
   });
 });

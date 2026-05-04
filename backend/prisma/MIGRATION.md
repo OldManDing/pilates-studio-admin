@@ -87,6 +87,8 @@ npx prisma migrate status
 
 ### Run Seed
 
+Set `SEED_ADMIN_PASSWORD` before running seed. The script refuses to create an admin user with a built-in default password.
+
 ```bash
 # Docker Compose
 docker-compose exec backend npx prisma db seed

@@ -15,7 +15,7 @@ export type MemberRecordCardProps = {
   memberCodeText: string;
   statusLabel: string;
   tone: AccentTone;
-  onEdit: () => void;
+  onEdit?: () => void;
   onViewDetail: () => void;
 };
 
@@ -57,7 +57,7 @@ export default function MemberRecordCard({
 
       <div className={widgetCls.detailActionGroup}>
         <Button type="primary" size="large" className={pageCls.cardActionHalf} onClick={onViewDetail}>查看详情</Button>
-        <Button size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={onEdit}>编辑</Button>
+        {onEdit ? <Button size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={onEdit}>编辑</Button> : null}
       </div>
     </div>
   );

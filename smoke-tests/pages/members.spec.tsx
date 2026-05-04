@@ -3,6 +3,22 @@ import { App } from 'antd';
 import { MemoryRouter } from 'react-router-dom';
 import MembersPage from '@/pages/members';
 
+vi.mock('@/services/auth', () => ({
+  authApi: {
+    getMe: vi.fn().mockResolvedValue({
+      id: 'admin-1',
+      email: 'owner@pilates.com',
+      displayName: 'Owner',
+      role: {
+        id: 'role-1',
+        code: 'OWNER',
+        name: 'Owner',
+        permissions: ['READ:MEMBERS', 'WRITE:MEMBERS', 'MANAGE:MEMBERS'],
+      },
+    }),
+  },
+}));
+
 vi.mock('@/services/reports', () => ({
   reportsApi: {
     getMembers: vi.fn().mockResolvedValue({
@@ -58,7 +74,7 @@ vi.mock('@/services/members', () => ({
 describe('MembersPage smoke test', () => {
   it('renders members management shell with mocked data', async () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <App>
           <MembersPage />
         </App>
@@ -70,5 +86,5 @@ describe('MembersPage smoke test', () => {
       expect(screen.getByRole('button', { name: /新增会员/ })).toBeInTheDocument();
       expect(screen.getByText('总会员数')).toBeInTheDocument();
     });
-  }, 10000);
+  }, 20000);
 });

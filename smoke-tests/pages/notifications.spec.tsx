@@ -4,6 +4,22 @@ import { MemoryRouter } from 'react-router-dom';
 import NotificationsPage from '@/pages/notifications';
 import { membersApi } from '@/services/members';
 
+vi.mock('@/services/auth', () => ({
+  authApi: {
+    getMe: vi.fn().mockResolvedValue({
+      id: 'admin-1',
+      email: 'owner@pilates.com',
+      displayName: 'Owner',
+      role: {
+        id: 'role-1',
+        code: 'OWNER',
+        name: 'Owner',
+        permissions: ['READ:NOTIFICATIONS', 'WRITE:NOTIFICATIONS', 'READ:ADMINS', 'WRITE:MEMBERS', 'WRITE:MINI_USERS'],
+      },
+    }),
+  },
+}));
+
 vi.mock('@/services/members', () => ({
   membersApi: {
     getAll: vi.fn().mockResolvedValue({
@@ -107,7 +123,7 @@ vi.mock('@/services/notifications', () => ({
 describe('NotificationsPage smoke test', () => {
   it('renders notifications management shell with searchable recipient picker', async () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <App>
           <NotificationsPage />
         </App>

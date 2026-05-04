@@ -14,13 +14,16 @@ export interface MembershipPlan {
 }
 
 export interface CreatePlanData {
-  code?: string;
+  code: string;
   name: string;
   description?: string;
   category: MembershipPlanCategory;
   totalCredits?: number;
   durationDays?: number;
   priceCents: number;
+}
+
+export interface UpdatePlanData extends Partial<CreatePlanData> {
   isActive?: boolean;
 }
 
@@ -37,7 +40,7 @@ export const membershipPlansApi = {
   create: (data: CreatePlanData) =>
     api.post<MembershipPlan>('/membership-plans', data),
 
-  update: (id: string, data: Partial<CreatePlanData>) =>
+  update: (id: string, data: UpdatePlanData) =>
     api.patch<MembershipPlan>(`/membership-plans/${id}`, data),
 
   delete: (id: string) =>

@@ -11,8 +11,10 @@ import { CRUD_MODAL_WIDTH, DETAIL_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import { coachStatusLabels, type CoachStatus } from '@/types';
+import { authApi } from '@/services/auth';
 import { coachesApi, type Coach } from '@/services/coaches';
 import { getErrorMessage } from '@/utils/errors';
+import { hasRequiredPermissions } from '@/utils/menu';
 import { getToneFromName } from '@/utils/tone';
 import { useDebouncedValue } from '@/utils/useDebouncedValue';
 import { CoachProfileOverviewCard, CoachProfileStats, CoachRecordCard, type CoachProfileStatItem } from './components';
@@ -93,6 +95,8 @@ export default function CoachesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
+  const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
+  const [currentUserRoleCode, setCurrentUserRoleCode] = useState('');
   const [stats, setStats] = useState({
     totalCoaches: 0,
     activeCoaches: 0,
@@ -100,6 +104,20 @@ export default function CoachesPage() {
     ratedCoaches: 0,
     profileReadyCount: 0,
   });
+  const canWriteCoaches = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['WRITE:COACHES']);
+  const canManageCoaches = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['MANAGE:COACHES']);
+
+  useEffect(() => {
+    void authApi.getMe()
+      .then((me) => {
+        setCurrentUserPermissions(me.role?.permissions || []);
+        setCurrentUserRoleCode(me.role?.code || '');
+      })
+      .catch(() => {
+        setCurrentUserPermissions([]);
+        setCurrentUserRoleCode('');
+      });
+  }, []);
 
   const syncCoachStats = useCallback((matchingCoaches: Coach[], totalCount: number) => {
     const activeCoaches = matchingCoaches.filter((coach) => coach.status === 'ACTIVE').length;
@@ -152,6 +170,11 @@ export default function CoachesPage() {
   ], [stats]);
 
   const openCreateModal = () => {
+    if (!canWriteCoaches) {
+      messageApi.warning('当前账号没有教练写入权限');
+      return;
+    }
+
     setEditingCoach(null);
     form.setFieldsValue({
       name: '',
@@ -167,6 +190,11 @@ export default function CoachesPage() {
   };
 
   const openEditModal = (coach: Coach) => {
+    if (!canWriteCoaches) {
+      messageApi.warning('当前账号没有教练写入权限');
+      return;
+    }
+
     setEditingCoach(coach);
     form.setFieldsValue({
       name: coach.name,
@@ -188,6 +216,11 @@ export default function CoachesPage() {
   };
 
   const handleSaveCoach = async () => {
+    if (!canWriteCoaches) {
+      messageApi.warning('当前账号没有教练写入权限');
+      return;
+    }
+
     try {
       setIsSavingCoach(true);
       const values = await form.validateFields();
@@ -234,6 +267,11 @@ export default function CoachesPage() {
   };
 
   const handleDeleteCoach = async (coach: Coach) => {
+    if (!canManageCoaches) {
+      messageApi.warning('当前账号没有教练管理权限');
+      return;
+    }
+
     const previousList = coachList;
     try {
       setDeletingCoachId(coach.id);
@@ -315,7 +353,7 @@ export default function CoachesPage() {
         {contextHolder}
         <PageHeader
           title="教练管理"
-          extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增教练</ActionButton>}
+          extra={canWriteCoaches ? <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增教练</ActionButton> : null}
         />
         <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
           <Spin size="large" />
@@ -329,7 +367,7 @@ export default function CoachesPage() {
       {contextHolder}
       <PageHeader
         title="教练管理"
-        extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增教练</ActionButton>}
+        extra={canWriteCoaches ? <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增教练</ActionButton> : null}
       />
 
       <div className={pageCls.heroGrid}>
@@ -374,11 +412,10 @@ export default function CoachesPage() {
                       coachCodeText={coach.coachCode || '未设置编号'}
                       statusLabel={coachStatusLabels[coach.status] || coach.status}
                       experienceText={coach.experience || '经验信息待补充'}
-                      phoneText={coach.phone}
                       ratingText={formatCoachRating(coach.rating)}
                       specialtiesText={getDisplayListText(coach.specialties, '待补充擅长方向', 2)}
                       tone={getToneFromName(coach.name)}
-                      onEdit={() => openEditModal(coach)}
+                      onEdit={canWriteCoaches ? () => openEditModal(coach) : undefined}
                       onViewDetail={() => setDetailCoach(coach)}
                     />
                   ))}
@@ -440,6 +477,7 @@ export default function CoachesPage() {
         onCancel={closeFormModal}
         onOk={handleSaveCoach}
         confirmLoading={isSavingCoach}
+        okButtonProps={{ disabled: !canWriteCoaches }}
         okText={editingCoach ? '保存修改' : '新增教练'}
         cancelText="取消"
         zIndex={1600}
@@ -498,29 +536,31 @@ export default function CoachesPage() {
         width={DETAIL_DRAWER_WIDTH}
         title={detailCoach?.name ?? '教练详情'}
         onClose={() => setDetailCoach(null)}
-        extra={detailCoach ? (
+        extra={detailCoach && (canWriteCoaches || canManageCoaches) ? (
           <div className={pageCls.drawerActionGroup}>
-            <Button icon={<EditOutlined />} onClick={() => openEditModal(detailCoach)}>编辑</Button>
-            <Popconfirm
-              title="确认删除该教练吗？"
-              okText="删除"
-              cancelText="取消"
-              okButtonProps={{
-                danger: true,
-                loading: deletingCoachId === detailCoach.id,
-                disabled: deletingCoachId !== null && deletingCoachId !== detailCoach.id,
-              }}
-              onConfirm={() => handleDeleteCoach(detailCoach)}
-            >
-              <Button
-                className={pageCls.cardActionWarning}
-                icon={<DeleteOutlined />}
-                loading={deletingCoachId === detailCoach.id}
-                disabled={deletingCoachId !== null && deletingCoachId !== detailCoach.id}
+            {canWriteCoaches ? <Button icon={<EditOutlined />} onClick={() => openEditModal(detailCoach)}>编辑</Button> : null}
+            {canManageCoaches ? (
+              <Popconfirm
+                title="确认删除该教练吗？"
+                okText="删除"
+                cancelText="取消"
+                okButtonProps={{
+                  danger: true,
+                  loading: deletingCoachId === detailCoach.id,
+                  disabled: deletingCoachId !== null && deletingCoachId !== detailCoach.id,
+                }}
+                onConfirm={() => handleDeleteCoach(detailCoach)}
               >
-                删除
-              </Button>
-            </Popconfirm>
+                <Button
+                  className={pageCls.cardActionWarning}
+                  icon={<DeleteOutlined />}
+                  loading={deletingCoachId === detailCoach.id}
+                  disabled={deletingCoachId !== null && deletingCoachId !== detailCoach.id}
+                >
+                  删除
+                </Button>
+              </Popconfirm>
+            ) : null}
           </div>
       ) : null}
       >

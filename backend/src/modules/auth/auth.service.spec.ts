@@ -20,6 +20,12 @@ const mockedHash = bcrypt.hash as jest.MockedFunction<typeof bcrypt.hash>;
 const mockedVerify = verify as jest.MockedFunction<typeof verify>;
 const mockedGenerateSecret = generateSecret as jest.MockedFunction<typeof generateSecret>;
 
+const ADMIN_LOGIN_SECRET = 'Admin123!';
+const INVALID_LOGIN_SECRET = 'wrong';
+const CURRENT_SECRET = 'old-password';
+const REPLACEMENT_SECRET = 'new-password';
+const MISMATCHED_SECRET = 'different-password';
+
 const createAdmin = (overrides: Partial<Record<string, unknown>> = {}) => ({
   id: 'admin-1',
   email: 'owner@pilates.com',
@@ -91,6 +97,7 @@ describe('AuthService', () => {
       get: jest.fn((key: string) => {
         if (key === 'auth.refreshSecret') return 'refresh-secret';
         if (key === 'auth.refreshExpiresIn') return '7d';
+        if (key === 'auth.bcryptRounds') return 10;
         return undefined;
       }),
     };
@@ -120,7 +127,7 @@ describe('AuthService', () => {
     mockedCompare.mockResolvedValue(true as never);
     jwtService.sign.mockReturnValue('mfa-token');
 
-    const result = await service.login({ email: 'owner@pilates.com', password: 'Admin123!' });
+    const result = await service.login({ email: 'owner@pilates.com', password: ADMIN_LOGIN_SECRET });
 
     expect(result).toEqual({
       requiresTwoFactor: true,
@@ -135,7 +142,7 @@ describe('AuthService', () => {
     mockedCompare.mockResolvedValue(true as never);
     jwtService.sign.mockReturnValueOnce('access-token').mockReturnValueOnce('refresh-token');
 
-    const result = await service.login({ email: 'owner@pilates.com', password: 'Admin123!' });
+    const result = await service.login({ email: 'owner@pilates.com', password: ADMIN_LOGIN_SECRET });
 
     expect(result).toMatchObject({
       accessToken: 'access-token',
@@ -150,13 +157,17 @@ describe('AuthService', () => {
       },
     });
     expect(prisma.refreshToken.create).toHaveBeenCalledTimes(1);
+    expect(jwtService.sign).toHaveBeenNthCalledWith(2, expect.any(Object), {
+      secret: 'refresh-secret',
+      expiresIn: '7d',
+    });
   });
 
   it('rejects a login when the password is invalid', async () => {
     prisma.adminUser.findUnique.mockResolvedValue(createAdmin());
     mockedCompare.mockResolvedValue(false as never);
 
-    await expect(service.login({ email: 'owner@pilates.com', password: 'wrong' })).rejects.toBeInstanceOf(
+    await expect(service.login({ email: 'owner@pilates.com', password: INVALID_LOGIN_SECRET })).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
   });
@@ -189,6 +200,10 @@ describe('AuthService', () => {
       user: { email: 'owner@pilates.com' },
     });
     expect(prisma.refreshToken.create).toHaveBeenCalledTimes(1);
+    expect(jwtService.sign).toHaveBeenNthCalledWith(2, expect.any(Object), {
+      secret: 'refresh-secret',
+      expiresIn: '7d',
+    });
   });
 
   it('rotates refresh tokens when the refresh token is valid', async () => {
@@ -210,6 +225,13 @@ describe('AuthService', () => {
       data: { revokedAt: expect.any(Date) },
     });
     expect(prisma.refreshToken.create).toHaveBeenCalledTimes(1);
+    expect(jwtService.verify).toHaveBeenCalledWith('refresh-token', {
+      secret: 'refresh-secret',
+    });
+    expect(jwtService.sign).toHaveBeenNthCalledWith(2, expect.any(Object), {
+      secret: 'refresh-secret',
+      expiresIn: '7d',
+    });
     expect(result).toEqual({
       accessToken: 'new-access-token',
       refreshToken: 'new-refresh-token',
@@ -234,9 +256,9 @@ describe('AuthService', () => {
   it('rejects password change when confirmation does not match', async () => {
     await expect(
       service.changePassword('admin-1', {
-        currentPassword: 'old-password',
-        newPassword: 'new-password',
-        confirmPassword: 'different-password',
+        currentPassword: CURRENT_SECRET,
+        newPassword: REPLACEMENT_SECRET,
+        confirmPassword: MISMATCHED_SECRET,
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
@@ -266,9 +288,9 @@ describe('AuthService', () => {
     mockedCompare.mockResolvedValue(true as never);
 
     await service.changePassword('admin-1', {
-      currentPassword: 'old-password',
-      newPassword: 'new-password',
-      confirmPassword: 'new-password',
+      currentPassword: CURRENT_SECRET,
+      newPassword: REPLACEMENT_SECRET,
+      confirmPassword: REPLACEMENT_SECRET,
     });
 
     expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith(
@@ -301,7 +323,7 @@ describe('AuthService', () => {
     prisma.adminUser.findUnique.mockResolvedValue(createAdmin({ twoFactorEnabled: true, twoFactorSecret: 'secret-123' }));
     mockedCompare.mockResolvedValue(true as never);
 
-    const result = await service.disableTwoFactor('admin-1', 'Admin123!');
+    const result = await service.disableTwoFactor('admin-1', ADMIN_LOGIN_SECRET);
 
     expect(prisma.adminUser.update).toHaveBeenCalledWith({
       where: { id: 'admin-1' },
@@ -314,7 +336,7 @@ describe('AuthService', () => {
     prisma.adminUser.findUnique.mockResolvedValue(createAdmin({ twoFactorEnabled: true, twoFactorSecret: 'secret-123' }));
     mockedCompare.mockResolvedValue(false as never);
 
-    await expect(service.disableTwoFactor('admin-1', 'wrong-password')).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(service.disableTwoFactor('admin-1', INVALID_LOGIN_SECRET)).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('changes password when current password is valid', async () => {
@@ -323,9 +345,9 @@ describe('AuthService', () => {
     mockedHash.mockResolvedValue('new-password-hash' as never);
 
     const result = await service.changePassword('admin-1', {
-      currentPassword: 'old-password',
-      newPassword: 'new-password',
-      confirmPassword: 'new-password',
+      currentPassword: CURRENT_SECRET,
+      newPassword: REPLACEMENT_SECRET,
+      confirmPassword: REPLACEMENT_SECRET,
     });
 
     expect(prisma.adminUser.update).toHaveBeenCalledWith({

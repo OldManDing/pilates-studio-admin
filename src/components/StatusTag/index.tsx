@@ -10,6 +10,8 @@ const statusToneMap: Record<string, 'mint' | 'violet' | 'orange' | 'pink' | 'sla
   在职: 'mint',
   已读: 'mint',
   READ: 'mint',
+  已处理: 'mint',
+  PROCESSED: 'mint',
   余位充足: 'mint',
   已完成: 'violet',
   COMPLETED: 'violet',

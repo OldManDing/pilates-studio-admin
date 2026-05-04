@@ -35,21 +35,22 @@
 cd /opt/pilates-studio-admin
 
 # Copy and configure environment
-cp backend/.env.example backend/.env
-# Edit backend/.env with production values:
+cp backend/.env.example backend/local.env
+# Edit backend/local.env for local development values:
 # - JWT_ACCESS_SECRET: Generate with `openssl rand -base64 32`
 # - JWT_REFRESH_SECRET: Generate with `openssl rand -base64 32`
-# - MYSQL_ROOT_PASSWORD: Strong password
-# - MYSQL_PASSWORD: Strong password
-# - CORS_ORIGINS: Your domain(s)
+# - DATABASE_URL: Your local MySQL connection string
+# - CORS_ORIGINS: Your local frontend origin
 
 # Create .env for docker-compose
 cat > .env << EOF
 MYSQL_ROOT_PASSWORD=your_secure_root_password
 MYSQL_PASSWORD=your_secure_app_password
+DATABASE_URL=mysql://pilates:your_secure_app_password@mysql:3306/pilates_studio
 JWT_ACCESS_SECRET=$(openssl rand -base64 32)
 JWT_REFRESH_SECRET=$(openssl rand -base64 32)
-CORS_ORIGINS=https://admin.yourdomain.com
+CORS_ORIGINS=https://admin.yourdomain.com,https://mini.yourdomain.com
+SEED_ADMIN_PASSWORD=$(openssl rand -base64 18)
 EOF
 ```
 
@@ -67,7 +68,7 @@ docker-compose up -d
 # Run database migrations
 docker-compose exec backend npx prisma migrate deploy
 
-# Seed initial data (optional)
+# Seed initial data (optional; requires SEED_ADMIN_PASSWORD)
 docker-compose exec backend npx prisma db seed
 ```
 

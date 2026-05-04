@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AllowMiniUser } from '../../common/decorators/allow-mini-user.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -33,5 +33,13 @@ export class SupportController {
     @CurrentUser('sub') miniUserId: string,
   ) {
     return this.supportService.submitAccountDeletionRequest(dto, miniUserId);
+  }
+
+  @Get('account-deletion-request/status')
+  @AllowMiniUser()
+  @RequirePermissions('READ:NOTIFICATIONS')
+  @ApiOperation({ summary: 'Get current mini-program account deletion request status' })
+  async getAccountDeletionRequestStatus(@CurrentUser('sub') miniUserId: string) {
+    return this.supportService.getAccountDeletionRequestStatus(miniUserId);
   }
 }

@@ -16,7 +16,6 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger'
 import { AllowMiniUser } from '../../common/decorators/allow-mini-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { PaginationDto } from '../../common/dto/pagination.dto';
 import { MembersService } from './members.service';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { QueryMembersDto } from './dto/query-members.dto';

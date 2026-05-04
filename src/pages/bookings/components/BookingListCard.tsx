@@ -9,17 +9,14 @@ import styles from '../index.module.css';
 export type BookingListCardProps = {
   memberName: string;
   statusLabel: string;
-  bookingCode: string;
   courseName: string;
   sessionTimeText: string;
   sessionDateText: string;
-  bookedAtText: string;
-  coachName: string;
-  sourceText: string;
   tone: AccentTone;
   primaryActionLabel: string;
   primaryActionLoading?: boolean;
   primaryActionDisabled?: boolean;
+  showPrimaryAction?: boolean;
   detailActionDisabled?: boolean;
   onPrimaryAction: () => void;
   onViewDetail: () => void;
@@ -28,17 +25,14 @@ export type BookingListCardProps = {
 export default function BookingListCard({
   memberName,
   statusLabel,
-  bookingCode,
   courseName,
   sessionTimeText,
   sessionDateText,
-  bookedAtText,
-  coachName,
-  sourceText,
   tone,
   primaryActionLabel,
   primaryActionLoading = false,
   primaryActionDisabled = false,
+  showPrimaryAction = true,
   detailActionDisabled = false,
   onPrimaryAction,
   onViewDetail,
@@ -46,57 +40,42 @@ export default function BookingListCard({
   return (
     <div className={`${widgetCls.recordItem} ${widgetCls.workRecordItem} ${pageCls.surface} ${styles.bookingRecordCard}`}>
       <div className={styles.bookingRecordMain}>
-        <div className={styles.bookingScheduleBlock}>
-          <div className={`${widgetCls.dashboardTimeBadge} ${styles.bookingScheduleBadge}`}>{sessionTimeText}</div>
-          <div className={styles.bookingScheduleDate}>{sessionDateText}</div>
+        <div className={widgetCls.recordMeta}>
+          <MemberAvatar name={memberName} tone={tone} />
+          <div className={styles.bookingRecordIdentity}>
+            <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
+              {memberName}
+              <StatusTag status={statusLabel} />
+            </div>
+            <div className={widgetCls.recordSub}>{sessionDateText}</div>
+          </div>
         </div>
 
-        <div className={styles.bookingRecordBody}>
-          <div className={widgetCls.recordMeta}>
-            <MemberAvatar name={memberName} tone={tone} />
-            <div className={styles.bookingIdentity}>
-              <div className={styles.bookingIdentityTop}>
-                <div className={styles.bookingIdentityCopy}>
-                  <div className={`${widgetCls.recordTitle} ${pageCls.recordTitleRow}`}>
-                    {memberName}
-                    <StatusTag status={statusLabel} />
-                  </div>
-                  <div className={styles.bookingCourseTitle}>{courseName}</div>
-                </div>
-                <span className={styles.bookingCodeBadge}>{bookingCode}</span>
-              </div>
-              <div className={styles.bookingSubtext}>预约于 {bookedAtText}</div>
-            </div>
+        <div className={`${pageCls.recordBriefGrid} ${pageCls.recordBriefGridTwo} ${styles.bookingRecordBriefGrid}`}>
+          <div className={pageCls.recordBriefField}>
+            <div className={pageCls.recordBriefLabel}>课程</div>
+            <div className={pageCls.recordBriefValue}>{courseName}</div>
           </div>
-
-          <div className={styles.bookingMetaGrid}>
-            <div className={styles.bookingMetaCard}>
-              <div className={styles.bookingMetaLabel}>预约时间</div>
-              <div className={styles.bookingMetaValue}>{bookedAtText}</div>
-            </div>
-            <div className={styles.bookingMetaCard}>
-              <div className={styles.bookingMetaLabel}>授课教练</div>
-              <div className={styles.bookingMetaValue}>{coachName}</div>
-            </div>
-            <div className={styles.bookingMetaCard}>
-              <div className={styles.bookingMetaLabel}>预约来源</div>
-              <div className={styles.bookingMetaValue}>{sourceText}</div>
-            </div>
+          <div className={pageCls.recordBriefField}>
+            <div className={pageCls.recordBriefLabel}>上课时间</div>
+            <div className={`${pageCls.recordBriefValue} ${pageCls.recordBriefValueStrong}`}>{sessionTimeText}</div>
           </div>
         </div>
       </div>
 
       <div className={`${widgetCls.detailActionGroup} ${styles.bookingRecordActions}`}>
-        <Button
-          type="primary"
-          size="large"
-          className={pageCls.cardActionHalf}
-          onClick={onPrimaryAction}
-          loading={primaryActionLoading}
-          disabled={primaryActionDisabled}
-        >
-          {primaryActionLabel}
-        </Button>
+        {showPrimaryAction ? (
+          <Button
+            type="primary"
+            size="large"
+            className={pageCls.cardActionHalf}
+            onClick={onPrimaryAction}
+            loading={primaryActionLoading}
+            disabled={primaryActionDisabled}
+          >
+            {primaryActionLabel}
+          </Button>
+        ) : null}
         <Button size="large" className={pageCls.cardActionHalf} onClick={onViewDetail} disabled={detailActionDisabled}>
           查看详情
         </Button>

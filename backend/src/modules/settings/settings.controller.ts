@@ -2,6 +2,7 @@ import { Controller, Get, Put, Body, Post, Res, UploadedFile, UseInterceptors, H
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { AllowMiniUser } from '../../common/decorators/allow-mini-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SettingsService } from './settings.service';
@@ -15,6 +16,7 @@ export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
 
   @Get('studio')
+  @AllowMiniUser()
   @RequirePermissions('READ:SETTINGS')
   @ApiOperation({ summary: 'Get studio settings' })
   async getStudioSettings() {
@@ -104,7 +106,7 @@ export class SettingsController {
       const backupData = JSON.parse(file.buffer.toString('utf-8'));
       const result = await this.settingsService.restoreFromBackup(backupData);
       return result;
-    } catch (error) {
+    } catch {
       return { success: false, message: '备份文件格式无效' };
     }
   }

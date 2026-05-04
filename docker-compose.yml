@@ -21,10 +21,10 @@ services:
     container_name: pilates-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-changeme}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
       MYSQL_DATABASE: pilates_studio
       MYSQL_USER: pilates
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
     volumes:
       - mysql_data:/var/lib/mysql
     ports:
@@ -47,10 +47,10 @@ services:
       NODE_ENV: production
       PORT: 3000
       API_PREFIX: api
-      DATABASE_URL: mysql://pilates:${MYSQL_PASSWORD:-changeme}@mysql:3306/pilates_studio
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
-      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
       LOG_LEVEL: ${LOG_LEVEL:-log}
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
       RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}

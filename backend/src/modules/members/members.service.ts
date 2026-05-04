@@ -10,7 +10,7 @@ import { CreateMemberDto } from './dto/create-member.dto';
 import { QueryMembersDto } from './dto/query-members.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { UpdateMemberPreferencesDto } from './dto/update-member-preferences.dto';
-import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
+import { PaginatedResponse } from '../../common/dto/pagination.dto';
 import { MemberStatus, MembershipPlanCategory, TransactionKind, TransactionStatus } from '../../common/enums/domain.enums';
 
 @Injectable()

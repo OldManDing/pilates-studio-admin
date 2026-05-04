@@ -12,6 +12,26 @@ export class SupportService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
+  private readonly accountDeletionRequestType = 'ACCOUNT_DELETION_REQUEST';
+
+  private isAccountDeletionProcessedStatus(status: string) {
+    return status === NotificationStatus.READ;
+  }
+
+  private hasProcessedPayload(payload: unknown) {
+    return Boolean(
+      payload
+      && typeof payload === 'object'
+      && !Array.isArray(payload)
+      && 'accountDeletionProcessedAt' in payload,
+    );
+  }
+
+  private isAccountDeletionRequestProcessed(request: { status: string; payload: unknown; readAt?: Date | null }) {
+    return this.isAccountDeletionProcessedStatus(request.status)
+      && (this.hasProcessedPayload(request.payload) || Boolean(request.readAt));
+  }
+
   async submitFeedback(dto: SubmitFeedbackDto, miniUserId: string) {
     const content = dto.content.trim();
 
@@ -57,15 +77,22 @@ export class SupportService {
       throw new NotFoundException('Mini user not found');
     }
 
-    const existing = await this.prisma.notification.findFirst({
+    const latestRequest = await this.prisma.notification.findFirst({
       where: {
-        type: 'ACCOUNT_DELETION_REQUEST',
+        type: this.accountDeletionRequestType,
         miniUserId,
-        status: NotificationStatus.PENDING,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      select: {
+        status: true,
+        payload: true,
+        readAt: true,
       },
     });
 
-    if (existing) {
+    if (latestRequest && !this.isAccountDeletionRequestProcessed(latestRequest)) {
       throw new ConflictException('An account deletion request is already pending');
     }
 
@@ -75,7 +102,7 @@ export class SupportService {
 
     const notification = await this.notificationsService.create({
       channel: NotificationChannel.INTERNAL,
-      type: 'ACCOUNT_DELETION_REQUEST',
+      type: this.accountDeletionRequestType,
       title: '账号注销申请',
       content,
       memberId: miniUser.member?.id,
@@ -91,6 +118,48 @@ export class SupportService {
     return {
       submitted: true,
       requestId: notification?.id,
+    };
+  }
+
+  async getAccountDeletionRequestStatus(miniUserId: string) {
+    const latestRequest = await this.prisma.notification.findFirst({
+      where: {
+        type: this.accountDeletionRequestType,
+        miniUserId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      select: {
+        id: true,
+        status: true,
+        payload: true,
+        createdAt: true,
+        readAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!latestRequest) {
+      return {
+        status: 'no_request' as const,
+        requestId: null,
+        notificationStatus: null,
+        requestedAt: null,
+        processedAt: null,
+        updatedAt: null,
+      };
+    }
+
+    const isProcessed = this.isAccountDeletionRequestProcessed(latestRequest);
+
+    return {
+      status: isProcessed ? ('processed' as const) : ('pending' as const),
+      requestId: latestRequest.id,
+      notificationStatus: latestRequest.status,
+      requestedAt: latestRequest.createdAt,
+      processedAt: isProcessed ? latestRequest.readAt ?? latestRequest.updatedAt : null,
+      updatedAt: latestRequest.updatedAt,
     };
   }
 }

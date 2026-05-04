@@ -13,11 +13,13 @@ import EmptyState from '@/components/EmptyState';
 import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import StatusTag from '@/components/StatusTag';
+import { authApi } from '@/services/auth';
 import { rolesApi, type Permission, type Role } from '@/services/roles';
 import { NARROW_DETAIL_DRAWER_WIDTH, ROLE_PERMISSION_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import { getErrorMessage } from '@/utils/errors';
+import { hasRequiredPermissions } from '@/utils/menu';
 import roleCss from './index.module.css';
 
 type RoleCode = 'OWNER' | 'FRONTDESK' | 'COACH' | 'FINANCE';
@@ -43,6 +45,7 @@ const moduleNameMap: Record<string, string> = {
   auth: '认证管理',
   dashboard: '仪表盘',
   plans: '会籍方案',
+  mini_users: '小程序用户',
   sessions: '课程时段',
   attendance: '签到管理',
   analytics: '数据分析',
@@ -59,6 +62,7 @@ const moduleNameMap: Record<string, string> = {
   AUTH: '认证管理',
   DASHBOARD: '仪表盘',
   PLANS: '会籍方案',
+  MINI_USERS: '小程序用户',
   SESSIONS: '课程时段',
   ATTENDANCE: '签到管理',
   ANALYTICS: '数据分析',
@@ -101,12 +105,27 @@ export default function RolesPage() {
   const [initialPermissionIds, setInitialPermissionIds] = useState<string[]>([]);
   const [permissionSearch, setPermissionSearch] = useState('');
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+  const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
+  const [currentUserRoleCode, setCurrentUserRoleCode] = useState('');
+  const canManageRoles = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['MANAGE:ROLES']);
+
+  useEffect(() => {
+    void authApi.getMe()
+      .then((me) => {
+        setCurrentUserPermissions(me.role?.permissions || []);
+        setCurrentUserRoleCode(me.role?.code || '');
+      })
+      .catch(() => {
+        setCurrentUserPermissions([]);
+        setCurrentUserRoleCode('');
+      });
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       let permissionList = await rolesApi.getPermissions().catch(() => []);
-      if (!permissionList.length) {
+      if (!permissionList.length && canManageRoles) {
         await rolesApi.initializeDefaults().catch(() => null);
         permissionList = await rolesApi.getPermissions().catch(() => []);
       }
@@ -118,7 +137,7 @@ export default function RolesPage() {
     } finally {
       setLoading(false);
     }
-  }, [message]);
+  }, [canManageRoles, message]);
 
   useEffect(() => {
     void fetchData();
@@ -152,6 +171,11 @@ export default function RolesPage() {
   }, [groupedPermissions, permissionSearch, selectedPermissionIds, showSelectedOnly]);
 
   const openPermissionEditor = (role: Role) => {
+    if (!canManageRoles) {
+      message.warning('当前账号没有角色权限管理权限');
+      return;
+    }
+
     setEditingPermissionRole(role);
     const nextPermissionIds = role.permissions.map((rp) => rp.permission.id);
     setSelectedPermissionIds(nextPermissionIds);
@@ -199,6 +223,11 @@ export default function RolesPage() {
   };
 
   const savePermissions = async () => {
+    if (!canManageRoles) {
+      message.warning('当前账号没有角色权限管理权限');
+      return;
+    }
+
     if (!editingPermissionRole) return;
     try {
       setSaving(true);
@@ -276,14 +305,16 @@ export default function RolesPage() {
                     >
                       详情
                     </ActionButton>
-                    <ActionButton
-                      size="large"
-                      className={roleCss.roleActionButton}
-                      icon={<EditOutlined />}
-                      onClick={() => openPermissionEditor(item)}
-                    >
-                      编辑权限
-                    </ActionButton>
+                    {canManageRoles ? (
+                      <ActionButton
+                        size="large"
+                        className={roleCss.roleActionButton}
+                        icon={<EditOutlined />}
+                        onClick={() => openPermissionEditor(item)}
+                      >
+                        编辑权限
+                      </ActionButton>
+                    ) : null}
                   </div>
                 </div>
               );
@@ -301,7 +332,7 @@ export default function RolesPage() {
         title={editingPermissionRole ? `编辑权限 · ${editingPermissionRole.name}` : '编辑权限'}
         onClose={closePermissionEditor}
         extra={(
-          <ActionButton icon={<SaveOutlined />} onClick={savePermissions} disabled={saving}>
+          <ActionButton icon={<SaveOutlined />} onClick={savePermissions} disabled={saving || !canManageRoles}>
             保存
           </ActionButton>
         )}
@@ -352,7 +383,7 @@ export default function RolesPage() {
                       <div className={pageCls.rolePermissionCode}>{actionLabel} {moduleLabel}</div>
                       <div className={pageCls.rolePermissionDesc}>{permission.description || '暂无描述'}</div>
                     </div>
-                    <Switch checked={checked} onChange={(value) => handlePermissionToggle(permission.id, value)} />
+                     <Switch checked={checked} disabled={!canManageRoles} onChange={(value) => handlePermissionToggle(permission.id, value)} />
                   </div>
                 );
               })}

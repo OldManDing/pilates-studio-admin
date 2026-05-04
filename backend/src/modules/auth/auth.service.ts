@@ -2,7 +2,6 @@ import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
 import { generateSecret, verify } from 'otplib';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
@@ -147,6 +146,7 @@ export class AuthService {
       const newPayload = { sub: payload.sub, email: payload.email };
       const newAccessToken = this.jwtService.sign(newPayload);
       const newRefreshToken = this.jwtService.sign(newPayload, {
+        secret: this.getRefreshSecret(),
         expiresIn: this.configService.get('auth.refreshExpiresIn'),
       });
 
@@ -154,7 +154,7 @@ export class AuthService {
       await this.prisma.refreshToken.create({
         data: {
           adminUserId: payload.sub,
-          tokenHash: await bcrypt.hash(newRefreshToken, 10),
+          tokenHash: await bcrypt.hash(newRefreshToken, this.getBcryptRounds()),
           expiresAt: new Date(Date.now() + this.resolveRefreshTokenTtlMs()),
         },
       });
@@ -242,7 +242,7 @@ export class AuthService {
     }
 
     // Hash new password
-    const newPasswordHash = await bcrypt.hash(dto.newPassword, 10);
+    const newPasswordHash = await bcrypt.hash(dto.newPassword, this.getBcryptRounds());
 
     // Update password
     await this.prisma.$transaction([
@@ -387,13 +387,14 @@ export class AuthService {
     const payload = { sub: admin.id, email: admin.email };
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = this.jwtService.sign(payload, {
+      secret: this.getRefreshSecret(),
       expiresIn: this.configService.get('auth.refreshExpiresIn'),
     });
 
     await this.prisma.refreshToken.create({
       data: {
         adminUserId: admin.id,
-        tokenHash: await bcrypt.hash(refreshToken, 10),
+        tokenHash: await bcrypt.hash(refreshToken, this.getBcryptRounds()),
         expiresAt: new Date(Date.now() + this.resolveRefreshTokenTtlMs()),
       },
     });
@@ -430,5 +431,17 @@ export class AuthService {
     if (unit === 'm') return value * 60 * 1000;
     if (unit === 'h') return value * 60 * 60 * 1000;
     return value * 24 * 60 * 60 * 1000;
+  }
+
+  private getRefreshSecret() {
+    const secret = this.configService.get<string>('auth.refreshSecret');
+    if (!secret) {
+      throw new Error('Refresh token secret is not configured');
+    }
+    return secret;
+  }
+
+  private getBcryptRounds() {
+    return Number(this.configService.get<number>('auth.bcryptRounds') ?? 10);
   }
 }

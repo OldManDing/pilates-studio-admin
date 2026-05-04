@@ -13,9 +13,11 @@ import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import { bookingStatusLabels, memberStatusLabels, type BookingStatus } from '@/types';
 import { bookingsApi, type Booking } from '@/services/bookings';
+import { authApi } from '@/services/auth';
 import { type Member } from '@/services/members';
 import { courseSessionsApi, type CourseSession } from '@/services/courseSessions';
 import { getErrorMessage } from '@/utils/errors';
+import { hasRequiredPermissions } from '@/utils/menu';
 import { getToneFromName } from '@/utils/tone';
 import { useDebouncedValue } from '@/utils/useDebouncedValue';
 import styles from './index.module.css';
@@ -158,14 +160,31 @@ export default function BookingsPage() {
   const [isSessionLoading, setIsSessionLoading] = useState(false);
   const [statusUpdatingBookingId, setStatusUpdatingBookingId] = useState<string | null>(null);
   const [deletingBookingId, setDeletingBookingId] = useState<string | null>(null);
+  const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
+  const [currentUserRoleCode, setCurrentUserRoleCode] = useState('');
   const [bookingSummary, setBookingSummary] = useState({
     todayCount: 0,
     weekTotal: 0,
     pendingCount: 0,
     confirmedCount: 0,
     completedCount: 0,
+    cancelledCount: 0,
     noShowCount: 0,
   });
+  const canWriteBookings = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['WRITE:BOOKINGS']);
+
+  useEffect(() => {
+    void authApi.getMe()
+      .then((me) => {
+        setCurrentUserPermissions(me.role?.permissions || []);
+        setCurrentUserRoleCode(me.role?.code || '');
+      })
+      .catch(() => {
+        setCurrentUserPermissions([]);
+        setCurrentUserRoleCode('');
+      });
+  }, []);
+
   const fetchAllMembers = useCallback(async () => {
     const data = await bookingsApi.getMemberOptions();
     return data as Member[];
@@ -260,7 +279,7 @@ export default function BookingsPage() {
       key: 'week',
       title: '本周预约',
       value: String(bookingSummary.weekTotal),
-      hint: `${bookingSummary.confirmedCount} 已确认`,
+      hint: `${bookingSummary.confirmedCount} 已确认 · ${bookingSummary.cancelledCount} 已取消`,
       tone: 'violet' as const,
       icon: iconMap.schedule,
     },
@@ -323,6 +342,11 @@ export default function BookingsPage() {
     : `当前展示${periodFilter}范围内的预约记录，可继续处理状态与查看详情。`;
 
   const openCreateModal = () => {
+    if (!canWriteBookings) {
+      messageApi.warning('当前账号没有预约写入权限');
+      return;
+    }
+
     setEditingBooking(null);
     form.setFieldsValue({
       memberId: undefined,
@@ -334,6 +358,11 @@ export default function BookingsPage() {
   };
 
   const openEditModal = (booking: Booking) => {
+    if (!canWriteBookings) {
+      messageApi.warning('当前账号没有预约写入权限');
+      return;
+    }
+
     setEditingBooking(booking);
     form.setFieldsValue({
       memberId: booking.memberId,
@@ -350,6 +379,11 @@ export default function BookingsPage() {
   };
 
   const handleSaveBooking = async () => {
+    if (!canWriteBookings) {
+      messageApi.warning('当前账号没有预约写入权限');
+      return;
+    }
+
     try {
       setIsSaving(true);
       const values = await form.validateFields();
@@ -380,6 +414,11 @@ export default function BookingsPage() {
   };
 
   const handleDeleteBooking = async (booking: Booking) => {
+    if (!canWriteBookings) {
+      messageApi.warning('当前账号没有预约写入权限');
+      return;
+    }
+
     try {
       setDeletingBookingId(booking.id);
       await bookingsApi.delete(booking.id);
@@ -398,6 +437,11 @@ export default function BookingsPage() {
   };
 
   const handleStatusAdvance = async (booking: Booking) => {
+    if (!canWriteBookings) {
+      messageApi.warning('当前账号没有预约写入权限');
+      return;
+    }
+
     const nextStatus = getNextBookingStatus(booking.status);
     if (nextStatus === booking.status) {
       setDetailBooking(booking);
@@ -460,7 +504,7 @@ export default function BookingsPage() {
         {contextHolder}
         <PageHeader
           title="预约管理"
-          extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增预约</ActionButton>}
+          extra={canWriteBookings ? <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增预约</ActionButton> : null}
         />
         <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
           <Spin size="large" />
@@ -474,7 +518,7 @@ export default function BookingsPage() {
       {contextHolder}
       <PageHeader
         title="预约管理"
-        extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增预约</ActionButton>}
+        extra={canWriteBookings ? <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增预约</ActionButton> : null}
       />
 
       <BookingHeroStats items={bookingStats} />
@@ -509,15 +553,12 @@ export default function BookingsPage() {
                       key={item.id}
                       memberName={item.member?.name || '未知会员'}
                       statusLabel={bookingStatusLabels[item.status]}
-                      bookingCode={item.bookingCode}
                       courseName={item.session?.course?.name || '未知课程'}
                       sessionTimeText={formatTime(item.session?.startsAt || item.bookedAt)}
                       sessionDateText={formatBookingDateLabel(item.session?.startsAt || item.bookedAt)}
-                      bookedAtText={formatDateTime(item.bookedAt)}
-                      coachName={item.session?.coach?.name || '-'}
-                      sourceText={item.source === 'ADMIN' ? '后台创建' : '小程序预约'}
                       tone={getToneFromName(item.member?.name || '未知会员')}
                       primaryActionLabel={getStatusActionLabel(item.status)}
+                      showPrimaryAction={canWriteBookings && canAdvanceBookingStatus(item.status)}
                       primaryActionLoading={statusUpdatingBookingId === item.id}
                       primaryActionDisabled={
                         (statusUpdatingBookingId !== null && statusUpdatingBookingId !== item.id)
@@ -564,6 +605,7 @@ export default function BookingsPage() {
         onCancel={closeFormModal}
         onOk={handleSaveBooking}
         confirmLoading={isSaving}
+        okButtonProps={{ disabled: !canWriteBookings }}
         okText={editingBooking ? '保存修改' : '新增预约'}
         cancelText="取消"
         zIndex={1600}
@@ -653,7 +695,7 @@ export default function BookingsPage() {
         width={DETAIL_DRAWER_WIDTH}
         title={detailBooking?.bookingCode ?? '预约详情'}
         onClose={() => setDetailBooking(null)}
-        extra={detailBooking ? (
+        extra={detailBooking && canWriteBookings ? (
           <div className={pageCls.drawerActionGroup}>
             <Button
               icon={<EditOutlined />}
@@ -730,14 +772,13 @@ export default function BookingsPage() {
               </div>
             </div>
 
-            <Descriptions column={1} size="small" bordered>
+            <Descriptions column={1} size="small" bordered className={pageCls.detailDescriptions}>
               <Descriptions.Item label="会员姓名">{detailBooking.member?.name || '-'}</Descriptions.Item>
               <Descriptions.Item label="手机号">{detailBooking.member?.phone || '-'}</Descriptions.Item>
               <Descriptions.Item label="预约编号">{detailBooking.bookingCode}</Descriptions.Item>
               <Descriptions.Item label="预约课程">{detailBooking.session?.course?.name || '-'}</Descriptions.Item>
               <Descriptions.Item label="授课教练">{detailBooking.session?.coach?.name || '-'}</Descriptions.Item>
               <Descriptions.Item label="上课时间">{formatDateTime(detailBooking.session?.startsAt || detailBooking.bookedAt)}</Descriptions.Item>
-              <Descriptions.Item label="预约时间">{formatDateTime(detailBooking.bookedAt)}</Descriptions.Item>
               <Descriptions.Item label="状态">{bookingStatusLabels[detailBooking.status]}</Descriptions.Item>
             </Descriptions>
           </div>

@@ -47,6 +47,7 @@ export class CoursesService {
     const search = query.search?.trim();
 
     const where = {
+      ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
       ...(query.type ? { type: query.type } : {}),
       ...(query.level ? { level: query.level } : {}),
       ...(search

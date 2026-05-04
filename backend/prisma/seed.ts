@@ -1,13 +1,109 @@
-import { PrismaClient, AdminRoleCode, MemberStatus, BookingStatus, AttendanceStatus, TransactionKind, TransactionStatus, MembershipPlanCategory, BookingSource, CoachStatus, MiniUserStatus, NotificationChannel } from '@prisma/client';
+import { PrismaClient, AdminRoleCode, MemberStatus, BookingStatus, MembershipPlanCategory, BookingSource, MiniUserStatus, NotificationChannel } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
   const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@pilates.com';
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD || 'Admin123!';
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+
+  if (!adminPassword) {
+    throw new Error('SEED_ADMIN_PASSWORD must be set before running the seed script.');
+  }
+
+  const defaultPermissions = [
+    { module: 'ADMIN', action: 'MANAGE', description: '管理系统管理员账号' },
+    { module: 'ROLES', action: 'READ', description: '查看角色与权限配置' },
+    { module: 'ROLES', action: 'MANAGE', description: '管理角色与权限配置' },
+    { module: 'MEMBERS', action: 'READ', description: '查看会员信息' },
+    { module: 'MEMBERS', action: 'WRITE', description: '新增、编辑会员' },
+    { module: 'MEMBERS', action: 'MANAGE', description: '删除会员、管理会籍' },
+    { module: 'PLANS', action: 'READ', description: '查看会籍方案' },
+    { module: 'PLANS', action: 'MANAGE', description: '管理会籍方案' },
+    { module: 'COACHES', action: 'READ', description: '查看教练信息' },
+    { module: 'COACHES', action: 'WRITE', description: '新增、编辑教练' },
+    { module: 'COACHES', action: 'MANAGE', description: '管理教练排班' },
+    { module: 'COURSES', action: 'READ', description: '查看课程信息' },
+    { module: 'COURSES', action: 'WRITE', description: '新增、编辑课程' },
+    { module: 'COURSES', action: 'MANAGE', description: '管理课程排期' },
+    { module: 'SESSIONS', action: 'READ', description: '查看课程时段' },
+    { module: 'SESSIONS', action: 'WRITE', description: '排课程时段' },
+    { module: 'BOOKINGS', action: 'READ', description: '查看预约记录' },
+    { module: 'BOOKINGS', action: 'WRITE', description: '创建、处理预约' },
+    { module: 'ATTENDANCE', action: 'READ', description: '查看签到记录' },
+    { module: 'ATTENDANCE', action: 'WRITE', description: '签到管理' },
+    { module: 'TRANSACTIONS', action: 'READ', description: '查看交易记录' },
+    { module: 'TRANSACTIONS', action: 'WRITE', description: '新增交易记录' },
+    { module: 'MINI_USERS', action: 'READ', description: '查看小程序用户信息' },
+    { module: 'MINI_USERS', action: 'WRITE', description: '管理小程序用户绑定与状态' },
+    { module: 'ANALYTICS', action: 'READ', description: '查看数据分析' },
+    { module: 'NOTIFICATIONS', action: 'READ', description: '查看通知记录与状态' },
+    { module: 'NOTIFICATIONS', action: 'WRITE', description: '创建通知并标记已读' },
+    { module: 'REPORTS', action: 'READ', description: '查看经营报表' },
+    { module: 'SETTINGS', action: 'READ', description: '查看系统设置' },
+    { module: 'SETTINGS', action: 'MANAGE', description: '管理系统设置' },
+  ] as const;
+
+  const rolePermissionsMap: Record<AdminRoleCode, Array<{ module: string; action: string }>> = {
+    [AdminRoleCode.OWNER]: defaultPermissions.map(({ module, action }) => ({ module, action })),
+    [AdminRoleCode.FRONTDESK]: [
+      { module: 'MEMBERS', action: 'READ' },
+      { module: 'MEMBERS', action: 'WRITE' },
+      { module: 'PLANS', action: 'READ' },
+      { module: 'BOOKINGS', action: 'READ' },
+      { module: 'BOOKINGS', action: 'WRITE' },
+      { module: 'COURSES', action: 'READ' },
+      { module: 'COACHES', action: 'READ' },
+      { module: 'MINI_USERS', action: 'READ' },
+      { module: 'MINI_USERS', action: 'WRITE' },
+      { module: 'NOTIFICATIONS', action: 'READ' },
+      { module: 'NOTIFICATIONS', action: 'WRITE' },
+      { module: 'SETTINGS', action: 'READ' },
+    ],
+    [AdminRoleCode.COACH]: [
+      { module: 'COURSES', action: 'READ' },
+      { module: 'COURSES', action: 'WRITE' },
+      { module: 'SESSIONS', action: 'READ' },
+      { module: 'SESSIONS', action: 'WRITE' },
+      { module: 'BOOKINGS', action: 'READ' },
+      { module: 'BOOKINGS', action: 'WRITE' },
+      { module: 'ATTENDANCE', action: 'READ' },
+      { module: 'ATTENDANCE', action: 'WRITE' },
+      { module: 'COACHES', action: 'READ' },
+      { module: 'MEMBERS', action: 'READ' },
+    ],
+    [AdminRoleCode.FINANCE]: [
+      { module: 'TRANSACTIONS', action: 'READ' },
+      { module: 'TRANSACTIONS', action: 'WRITE' },
+      { module: 'REPORTS', action: 'READ' },
+      { module: 'ANALYTICS', action: 'READ' },
+      { module: 'MEMBERS', action: 'READ' },
+      { module: 'PLANS', action: 'READ' },
+      { module: 'NOTIFICATIONS', action: 'READ' },
+    ],
+  };
 
   console.log(`Creating roles and permissions...`);
+
+  for (const permission of defaultPermissions) {
+    const existingPermission = await prisma.permission.findFirst({
+      where: {
+        module: permission.module,
+        action: permission.action,
+      },
+    });
+
+    if (existingPermission) {
+      await prisma.permission.update({
+        where: { id: existingPermission.id },
+        data: { description: permission.description },
+      });
+    } else {
+      await prisma.permission.create({
+        data: permission,
+      });
+    }
+  }
 
   // Create roles
   const roles = [
@@ -20,9 +116,43 @@ async function main() {
   for (const role of roles) {
     await prisma.role.upsert({
       where: { code: role.code },
-      update: {},
+      update: { name: role.name, description: role.description },
       create: role,
     });
+  }
+
+  for (const role of roles) {
+    const dbRole = await prisma.role.findUnique({ where: { code: role.code } });
+    if (!dbRole) {
+      continue;
+    }
+
+    const permissionLinks = rolePermissionsMap[role.code];
+    await prisma.rolePermission.deleteMany({ where: { roleId: dbRole.id } });
+    for (const permissionLink of permissionLinks) {
+      const permission = await prisma.permission.findFirst({
+        where: {
+          module: permissionLink.module,
+          action: permissionLink.action,
+        },
+      });
+      if (!permission) {
+        continue;
+      }
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: {
+            roleId: dbRole.id,
+            permissionId: permission.id,
+          },
+        },
+        update: {},
+        create: {
+          roleId: dbRole.id,
+          permissionId: permission.id,
+        },
+      });
+    }
   }
 
   console.log(`Created ${roles.length} roles`);

@@ -1,10 +1,14 @@
 import { ValidationPipe, Logger, LogLevel } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { json, urlencoded } from 'express';
+import helmet from 'helmet';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+
+const REQUEST_BODY_LIMIT = '8mb';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -17,7 +21,17 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule, {
     logger: logLevels,
+    rawBody: true,
   });
+
+  app.use(json({ limit: REQUEST_BODY_LIMIT }));
+  app.use(urlencoded({ extended: true, limit: REQUEST_BODY_LIMIT }));
+  app.use(
+    helmet({
+      contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
 
   const config = app.get(ConfigService);
   const apiPrefix = config.get<string>('app.apiPrefix') ?? 'api';
@@ -45,10 +59,24 @@ async function bootstrap() {
   app.useGlobalInterceptors(new TransformInterceptor());
 
   // CORS configuration
-  const corsOptions = corsOrigins === '*'
-    ? { origin: true, credentials: true }
+  const originList = corsOrigins
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  if (process.env.NODE_ENV === 'production' && originList.includes('*')) {
+    throw new Error('CORS_ORIGINS must not be wildcard in production');
+  }
+
+  const corsOptions = originList.includes('*')
+    ? {
+        origin: true,
+        credentials: false,
+        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+        allowedHeaders: 'Content-Type, Accept, Authorization',
+      }
     : {
-        origin: corsOrigins.split(',').map(o => o.trim()),
+        origin: originList,
         credentials: true,
         methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
         allowedHeaders: 'Content-Type, Accept, Authorization',

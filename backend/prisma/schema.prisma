@@ -236,7 +236,7 @@ model Course {
   level           String
   durationMinutes Int
   capacity        Int
-  coverImageUrl   String?
+  coverImageUrl   String?         @db.LongText
   coachId         String?
   coach           Coach?          @relation(fields: [coachId], references: [id])
   isActive        Boolean         @default(true)
@@ -320,6 +320,15 @@ model Transaction {
   kind            TransactionKind
   status          TransactionStatus @default(PENDING)
   amountCents     Int
+  paymentMethod   String?
+  paymentProvider String?
+  paymentOrderNo  String?
+  paymentPrepayId String?
+  paymentTransactionId String?
+  paymentRequestedAt DateTime?
+  paidAt          DateTime?
+  paymentPayload  Json?
+  paymentError    String?           @db.Text
   happenedAt      DateTime
   notes           String?
   createdAt       DateTime          @default(now())
@@ -333,7 +342,7 @@ model StudioSetting {
   email         String
   businessHours String
   address       String
-  imageUrl      String?
+  imageUrl      String?  @db.LongText
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }

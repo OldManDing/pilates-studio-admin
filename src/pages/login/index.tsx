@@ -26,8 +26,9 @@ export default function LoginPage() {
 
   const redirectPath = useMemo(() => {
     const from = location.state as { from?: string } | undefined;
-    return getSafeRedirectPath(from?.from);
-  }, [location.state]);
+    const next = new URLSearchParams(location.search).get('next') || undefined;
+    return getSafeRedirectPath(from?.from || next);
+  }, [location.search, location.state]);
 
   useEffect(() => {
     const token = localStorage.getItem('pilates_access_token');
@@ -147,7 +148,8 @@ export default function LoginPage() {
                   size="large"
                   prefix={<UserOutlined />}
                   className={cls.input}
-                 placeholder="邮箱"
+                  placeholder="邮箱"
+                  autoComplete="username"
                 />
               </Form.Item>
 
@@ -160,7 +162,8 @@ export default function LoginPage() {
                   size="large"
                   prefix={<LockOutlined />}
                   className={cls.input}
-                 placeholder="密码"
+                  placeholder="密码"
+                  autoComplete="current-password"
                 />
               </Form.Item>
 

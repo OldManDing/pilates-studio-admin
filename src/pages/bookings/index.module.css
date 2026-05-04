@@ -146,111 +146,20 @@
   display: grid;
   flex: 1;
   min-width: 0;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
   gap: 16px;
-  align-items: stretch;
-}
-
-.bookingScheduleBlock {
-  display: flex;
-  min-width: 82px;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.bookingScheduleBadge {
-  min-width: 82px;
-}
-
-.bookingScheduleDate {
-  color: var(--text-tertiary);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-bold);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.bookingRecordBody {
-  display: grid;
-  gap: 12px;
-  min-width: 0;
-}
-
-.bookingIdentity {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.bookingIdentityTop {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.bookingIdentityCopy {
-  min-width: 0;
-}
-
-.bookingCourseTitle {
-  margin-top: 6px;
-  color: var(--text-heading);
-  font-size: var(--font-size-md);
-  font-weight: var(--font-bold);
-  line-height: 1.35;
-}
-
-.bookingSubtext {
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  line-height: 1.5;
-}
-
-.bookingCodeBadge {
-  display: inline-flex;
   align-items: center;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(248, 250, 251, 0.9);
-  border: 1px solid var(--border-soft);
-  color: var(--text-tertiary);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-bold);
-  white-space: nowrap;
 }
 
-.bookingMetaGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+.bookingRecordIdentity {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.bookingMetaCard {
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  background: var(--control-surface);
-  border: 1px solid var(--border-soft);
-}
-
-.bookingMetaLabel {
-  color: var(--text-tertiary);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-bold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.bookingMetaValue {
-  margin-top: 8px;
-  color: var(--text-heading);
-  font-size: var(--font-size-md);
-  font-weight: var(--font-bold);
-  line-height: 1.35;
+.bookingRecordBriefGrid {
+  align-self: stretch;
 }
 
 .bookingRecordActions {
@@ -263,16 +172,11 @@
 
 .bookingRecordActions :global(.ant-btn) {
   width: 100%;
+  flex: 0 0 auto;
 }
 
 .bookingDetailStatGrid {
   grid-template-columns: 1fr;
-}
-
-@media (max-width: 1200px) {
-  .bookingMetaGrid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 992px) {
@@ -283,13 +187,6 @@
 
   .bookingPeriodGrid {
     grid-template-columns: 1fr;
-  }
-
-  .bookingScheduleBlock {
-    min-width: 0;
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
   }
 
   .bookingRecordActions {

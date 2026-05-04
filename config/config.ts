@@ -44,6 +44,8 @@ export default defineConfig({
     { path: '/', redirect: '/dashboard' },
     { path: '/dashboard', component: '@/pages/dashboard' },
     { path: '/members', component: '@/pages/members' },
+    { path: '/membership-plans', component: '@/pages/membership-plans' },
+    { path: '/mini-users', component: '@/pages/mini-users' },
     { path: '/courses', component: '@/pages/courses' },
     { path: '/bookings', component: '@/pages/bookings' },
     { path: '/coaches', component: '@/pages/coaches' },

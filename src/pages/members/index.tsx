@@ -12,12 +12,14 @@ import { CRUD_MODAL_WIDTH, NARROW_DETAIL_DRAWER_WIDTH } from '@/styles/dimension
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import { bookingStatusLabels, memberStatusLabels, type MemberStatus, type TransactionKind, type TransactionStatus } from '@/types';
+import { authApi } from '@/services/auth';
 import { membersApi, type Member } from '@/services/members';
 import { membershipPlansApi, type MembershipPlan } from '@/services/membershipPlans';
 import { type Booking } from '@/services/bookings';
 import { type Transaction } from '@/services/transactions';
 import { reportsApi } from '@/services/reports';
 import { getErrorMessage } from '@/utils/errors';
+import { hasRequiredPermissions } from '@/utils/menu';
 import { getToneFromName } from '@/utils/tone';
 import { useDebouncedValue } from '@/utils/useDebouncedValue';
 import {
@@ -48,7 +50,7 @@ type MemberFilterDraft = {
   planId: string;
 };
 
-const memberStatusOptions: MemberStatus[] = ['ACTIVE', 'PENDING', 'EXPIRED'];
+const memberStatusOptions: MemberStatus[] = ['ACTIVE', 'PENDING', 'EXPIRED', 'SUSPENDED'];
 
 const transactionStatusLabels: Record<TransactionStatus, string> = {
   COMPLETED: '已完成',
@@ -93,11 +95,27 @@ export default function MembersPage() {
     newMembersThisMonth: 0,
     expiringSoonCount: 0,
   });
+  const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
+  const [currentUserRoleCode, setCurrentUserRoleCode] = useState('');
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
+  const canWriteMembers = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['WRITE:MEMBERS']);
+  const canManageMembers = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['MANAGE:MEMBERS']);
+
+  useEffect(() => {
+    void authApi.getMe()
+      .then((me) => {
+        setCurrentUserPermissions(me.role?.permissions || []);
+        setCurrentUserRoleCode(me.role?.code || '');
+      })
+      .catch(() => {
+        setCurrentUserPermissions([]);
+        setCurrentUserRoleCode('');
+      });
+  }, []);
 
   const fetchStats = useCallback(async () => {
       try {
@@ -218,6 +236,11 @@ export default function MembersPage() {
     : '可继续查看档案、编辑资料或导出当前结果。';
 
   const openCreateModal = () => {
+    if (!canWriteMembers) {
+      messageApi.warning('当前账号没有会员新增权限');
+      return;
+    }
+
     setEditingMember(null);
     form.setFieldsValue({
       name: '',
@@ -231,6 +254,11 @@ export default function MembersPage() {
   };
 
   const openEditModal = (member: Member) => {
+    if (!canWriteMembers) {
+      messageApi.warning('当前账号没有会员编辑权限');
+      return;
+    }
+
     setEditingMember(member);
     form.setFieldsValue({
       name: member.name,
@@ -250,6 +278,11 @@ export default function MembersPage() {
   };
 
   const handleSaveMember = async () => {
+    if (!canWriteMembers) {
+      messageApi.warning('当前账号没有会员编辑权限');
+      return;
+    }
+
     try {
       setIsSavingMember(true);
       const values = await form.validateFields();
@@ -271,6 +304,11 @@ export default function MembersPage() {
   };
 
   const handleDeleteMember = async (member: Member) => {
+    if (!canManageMembers) {
+      messageApi.warning('当前账号没有会员删除权限');
+      return;
+    }
+
     try {
       setDeletingMemberId(member.id);
       await membersApi.delete(member.id);
@@ -428,7 +466,7 @@ export default function MembersPage() {
         {contextHolder}
         <PageHeader
           title="会员管理"
-          extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增会员</ActionButton>}
+          extra={canWriteMembers ? <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增会员</ActionButton> : null}
         />
         <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
           <Spin size="large" />
@@ -442,7 +480,7 @@ export default function MembersPage() {
       {contextHolder}
       <PageHeader
         title="会员管理"
-        extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增会员</ActionButton>}
+        extra={canWriteMembers ? <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增会员</ActionButton> : null}
       />
 
       <div className={pageCls.heroGrid}>
@@ -492,7 +530,7 @@ export default function MembersPage() {
                       memberCodeText={member.memberCode || '未设置编号'}
                       statusLabel={memberStatusLabels[member.status]}
                       tone={getToneFromName(member.name)}
-                      onEdit={() => openEditModal(member)}
+                      onEdit={canWriteMembers ? () => openEditModal(member) : undefined}
                       onViewDetail={() => setDetailMember(member)}
                     />
                   ))}
@@ -620,27 +658,29 @@ export default function MembersPage() {
         onClose={() => setDetailMember(null)}
         extra={detailMember ? (
           <div className={pageCls.drawerActionGroup}>
-            <Button icon={<EditOutlined />} onClick={() => openEditModal(detailMember)}>编辑</Button>
-            <Popconfirm
-              title="确认删除该会员吗？"
-              okText="删除"
-              cancelText="取消"
-              okButtonProps={{
-                danger: true,
-                loading: deletingMemberId === detailMember.id,
-                disabled: deletingMemberId !== null && deletingMemberId !== detailMember.id,
-              }}
-              onConfirm={() => handleDeleteMember(detailMember)}
-            >
-              <Button
-                className={pageCls.cardActionWarning}
-                icon={<DeleteOutlined />}
-                loading={deletingMemberId === detailMember.id}
-                disabled={deletingMemberId !== null && deletingMemberId !== detailMember.id}
+            {canWriteMembers ? <Button icon={<EditOutlined />} onClick={() => openEditModal(detailMember)}>编辑</Button> : null}
+            {canManageMembers ? (
+              <Popconfirm
+                title="确认删除该会员吗？"
+                okText="删除"
+                cancelText="取消"
+                okButtonProps={{
+                  danger: true,
+                  loading: deletingMemberId === detailMember.id,
+                  disabled: deletingMemberId !== null && deletingMemberId !== detailMember.id,
+                }}
+                onConfirm={() => handleDeleteMember(detailMember)}
               >
-                删除
-              </Button>
-            </Popconfirm>
+                <Button
+                  className={pageCls.cardActionWarning}
+                  icon={<DeleteOutlined />}
+                  loading={deletingMemberId === detailMember.id}
+                  disabled={deletingMemberId !== null && deletingMemberId !== detailMember.id}
+                >
+                  删除
+                </Button>
+              </Popconfirm>
+            ) : null}
           </div>
         ) : null}
       >
@@ -659,8 +699,8 @@ export default function MembersPage() {
               progressPercent={getMemberProgressPercent(detailMember)}
               progressLabel={`剩余课时 ${detailMember.remainingCredits} 节`}
               tone={getToneFromName(detailMember.name)}
-              onPrimaryAction={() => openEditModal(detailMember)}
-            />
+               onPrimaryAction={canWriteMembers ? () => openEditModal(detailMember) : undefined}
+             />
 
             <MemberProfileStats items={getMemberSummaryStats(detailMember)} />
 

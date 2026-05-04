@@ -1,0 +1,65 @@
+.planRecordCard {
+  align-items: center;
+}
+
+.planRecordMain {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.planRecordIcon {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: rgba(237, 248, 243, 0.88);
+  border: 1px solid color-mix(in srgb, var(--mint) 14%, transparent);
+  color: var(--mint);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-black);
+}
+
+.planRecordBriefGrid {
+  align-self: stretch;
+}
+
+.planRecordActions {
+  align-items: stretch;
+}
+
+.planDetailStatGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.planDetailStatGrid > :last-child {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 520px) {
+  .planDetailStatGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .planDetailStatGrid > :last-child {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 1200px) {
+  .planRecordMain {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .planRecordActions {
+    width: 100%;
+  }
+}

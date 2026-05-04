@@ -12,7 +12,7 @@ import {
   TransactionKind,
   TransactionStatus,
 } from '../../common/enums/domain.enums';
-import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
+import { PaginatedResponse } from '../../common/dto/pagination.dto';
 import { buildDateRange } from '../../common/utils/date-range';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -150,106 +150,16 @@ export class TransactionsService {
 
   async updateStatus(id: string, dto: UpdateTransactionStatusDto) {
     return this.prisma.$transaction(async (tx) => {
-      const transaction = await tx.transaction.findUnique({
-        where: { id },
-        include: {
-          member: {
-            include: {
-              plan: true,
-            },
-          },
-          plan: true,
-        },
-      });
+      return this.updateTransactionStatusTx(tx, id, dto.status);
+    });
+  }
 
-      if (!transaction) {
-        throw new NotFoundException('Transaction not found');
-      }
-
-      const shouldApplyRenewal =
-        transaction.kind === TransactionKind.MEMBERSHIP_RENEWAL &&
-        dto.status === TransactionStatus.COMPLETED &&
-        transaction.status !== TransactionStatus.COMPLETED;
-
-      if (!shouldApplyRenewal) {
-        return tx.transaction.update({
-          where: { id },
-          data: { status: dto.status },
-          include: {
-            member: true,
-            plan: true,
-          },
-        });
-      }
-
-      if (!transaction.memberId || !transaction.member || !transaction.planId || !transaction.plan) {
-        throw new BadRequestException('Membership renewal transaction must include member and plan');
-      }
-
-      const completedRenewalCount = await tx.transaction.count({
-        where: {
-          memberId: transaction.memberId,
-          planId: transaction.member.planId ?? transaction.planId,
-          kind: TransactionKind.MEMBERSHIP_RENEWAL,
-          status: TransactionStatus.COMPLETED,
-        },
-      });
-
-      const currentMembershipExpiresAt = this.getMembershipExpiresAt(
-        transaction.member.joinedAt,
-        transaction.member.plan?.durationDays,
-        completedRenewalCount,
-      );
-      const hasActiveMembership = Boolean(
-        transaction.member.status === MemberStatus.ACTIVE
-        && currentMembershipExpiresAt
-        && currentMembershipExpiresAt > new Date(),
-      );
-      const isSamePlanRenewal = transaction.member.planId === transaction.planId;
-
-      if (hasActiveMembership && !isSamePlanRenewal) {
-        throw new BadRequestException('Current membership has not expired; only same-plan renewal is supported');
-      }
-
-      const statusUpdate = await tx.transaction.updateMany({
-        where: {
-          id,
-          status: { not: TransactionStatus.COMPLETED },
-        },
-        data: { status: dto.status },
-      });
-
-      if (statusUpdate.count === 0) {
-        return tx.transaction.findUniqueOrThrow({
-          where: { id },
-          include: {
-            member: true,
-            plan: true,
-          },
-        });
-      }
-
-      await tx.member.update({
-        where: { id: transaction.memberId },
-        data: {
-          planId: transaction.planId,
-          joinedAt: hasActiveMembership && isSamePlanRenewal ? transaction.member.joinedAt : new Date(),
-          status: MemberStatus.ACTIVE,
-          remainingCredits: this.calculateRenewedCredits(
-            transaction.member.remainingCredits,
-            transaction.plan.category as MembershipPlanCategory,
-            transaction.plan.totalCredits,
-          ),
-        },
-      });
-
-      return tx.transaction.findUniqueOrThrow({
-        where: { id },
-        include: {
-          member: true,
-          plan: true,
-        },
-      });
+  async markPaymentCompleted(
+    id: string,
+    options?: { paymentTransactionId?: string; paidAt?: Date; paymentPayload?: Record<string, unknown> },
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      return this.updateTransactionStatusTx(tx, id, TransactionStatus.COMPLETED, options);
     });
   }
 
@@ -394,5 +304,123 @@ export class TransactionsService {
 
     const cycles = 1 + Math.max(completedRenewalCount, 0);
     return new Date(joinedAt.getTime() + durationDays * cycles * 24 * 60 * 60 * 1000);
+  }
+
+  private async updateTransactionStatusTx(
+    tx: Prisma.TransactionClient,
+    id: string,
+    status: TransactionStatus,
+    options?: { paymentTransactionId?: string; paidAt?: Date; paymentPayload?: Record<string, unknown> },
+  ) {
+    const transaction = await tx.transaction.findUnique({
+      where: { id },
+      include: {
+        member: {
+          include: {
+            plan: true,
+          },
+        },
+        plan: true,
+      },
+    });
+
+    if (!transaction) {
+      throw new NotFoundException('Transaction not found');
+    }
+
+    const shouldApplyRenewal =
+      transaction.kind === TransactionKind.MEMBERSHIP_RENEWAL &&
+      status === TransactionStatus.COMPLETED &&
+      transaction.status !== TransactionStatus.COMPLETED;
+
+    if (!shouldApplyRenewal) {
+      return tx.transaction.update({
+        where: { id },
+        data: {
+          status,
+          ...(options?.paymentTransactionId ? { paymentTransactionId: options.paymentTransactionId } : {}),
+          ...(options?.paidAt ? { paidAt: options.paidAt } : {}),
+          ...(options?.paymentPayload ? { paymentPayload: options.paymentPayload as Prisma.InputJsonValue } : {}),
+        },
+        include: {
+          member: true,
+          plan: true,
+        },
+      });
+    }
+
+    if (!transaction.memberId || !transaction.member || !transaction.planId || !transaction.plan) {
+      throw new BadRequestException('Membership renewal transaction must include member and plan');
+    }
+
+    const completedRenewalCount = await tx.transaction.count({
+      where: {
+        memberId: transaction.memberId,
+        planId: transaction.member.planId ?? transaction.planId,
+        kind: TransactionKind.MEMBERSHIP_RENEWAL,
+        status: TransactionStatus.COMPLETED,
+      },
+    });
+
+    const currentMembershipExpiresAt = this.getMembershipExpiresAt(
+      transaction.member.joinedAt,
+      transaction.member.plan?.durationDays,
+      completedRenewalCount,
+    );
+    const hasActiveMembership = Boolean(
+      transaction.member.status === MemberStatus.ACTIVE
+      && currentMembershipExpiresAt
+      && currentMembershipExpiresAt > new Date(),
+    );
+    const isSamePlanRenewal = transaction.member.planId === transaction.planId;
+
+    if (hasActiveMembership && !isSamePlanRenewal) {
+      throw new BadRequestException('Current membership has not expired; only same-plan renewal is supported');
+    }
+
+    const statusUpdate = await tx.transaction.updateMany({
+      where: {
+        id,
+        status: { not: TransactionStatus.COMPLETED },
+      },
+      data: {
+        status,
+        ...(options?.paymentTransactionId ? { paymentTransactionId: options.paymentTransactionId } : {}),
+        ...(options?.paidAt ? { paidAt: options.paidAt } : {}),
+        ...(options?.paymentPayload ? { paymentPayload: options.paymentPayload as Prisma.InputJsonValue } : {}),
+      },
+    });
+
+    if (statusUpdate.count === 0) {
+      return tx.transaction.findUniqueOrThrow({
+        where: { id },
+        include: {
+          member: true,
+          plan: true,
+        },
+      });
+    }
+
+    await tx.member.update({
+      where: { id: transaction.memberId },
+      data: {
+        planId: transaction.planId,
+        joinedAt: hasActiveMembership && isSamePlanRenewal ? transaction.member.joinedAt : new Date(),
+        status: MemberStatus.ACTIVE,
+        remainingCredits: this.calculateRenewedCredits(
+          transaction.member.remainingCredits,
+          transaction.plan.category as MembershipPlanCategory,
+          transaction.plan.totalCredits,
+        ),
+      },
+    });
+
+    return tx.transaction.findUniqueOrThrow({
+      where: { id },
+      include: {
+        member: true,
+        plan: true,
+      },
+    });
   }
 }

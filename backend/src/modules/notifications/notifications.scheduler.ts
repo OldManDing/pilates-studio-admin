@@ -144,7 +144,7 @@ export class NotificationsScheduler {
           sessionId: booking.sessionId,
           courseName: booking.session.course.name,
           startsAt: booking.session.startsAt.toISOString(),
-          page: 'pages/bookings/index',
+          page: 'pages/my-bookings/index',
         },
       });
 

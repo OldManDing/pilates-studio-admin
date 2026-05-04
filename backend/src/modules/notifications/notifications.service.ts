@@ -15,6 +15,24 @@ export class NotificationsService {
   ) {}
 
   private readonly processingFailureReasonPrefix = '__processing__:';
+  private readonly accountDeletionRequestType = 'ACCOUNT_DELETION_REQUEST';
+  private readonly defaultNotificationSettings = {
+    booking_confirmation: { title: '预约确认', channel: NotificationChannel.MINI_PROGRAM, description: '会员预约成功后发送确认通知' },
+    booking_cancelled: { title: '预约取消', channel: NotificationChannel.MINI_PROGRAM, description: '预约取消后发送提醒通知' },
+    booking_reminder: { title: '开课提醒', channel: NotificationChannel.MINI_PROGRAM, description: '课程开始前发送提醒通知' },
+    attendance_checked_in: { title: '签到成功', channel: NotificationChannel.INTERNAL, description: '会员完成签到后记录通知' },
+    membership_expiry: { title: '会籍到期', channel: NotificationChannel.SMS, description: '会员卡即将到期时发送通知' },
+    payment_receipt: { title: '支付凭证', channel: NotificationChannel.EMAIL, description: '支付成功后发送电子收据' },
+    membership_renewal_request: { title: '会员续费申请', channel: NotificationChannel.INTERNAL, description: '会员提交续费申请后通知后台跟进' },
+  } as const;
+
+  private isAccountDeletionProcessedPayload(payload: Prisma.JsonValue | null | undefined) {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      return false;
+    }
+
+    return payload !== null && 'accountDeletionProcessedAt' in payload;
+  }
 
   async create(dto: CreateNotificationDto) {
     if (dto.channel === NotificationChannel.MINI_PROGRAM && dto.miniUserId) {
@@ -30,7 +48,7 @@ export class NotificationsService {
       }
     }
 
-    return this.prisma.notification.create({
+    const created = await this.prisma.notification.create({
       data: {
         channel: dto.channel,
         type: dto.type,
@@ -50,15 +68,23 @@ export class NotificationsService {
         },
       },
     });
+
+    this.triggerImmediateDelivery(created);
+
+    return created;
   }
 
   async createFromSetting(
     key: string,
     params: Omit<CreateNotificationDto, 'channel' | 'title'> & { title?: string },
   ) {
-    const setting = await this.prisma.notificationSetting.findUnique({
+    let setting = await this.prisma.notificationSetting.findUnique({
       where: { key },
     });
+
+    if (!setting) {
+      setting = await this.ensureDefaultNotificationSetting(key);
+    }
 
     if (!setting || !setting.enabled) {
       return null;
@@ -178,7 +204,11 @@ export class NotificationsService {
   }
 
   async markAsRead(id: string) {
-    await this.findOne(id);
+    const notification = await this.findOne(id);
+
+    if (notification.type === this.accountDeletionRequestType) {
+      throw new BadRequestException('Account deletion requests must be processed through the dedicated endpoint');
+    }
 
     return this.prisma.notification.update({
       where: { id },
@@ -213,7 +243,7 @@ export class NotificationsService {
         throw new NotFoundException('Notification not found');
       }
 
-      if (notification.type !== 'ACCOUNT_DELETION_REQUEST') {
+      if (notification.type !== this.accountDeletionRequestType) {
         throw new BadRequestException('Notification is not an account deletion request');
       }
 
@@ -236,6 +266,12 @@ export class NotificationsService {
         data: {
           status: NotificationStatus.READ,
           readAt: new Date(),
+          payload: {
+            ...(notification.payload && typeof notification.payload === 'object' && !Array.isArray(notification.payload)
+              ? notification.payload as Prisma.InputJsonObject
+              : {}),
+            accountDeletionProcessedAt: new Date().toISOString(),
+          },
         },
         include: {
           member: true,
@@ -255,6 +291,10 @@ export class NotificationsService {
 
     if (!notification) {
       throw new NotFoundException('Notification not found');
+    }
+
+    if (notification.type === this.accountDeletionRequestType && this.isAccountDeletionProcessedPayload(notification.payload)) {
+      return this.findOne(id);
     }
 
     return this.prisma.notification.update({
@@ -319,8 +359,9 @@ export class NotificationsService {
     const processed = [] as Array<{ id: string; status: NotificationStatus }>;
 
     for (const notification of notifications) {
+      const processingFailureReason = `${this.processingFailureReasonPrefix}${Date.now()}`;
+
       if (typeof this.prisma.notification.updateMany === 'function') {
-        const processingFailureReason = `${this.processingFailureReasonPrefix}${Date.now()}`;
         const lockResult = await this.prisma.notification.updateMany({
           where: {
             id: notification.id,
@@ -333,32 +374,60 @@ export class NotificationsService {
         });
 
         if (lockResult.count > 0) {
-          const result = await this.notificationDeliveryService.deliver({
-            id: notification.id,
-            channel: notification.channel as NotificationChannel,
-            type: notification.type,
-            title: notification.title,
-            content: notification.content,
-            payload: notification.payload as Record<string, unknown> | null,
-            miniUser: notification.miniUser,
-          });
+          const result = await this.deliverWithRecovery(notification, processingFailureReason);
           processed.push(result);
         }
       } else {
-        const result = await this.notificationDeliveryService.deliver({
-          id: notification.id,
-          channel: notification.channel as NotificationChannel,
-          type: notification.type,
-          title: notification.title,
-          content: notification.content,
-          payload: notification.payload as Record<string, unknown> | null,
-          miniUser: notification.miniUser,
-        });
+        const result = await this.deliverWithRecovery(notification, processingFailureReason);
         processed.push(result);
       }
     }
 
     return processed;
+  }
+
+  private async deliverWithRecovery(
+    notification: {
+      id: string;
+      channel: string;
+      type: string;
+      title: string;
+      content: string;
+      payload: Prisma.JsonValue;
+      miniUser: { openId: string | null } | null;
+    },
+    processingFailureReason: string,
+  ) {
+    try {
+      return await this.notificationDeliveryService.deliver({
+        id: notification.id,
+        channel: notification.channel as NotificationChannel,
+        type: notification.type,
+        title: notification.title,
+        content: notification.content,
+        payload: notification.payload as Record<string, unknown> | null,
+        miniUser: notification.miniUser,
+      });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'Unknown notification delivery error';
+
+      await this.prisma.notification.updateMany({
+        where: {
+          id: notification.id,
+          status: NotificationStatus.PENDING,
+          failureReason: processingFailureReason,
+        },
+        data: {
+          status: NotificationStatus.FAILED,
+          failureReason: reason,
+        },
+      });
+
+      return {
+        id: notification.id,
+        status: NotificationStatus.FAILED,
+      };
+    }
   }
 
   private getMiniNotificationPreferenceKey(type: string) {
@@ -367,5 +436,48 @@ export class NotificationsService {
     }
 
     return 'systemNotification';
+  }
+
+  private async ensureDefaultNotificationSetting(key: string) {
+    const defaultSetting = this.defaultNotificationSettings[key as keyof typeof this.defaultNotificationSettings];
+    if (!defaultSetting) {
+      return null;
+    }
+
+    return this.prisma.notificationSetting.upsert({
+      where: { key },
+      update: {
+        title: defaultSetting.title,
+        description: defaultSetting.description,
+        channel: defaultSetting.channel,
+      },
+      create: {
+        key,
+        title: defaultSetting.title,
+        description: defaultSetting.description,
+        channel: defaultSetting.channel,
+        enabled: true,
+      },
+    });
+  }
+
+  private triggerImmediateDelivery(notification: {
+    id: string;
+    channel: string;
+    type?: string;
+    title?: string;
+    content?: string;
+    payload?: Prisma.JsonValue;
+    miniUser?: { openId?: string | null } | null;
+  }) {
+    void this.notificationDeliveryService.deliver({
+      id: notification.id,
+      channel: notification.channel as NotificationChannel,
+      type: notification.type,
+      title: notification.title,
+      content: notification.content,
+      payload: notification.payload as Record<string, unknown> | null,
+      miniUser: notification.miniUser,
+    }).catch(() => undefined);
   }
 }

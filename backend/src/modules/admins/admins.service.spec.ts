@@ -8,6 +8,10 @@ jest.mock('bcrypt', () => ({
 
 const mockedHash = bcrypt.hash as jest.MockedFunction<typeof bcrypt.hash>;
 
+const ADMIN_CREATE_SECRET = 'Admin123!';
+const ADMIN_UPDATE_SECRET = 'NewSecret123';
+const ADMIN_RESET_SECRET = 'Reset123!';
+
 const createAdmin = (overrides: Partial<Record<string, unknown>> = {}) => ({
   id: 'admin-1',
   email: 'owner@pilates.com',
@@ -53,7 +57,7 @@ describe('AdminsService', () => {
       email: 'owner@pilates.com',
       phone: '13800000000',
       displayName: 'Owner',
-      password: 'Admin123!',
+      password: ADMIN_CREATE_SECRET,
       roleId: 'role-1',
     });
 
@@ -73,7 +77,7 @@ describe('AdminsService', () => {
         email: 'owner@pilates.com',
         phone: '13800000000',
         displayName: 'Owner',
-        password: 'Admin123!',
+        password: ADMIN_CREATE_SECRET,
         roleId: 'role-1',
       }),
     ).rejects.toBeInstanceOf(ConflictException);
@@ -89,7 +93,7 @@ describe('AdminsService', () => {
     prisma.adminUser.findUnique.mockResolvedValue(createAdmin());
     prisma.adminUser.update.mockResolvedValue(createAdmin({ displayName: 'Updated' }));
 
-    await service.update('admin-1', { password: 'NewSecret123', displayName: 'Updated' } as never);
+    await service.update('admin-1', { password: ADMIN_UPDATE_SECRET, displayName: 'Updated' } as never);
 
     expect(prisma.adminUser.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -103,7 +107,7 @@ describe('AdminsService', () => {
     prisma.adminUser.findUnique.mockResolvedValue(createAdmin());
     prisma.adminUser.update.mockResolvedValue({ id: 'admin-1', email: 'owner@pilates.com', updatedAt: new Date() });
 
-    const result = await service.resetPassword('admin-1', 'Reset123!');
+    const result = await service.resetPassword('admin-1', ADMIN_RESET_SECRET);
 
     expect(prisma.adminUser.update).toHaveBeenCalledWith(
       expect.objectContaining({

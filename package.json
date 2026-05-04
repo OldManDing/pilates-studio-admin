@@ -20,8 +20,7 @@
     "dayjs": "^1.11.13",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "recharts": "^2.15.3",
-    "umi": "^4.4.6"
+    "recharts": "^2.15.3"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
@@ -32,6 +31,7 @@
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
     "@typescript-eslint/visitor-keys": "^7.18.0",
+    "@vitest/coverage-v8": "^4.1.5",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.37.5",
@@ -40,6 +40,21 @@
     "jsdom": "^29.0.2",
     "prettier": "^3.3.3",
     "typescript": "^5.7.2",
+    "umi": "^4.4.6",
     "vitest": "^4.1.4"
+  },
+  "overrides": {
+    "@babel/runtime": "7.29.2",
+    "@vitejs/plugin-react": "5.2.0",
+    "esbuild": "0.28.0",
+    "postcss": "8.5.13",
+    "react-router": "6.30.3",
+    "react-router-dom": "6.30.3",
+    "send": "0.19.2",
+    "tsx": "4.21.0",
+    "vite": "8.0.10",
+    "@umijs/preset-umi": {
+      "path-to-regexp": "1.9.0"
+    }
   }
 }

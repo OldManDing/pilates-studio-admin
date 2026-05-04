@@ -16,6 +16,13 @@
     gap: 10px;
   }
 
+  .financeToolbar :global(.ant-btn) {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 130px;
+    justify-content: center;
+    padding-inline: 12px !important;
+  }
+
   .financeRecordCard {
     padding: 12px;
     gap: 12px;

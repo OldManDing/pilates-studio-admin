@@ -24,6 +24,8 @@ export const isOwnerOnlyPath = (path: string) => path === '/roles';
 
 export const routePermissionMap: Record<string, string[]> = {
   '/members': ['READ:MEMBERS'],
+  '/membership-plans': ['READ:PLANS'],
+  '/mini-users': ['READ:MINI_USERS'],
   '/courses': ['READ:COURSES'],
   '/bookings': ['READ:BOOKINGS'],
   '/coaches': ['READ:COACHES'],
@@ -55,6 +57,8 @@ export const hasRequiredPermissions = (userPermissions: string[] = [], requiredP
 export const menuItems: MenuItem[] = [
   { key: '/dashboard', label: '仪表盘', icon: <AppstoreOutlined />, description: '运营总览与今日动态', group: 'operations' },
   { key: '/members', label: '会员管理', icon: <UsergroupAddOutlined />, description: '会籍、状态与生命周期', group: 'operations', requiredPermissions: ['READ:MEMBERS'] },
+  { key: '/membership-plans', label: '会籍方案', icon: <SafetyCertificateOutlined />, description: '方案配置、上下架与价格规则', group: 'operations', requiredPermissions: ['READ:PLANS'] },
+  { key: '/mini-users', label: '小程序用户', icon: <TeamOutlined />, description: '微信身份、绑定关系与账号状态', group: 'operations', requiredPermissions: ['READ:MINI_USERS'] },
   { key: '/courses', label: '课程管理', icon: <CalendarOutlined />, description: '课程设置与排期', group: 'operations', requiredPermissions: ['READ:COURSES'] },
   { key: '/bookings', label: '预约管理', icon: <FundProjectionScreenOutlined />, description: '预约确认与签到', group: 'operations', requiredPermissions: ['READ:BOOKINGS'] },
   { key: '/coaches', label: '教练管理', icon: <TeamOutlined />, description: '教练资料、专长与排班', group: 'operations', requiredPermissions: ['READ:COACHES'] },

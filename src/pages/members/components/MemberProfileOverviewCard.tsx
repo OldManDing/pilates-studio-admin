@@ -19,7 +19,7 @@ export type MemberProfileOverviewCardProps = {
   progressPercent: number;
   progressLabel: string;
   tone: AccentTone;
-  onPrimaryAction: () => void;
+  onPrimaryAction?: () => void;
 };
 
 export default function MemberProfileOverviewCard({
@@ -80,9 +80,11 @@ export default function MemberProfileOverviewCard({
         <Progress percent={progressPercent} showInfo={false} strokeColor="linear-gradient(90deg, var(--orange) 0%, color-mix(in srgb, var(--orange) 68%, var(--mint)) 100%)" trailColor="rgba(244, 244, 245, 0.95)" />
       </div>
 
-      <div className={styles.profileHeroActionRow}>
-        <Button size="large" className={pageCls.cardActionPrimary} onClick={onPrimaryAction}>编辑会员</Button>
-      </div>
+      {onPrimaryAction ? (
+        <div className={styles.profileHeroActionRow}>
+          <Button size="large" className={pageCls.cardActionPrimary} onClick={onPrimaryAction}>编辑会员</Button>
+        </div>
+      ) : null}
     </section>
   );
 }

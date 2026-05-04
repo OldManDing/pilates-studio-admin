@@ -46,7 +46,7 @@ vi.mock('@/services/reports', () => ({
 describe('FinancePage smoke test', () => {
   it('renders finance page shell with mocked data', async () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <App>
           <FinancePage />
         </App>

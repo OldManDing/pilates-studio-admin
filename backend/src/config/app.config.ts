@@ -29,6 +29,16 @@ export default () => ({
     appId: process.env.WECHAT_APPID ?? '',
     secret: process.env.WECHAT_SECRET ?? '',
   },
+  wechatPay: {
+    enabled: process.env.WECHAT_PAY_ENABLED === 'true',
+    mock: process.env.WECHAT_PAY_MOCK === 'true',
+    mchId: process.env.WECHAT_PAY_MCH_ID ?? '',
+    merchantSerialNumber: process.env.WECHAT_PAY_MERCHANT_SERIAL_NO ?? '',
+    apiV3Key: process.env.WECHAT_PAY_API_V3_KEY ?? '',
+    privateKey: process.env.WECHAT_PAY_PRIVATE_KEY ?? '',
+    platformPublicKey: process.env.WECHAT_PAY_PLATFORM_PUBLIC_KEY ?? '',
+    notifyUrl: process.env.WECHAT_PAY_NOTIFY_URL ?? '',
+  },
   email: {
     host: process.env.SMTP_HOST ?? '',
     port: Number(process.env.SMTP_PORT ?? 587),

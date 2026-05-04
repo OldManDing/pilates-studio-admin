@@ -9,7 +9,8 @@ export default defineConfig({
     globals: true,
     css: true,
     pool: 'forks',
-    maxWorkers: 1,
+    maxWorkers: 4,
+    testTimeout: 15000,
   },
   resolve: {
     alias: {

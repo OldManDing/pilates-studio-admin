@@ -102,6 +102,9 @@ describe('NotificationsScheduler', () => {
         type: 'BOOKING_REMINDER',
         memberId: 'member-1',
         miniUserId: 'mini-user-1',
+        payload: expect.objectContaining({
+          page: 'pages/my-bookings/index',
+        }),
       }),
     );
     expect(result).toEqual([{ bookingId: 'booking-1', notificationId: 'notification-2' }]);

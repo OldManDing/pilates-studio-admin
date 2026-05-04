@@ -30,6 +30,7 @@ describe('Auth -> Members -> Bookings integration flow', () => {
   const adminId = '11111111-1111-4111-8111-111111111111';
   const memberId = '22222222-2222-4222-8222-222222222222';
   const sessionId = '33333333-3333-4333-8333-333333333333';
+  const adminLoginSecret = 'Admin123!';
 
   const prisma = {
     adminUser: {
@@ -77,6 +78,7 @@ describe('Auth -> Members -> Bookings integration flow', () => {
 
   const configService = {
     get: jest.fn((key: string) => {
+      if (key === 'auth.refreshSecret') return 'local-development-refresh-secret-change-before-production';
       if (key === 'auth.refreshExpiresIn') return '7d';
       return undefined;
     }),
@@ -126,7 +128,7 @@ describe('Auth -> Members -> Bookings integration flow', () => {
     prisma.transaction.findMany.mockResolvedValue([]);
     notificationsService.createFromSetting.mockResolvedValue(undefined);
 
-    const passwordHash = await bcrypt.hash('Admin123!', 10);
+    const passwordHash = await bcrypt.hash(adminLoginSecret, 10);
     prisma.adminUser.findUnique.mockResolvedValue({
       id: adminId,
       email: 'owner@pilates.com',
@@ -221,7 +223,7 @@ describe('Auth -> Members -> Bookings integration flow', () => {
 
     const loginResponse = await request(app.getHttpServer())
       .post('/api/auth/login')
-      .send({ email: 'owner@pilates.com', password: 'Admin123!' })
+      .send({ email: 'owner@pilates.com', password: adminLoginSecret })
       .expect(200);
 
     expect(loginResponse.body.success).toBe(true);

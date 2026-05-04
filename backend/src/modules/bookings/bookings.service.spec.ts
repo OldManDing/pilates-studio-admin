@@ -135,6 +135,33 @@ describe('BookingsService', () => {
         service.findAll({ page: 1, pageSize: 10, from: '2025-01-02', to: '2025-01-01' }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
+
+    it('returns cancelledCount in booking summary', async () => {
+      prisma.booking.count
+        .mockResolvedValueOnce(12)
+        .mockResolvedValueOnce(2)
+        .mockResolvedValueOnce(4)
+        .mockResolvedValueOnce(3)
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(2)
+        .mockResolvedValueOnce(5);
+
+      const result = await service.getSummary({ page: 1, pageSize: 10 });
+
+      expect(result).toEqual({
+        todayCount: 5,
+        weekTotal: 12,
+        pendingCount: 2,
+        confirmedCount: 4,
+        completedCount: 3,
+        cancelledCount: 1,
+        noShowCount: 2,
+      });
+      expect(prisma.booking.count).toHaveBeenNthCalledWith(
+        5,
+        expect.objectContaining({ where: expect.objectContaining({ status: BookingStatus.CANCELLED }) }),
+      );
+    });
   });
 
   describe('booking lifecycle', () => {
@@ -217,6 +244,32 @@ describe('BookingsService', () => {
       );
 
       expect(prisma.member.findUnique).toHaveBeenNthCalledWith(1, { where: { miniUserId: 'mini-user-1' } });
+      expect(prisma.booking.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            memberId: 'member-1',
+            source: BookingSource.MINI_PROGRAM,
+          }),
+        }),
+      );
+    });
+
+    it('forces mini bookings to use mini-program source even when the client omits it', async () => {
+      prisma.member.findUnique
+        .mockResolvedValueOnce({ id: 'member-1' })
+        .mockResolvedValueOnce(createBooking().member);
+      prisma.courseSession.findUnique.mockResolvedValue(createSession());
+      prisma.booking.findUnique.mockResolvedValue(null);
+      prisma.booking.findFirst.mockResolvedValue(null);
+      prisma.booking.create.mockResolvedValue(createBooking({ source: BookingSource.MINI_PROGRAM }));
+      prisma.booking.count.mockResolvedValue(1);
+
+      await service.create(
+        { memberId: 'SELF', sessionId: 'session-1' },
+        'mini-user-1',
+        true,
+      );
+
       expect(prisma.booking.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({

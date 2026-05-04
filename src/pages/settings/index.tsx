@@ -11,6 +11,7 @@ import widgetCls from '@/styles/widgets.module.css';
 import { settingsApi, type NotificationSetting } from '@/services/settings';
 import { authApi } from '@/services/auth';
 import { getErrorMessage } from '@/utils/errors';
+import { hasRequiredPermissions } from '@/utils/menu';
 import {
   SettingsActionRow,
   SettingsOverviewCard,
@@ -40,6 +41,20 @@ function readFileAsDataUrl(file: File) {
     reader.onerror = () => reject(new Error('图片读取失败'));
     reader.readAsDataURL(file);
   });
+}
+
+const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
+
+function validateImageFile(file: File) {
+  if (!file.type.startsWith('image/')) {
+    return '仅支持上传图片文件';
+  }
+
+  if (file.size > MAX_IMAGE_FILE_SIZE) {
+    return '图片文件过大，请上传 5MB 以内图片';
+  }
+
+  return '';
 }
 
 type SecurityActionTitle = '修改密码' | '两步验证' | '权限管理';
@@ -297,17 +312,24 @@ export default function SettingsPage() {
   const [systemStatus] = useState<'稳定'>('稳定');
   const [openSecurityDrawer, setOpenSecurityDrawer] = useState<SecurityDrawerKey>(null);
   const [openDataDrawer, setOpenDataDrawer] = useState<DataDrawerKey>(null);
+  const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
+  const [currentUserRoleCode, setCurrentUserRoleCode] = useState('');
   const watchedStoreInfo = Form.useWatch([], storeForm) as Partial<StoreInfoValues> | undefined;
+  const canManageSettings = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['MANAGE:SETTINGS']);
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
         setLoading(true);
-        const [studioData, notificationsData, twoFactorStatus] = await Promise.all([
+        const [studioData, notificationsData, twoFactorStatus, currentUser] = await Promise.all([
           settingsApi.getStudio().catch(() => null),
           settingsApi.getNotifications().catch(() => []),
           authApi.getTwoFactorStatus().catch(() => ({ enabled: false, hasSecret: false })),
+          authApi.getMe().catch(() => null),
         ]);
+
+        setCurrentUserPermissions(currentUser?.role?.permissions || []);
+        setCurrentUserRoleCode(currentUser?.role?.code || '');
 
         if (studioData) {
           // 解析地址：尝试从地址字符串中提取省市区
@@ -483,6 +505,11 @@ export default function SettingsPage() {
   );
 
   const handleSaveStoreInfo = async () => {
+    if (!canManageSettings) {
+      message.warning('当前账号只有查看权限，不能保存门店图片或门店信息');
+      return;
+    }
+
     try {
       setIsSavingStoreInfo(true);
       const values = await storeForm.validateFields();
@@ -548,6 +575,11 @@ export default function SettingsPage() {
   };
 
   const handleSelectStoreImage = () => {
+    if (!canManageSettings) {
+      message.warning('当前账号没有门店信息管理权限');
+      return;
+    }
+
     storeImageInputRef.current?.click();
   };
 
@@ -558,6 +590,12 @@ export default function SettingsPage() {
     }
 
     try {
+      const validationMessage = validateImageFile(file);
+      if (validationMessage) {
+        message.warning(validationMessage);
+        return;
+      }
+
       const imageUrl = await readFileAsDataUrl(file);
       storeForm.setFieldValue('imageUrl', imageUrl);
       message.success('店面图片已载入，保存后生效');
@@ -785,7 +823,7 @@ export default function SettingsPage() {
         metaItems={settingsOverviewMetaItems}
         metrics={settingsOverviewMetrics}
         primaryActionLabel="保存门店信息"
-        primaryActionDisabled={!storeChanged || isSavingStoreInfo}
+        primaryActionDisabled={!canManageSettings || !storeChanged || isSavingStoreInfo}
         primaryActionLoading={isSavingStoreInfo}
         onPrimaryAction={handleSaveStoreInfo}
       />
@@ -833,7 +871,7 @@ export default function SettingsPage() {
                           style={{ display: 'none' }}
                           onChange={handleStoreImageChange}
                         />
-                        <Button onClick={handleSelectStoreImage}>上传店面图片</Button>
+                        <Button onClick={handleSelectStoreImage} disabled={!canManageSettings}>上传店面图片</Button>
                         <Form.Item noStyle shouldUpdate>
                           {() => {
                             const imageUrl = storeForm.getFieldValue('imageUrl');

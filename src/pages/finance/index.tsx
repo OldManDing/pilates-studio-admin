@@ -21,6 +21,7 @@ import PageHeader from '@/components/PageHeader';
 import SectionCard from '@/components/SectionCard';
 import StatCard from '@/components/StatCard';
 import StatusTag from '@/components/StatusTag';
+import { authApi } from '@/services/auth';
 import { CRUD_MODAL_WIDTH, NARROW_DETAIL_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
@@ -29,6 +30,7 @@ import { transactionsApi, type Transaction } from '@/services/transactions';
 import type { AccentTone, TransactionStatus, TransactionKind } from '@/types';
 import { getErrorMessage } from '@/utils/errors';
 import { formatCurrency, getToneColor } from '@/utils/format';
+import { hasRequiredPermissions } from '@/utils/menu';
 import { useIsMobile } from '@/utils/useResponsive';
 import { axisTick, chartGrid } from '@/utils/chartTheme';
 import { getToneFromName } from '@/utils/tone';
@@ -119,7 +121,6 @@ export default function FinancePage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [detailTransaction, setDetailTransaction] = useState<Transaction | null>(null);
-  const [showAllTransactions, setShowAllTransactions] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [isSavingTransaction, setIsSavingTransaction] = useState(false);
@@ -133,6 +134,23 @@ export default function FinancePage() {
     pendingAmount: 0,
     netRevenue: 0,
   });
+  const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
+  const [currentUserRoleCode, setCurrentUserRoleCode] = useState('');
+  const [workbenchTransactions, setWorkbenchTransactions] = useState<Transaction[]>([]);
+  const [workbenchTotal, setWorkbenchTotal] = useState(0);
+  const canWriteTransactions = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['WRITE:TRANSACTIONS']);
+
+  useEffect(() => {
+    void authApi.getMe()
+      .then((me) => {
+        setCurrentUserPermissions(me.role?.permissions || []);
+        setCurrentUserRoleCode(me.role?.code || '');
+      })
+      .catch(() => {
+        setCurrentUserPermissions([]);
+        setCurrentUserRoleCode('');
+      });
+  }, []);
 
   const fetchAllTransactions = useCallback(async (params: { kind?: string; status?: TransactionStatus } = {}) => {
     const now = new Date();
@@ -162,10 +180,28 @@ export default function FinancePage() {
     return allRows;
   }, []);
 
-  const fetchTransactions = useCallback(async () => {
+  const getWorkbenchQueryParams = useCallback(() => {
+    const now = new Date();
+    return {
+      from: new Date(now.getFullYear(), now.getMonth() - 12, now.getDate()).toISOString().split('T')[0],
+      to: now.toISOString().split('T')[0],
+      status: statusFilter === '全部' ? undefined : statusFilter as TransactionStatus,
+      kind: kindFilter === '全部' ? undefined : kindFilter,
+    };
+  }, [kindFilter, statusFilter]);
+
+  const fetchTransactions = useCallback(async (page = 1) => {
     try {
       setLoading(true);
-      const allTransactions = await fetchAllTransactions();
+      const queryParams = getWorkbenchQueryParams();
+      const [allTransactions, pagedTransactions] = await Promise.all([
+        fetchAllTransactions(queryParams),
+        transactionsApi.getAll({
+          page,
+          pageSize,
+          ...queryParams,
+        }),
+      ]);
 
       setTransactionList(allTransactions);
 
@@ -228,6 +264,26 @@ export default function FinancePage() {
         revenue: Math.round(values.revenue),
       }));
       setFinanceBar(barData);
+
+      const keyword = searchValue.trim().toLowerCase();
+      if (keyword) {
+        const locallyFiltered = allTransactions.filter((item) =>
+          (item.member?.name || '').toLowerCase().includes(keyword)
+          || (kindMap[item.kind] || item.kind).toLowerCase().includes(keyword)
+          || String(item.amountCents).includes(keyword)
+          || String(item.amountCents / 100).includes(keyword.replace('¥', '').replace(',', ''))
+          || formatCurrency(item.amountCents / 100).toLowerCase().includes(keyword)
+          || item.happenedAt.includes(keyword),
+        );
+        const startIndex = (page - 1) * pageSize;
+        setWorkbenchTransactions(locallyFiltered.slice(startIndex, startIndex + pageSize));
+        setWorkbenchTotal(locallyFiltered.length);
+      } else {
+        setWorkbenchTransactions(pagedTransactions.data);
+        setWorkbenchTotal(pagedTransactions.meta.total);
+      }
+
+      setCurrentPage(page);
       return allTransactions;
     } catch (err) {
       messageApi.error('获取财务数据失败');
@@ -235,12 +291,12 @@ export default function FinancePage() {
     } finally {
       setLoading(false);
     }
-  }, [fetchAllTransactions, messageApi]);
+  }, [fetchAllTransactions, getWorkbenchQueryParams, messageApi, pageSize, searchValue]);
 
   useEffect(() => {
     setLoading(true);
-    void fetchTransactions();
-  }, [fetchTransactions]);
+    void fetchTransactions(currentPage);
+  }, [currentPage, fetchTransactions]);
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -272,30 +328,9 @@ export default function FinancePage() {
         String(item.amountCents / 100).includes(keyword.replace('¥', '').replace(',', '')) ||
         formatCurrency(item.amountCents / 100).toLowerCase().includes(keyword) ||
         item.happenedAt.includes(keyword);
-      const matchesStatus = statusFilter === '全部' || item.status === statusFilter;
-      const matchesKind = kindFilter === '全部' || item.kind === kindFilter;
-
-      return matchesKeyword && matchesStatus && matchesKind;
+      return matchesKeyword;
     });
-  }, [searchValue, statusFilter, kindFilter, transactionList]);
-
-  const workbenchSourceTransactions = useMemo(() => {
-    if (showAllTransactions || searchValue.trim().length > 0 || statusFilter !== '全部' || kindFilter !== '全部') {
-      return filteredTransactions;
-    }
-    return filteredTransactions.slice(0, 4);
-  }, [filteredTransactions, searchValue, showAllTransactions, statusFilter, kindFilter]);
-
-  const workbenchPageSize = showAllTransactions || searchValue.trim().length > 0 || statusFilter !== '全部' || kindFilter !== '全部'
-    ? pageSize
-    : 4;
-
-  const workbenchTotal = workbenchSourceTransactions.length;
-
-  const visibleTransactions = useMemo(() => {
-    const startIndex = (currentPage - 1) * workbenchPageSize;
-    return workbenchSourceTransactions.slice(startIndex, startIndex + workbenchPageSize);
-  }, [currentPage, workbenchPageSize, workbenchSourceTransactions]);
+  }, [searchValue, transactionList]);
 
   const financeStats = useMemo(() => [
     {
@@ -376,6 +411,11 @@ export default function FinancePage() {
   };
 
   const openCreateModal = () => {
+    if (!canWriteTransactions) {
+      messageApi.warning('当前账号没有交易写入权限');
+      return;
+    }
+
     setEditingTransaction(null);
     form.setFieldsValue({
       memberId: undefined,
@@ -388,6 +428,11 @@ export default function FinancePage() {
   };
 
   const openEditModal = (transaction: Transaction) => {
+    if (!canWriteTransactions) {
+      messageApi.warning('当前账号没有交易写入权限');
+      return;
+    }
+
     setEditingTransaction(transaction);
     form.setFieldsValue({
       memberId: transaction.memberId,
@@ -406,6 +451,11 @@ export default function FinancePage() {
   };
 
   const handleSaveTransaction = async () => {
+    if (!canWriteTransactions) {
+      messageApi.warning('当前账号没有交易写入权限');
+      return;
+    }
+
     try {
       setIsSavingTransaction(true);
       const values = await form.validateFields();
@@ -432,7 +482,7 @@ export default function FinancePage() {
         setDetailTransaction(updated);
       }
 
-      setShowAllTransactions(true);
+      setCurrentPage(1);
       closeFormModal();
     } catch (err) {
       messageApi.error(getErrorMessage(err, '保存失败'));
@@ -442,6 +492,11 @@ export default function FinancePage() {
   };
 
   const handleUpdateTransactionStatus = async (transaction: Transaction, status: TransactionStatus) => {
+    if (!canWriteTransactions) {
+      messageApi.warning('当前账号没有交易写入权限');
+      return;
+    }
+
     try {
       setStatusUpdatingTransactionId(transaction.id);
       await transactionsApi.updateStatus(transaction.id, status);
@@ -467,19 +522,18 @@ export default function FinancePage() {
   const applyFilters = () => {
     setStatusFilter(filterDraft.status);
     setKindFilter(filterDraft.kind);
-    setShowAllTransactions(true);
+    setCurrentPage(1);
     setIsFilterOpen(false);
   };
 
   const resetFilters = () => {
     const nextDraft: TransactionFilterDraft = { status: '全部', kind: '全部' };
     setFilterDraft(nextDraft);
-    setStatusFilter(nextDraft.status);
-    setKindFilter(nextDraft.kind);
-    setSearchValue('');
-    setShowAllTransactions(true);
-    setCurrentPage(1);
-    setIsFilterOpen(false);
+      setStatusFilter(nextDraft.status);
+      setKindFilter(nextDraft.kind);
+      setSearchValue('');
+      setCurrentPage(1);
+      setIsFilterOpen(false);
   };
 
   const handleViewAll = async () => {
@@ -487,74 +541,26 @@ export default function FinancePage() {
 
     if (hasActiveQuery) {
       resetFilters();
-      await fetchTransactions();
+      await fetchTransactions(1);
       messageApi.success('已恢复查看全部最近交易');
       return;
     }
   };
 
   const showPendingRenewals = async () => {
-    try {
-      setLoading(true);
-      const pendingRenewals = await fetchAllTransactions({
-        kind: 'MEMBERSHIP_RENEWAL',
-        status: 'PENDING',
-      });
-
-      setTransactionList(pendingRenewals);
-      setSearchValue('');
-      setStatusFilter('PENDING');
-      setKindFilter('MEMBERSHIP_RENEWAL');
-      setFilterDraft({ status: 'PENDING', kind: 'MEMBERSHIP_RENEWAL' });
-      setShowAllTransactions(true);
-      setCurrentPage(1);
-
-      const totalRevenue = pendingRenewals.reduce((sum, item) => sum + item.amountCents / 100, 0);
-      setStats({
-        totalRevenue,
-        refundedAmount: 0,
-        pendingAmount: totalRevenue,
-        netRevenue: totalRevenue,
-      });
-
-      setRevenueStructure([
-        {
-          name: kindMap.MEMBERSHIP_RENEWAL,
-          value: totalRevenue,
-          fill: getToneColor('orange').solid,
-        },
-      ]);
-
-      const pendingMonthData: Record<string, { revenue: number }> = {};
-      buildRecentMonthKeys(FINANCE_TREND_MONTHS).forEach((key) => {
-        pendingMonthData[key] = { revenue: 0 };
-      });
-      pendingRenewals.forEach((tx) => {
-        const date = new Date(tx.happenedAt);
-        if (Number.isNaN(date.getTime())) return;
-        const key = toMonthKey(date);
-        if (pendingMonthData[key]) {
-          pendingMonthData[key].revenue += tx.amountCents / 100;
-        }
-      });
-      setFinanceBar(Object.entries(pendingMonthData).map(([month, values]) => ({
-        month,
-        revenue: Math.round(values.revenue),
-      })));
-
-      messageApi.success('已加载待处理续费申请');
-    } catch (err) {
-      messageApi.error(getErrorMessage(err, '加载待处理续费失败'));
-    } finally {
-      setLoading(false);
-    }
+    setSearchValue('');
+    setStatusFilter('PENDING');
+    setKindFilter('MEMBERSHIP_RENEWAL');
+    setFilterDraft({ status: 'PENDING', kind: 'MEMBERSHIP_RENEWAL' });
+    setCurrentPage(1);
+    messageApi.success('已切换到待处理续费筛选');
   };
 
-  const transactionCountText = `当前共 ${filteredTransactions.length} 笔交易`;
+  const transactionCountText = `当前共 ${workbenchTotal} 笔交易`;
   const pendingRenewalCount = transactionList.filter((item) => item.kind === 'MEMBERSHIP_RENEWAL' && item.status === 'PENDING').length;
   const transactionResultSummary = transactionFilterLabels.length
     ? `已按${transactionFilterLabels.join('、')}筛选。`
-    : '当前展示全部最近交易，支持继续筛选、编辑与查看详情。';
+      : '当前展示全部最近交易，支持继续筛选、编辑与查看详情。';
   const viewAllLabel = searchValue.trim().length > 0 || statusFilter !== '全部' || kindFilter !== '全部' ? '查看全部' : '';
   const hasFinanceTrendData = financeBar.some((item) => item.revenue > 0);
   const hasRevenueStructureData = revenueStructure.length > 0;
@@ -702,9 +708,7 @@ export default function FinancePage() {
                 placeholder="按会员、交易类型、金额或日期搜索"
                 onChange={(event) => {
                   setSearchValue(event.target.value);
-                  if (event.target.value.trim().length > 0) {
-                    setShowAllTransactions(true);
-                  }
+                  setCurrentPage(1);
                 }}
               />
             </div>
@@ -712,14 +716,14 @@ export default function FinancePage() {
               <ActionButton icon={<FilterOutlined />} ghost onClick={showPendingRenewals}>待处理续费</ActionButton>
               <ActionButton icon={<FilterOutlined />} ghost onClick={openFilterModal}>筛选条件</ActionButton>
               <ActionButton icon={<DownloadOutlined />} ghost onClick={handleExportVisibleTransactions}>导出</ActionButton>
-              <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增交易</ActionButton>
+              {canWriteTransactions ? <ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增交易</ActionButton> : null}
             </div>
           </div>
 
-          {visibleTransactions.length ? (
+          {workbenchTransactions.length ? (
             <>
             <div className={`${widgetCls.recordList} ${pageCls.sectionListStack}`}>
-              {visibleTransactions.map((item) => (
+              {workbenchTransactions.map((item) => (
                 <div key={item.id} className={`${widgetCls.recordItem} ${pageCls.surface} ${pageCls.memberRecordItem} ${styles.financeRecordCard}`}>
                   <div className={widgetCls.recordMeta}>
                     <MemberAvatar name={item.member?.name || '未知'} tone={getToneFromName(item.member?.name || '未知')} />
@@ -744,7 +748,7 @@ export default function FinancePage() {
                   </div>
 
                   <div className={`${pageCls.actionRowWrap} ${pageCls.actionRowWrapEnd} ${styles.financeActionRow}`}>
-                    {item.kind === 'MEMBERSHIP_RENEWAL' && item.status === 'PENDING' ? (
+                    {canWriteTransactions && item.kind === 'MEMBERSHIP_RENEWAL' && item.status === 'PENDING' ? (
                       <Button
                         size="large"
                         className={pageCls.cardActionHalf}
@@ -755,7 +759,7 @@ export default function FinancePage() {
                         开始处理
                       </Button>
                     ) : null}
-                    {item.kind === 'MEMBERSHIP_RENEWAL' && item.status === 'PROCESSING' ? (
+                    {canWriteTransactions && item.kind === 'MEMBERSHIP_RENEWAL' && item.status === 'PROCESSING' ? (
                       <Button
                         type="primary"
                         size="large"
@@ -777,24 +781,26 @@ export default function FinancePage() {
                     >
                       核对详情
                     </Button>
-                    <Button
-                      size="large"
-                      className={pageCls.cardActionHalf}
-                      icon={<EditOutlined />}
-                      onClick={() => openEditModal(item)}
-                      disabled={statusUpdatingTransactionId !== null}
-                    >
-                      调整记录
-                    </Button>
+                    {canWriteTransactions ? (
+                      <Button
+                        size="large"
+                        className={pageCls.cardActionHalf}
+                        icon={<EditOutlined />}
+                        onClick={() => openEditModal(item)}
+                        disabled={statusUpdatingTransactionId !== null}
+                      >
+                        调整记录
+                      </Button>
+                    ) : null}
                   </div>
                   </div>
                 ))}
             </div>
-            {workbenchTotal > workbenchPageSize ? (
+            {workbenchTotal > pageSize ? (
               <div className={pageCls.sectionPagination}>
                 <Pagination
                   current={currentPage}
-                  pageSize={workbenchPageSize}
+                  pageSize={pageSize}
                   total={workbenchTotal}
                   onChange={setCurrentPage}
                   showSizeChanger={false}
@@ -827,6 +833,7 @@ export default function FinancePage() {
         okText={editingTransaction ? '保存修改' : '新增交易'}
         cancelText="取消"
         zIndex={1600}
+        forceRender
         destroyOnHidden
       >
         <Form form={form} className={pageCls.crudModalForm} layout="vertical">
@@ -908,7 +915,7 @@ export default function FinancePage() {
         onClose={() => setDetailTransaction(null)}
         extra={detailTransaction ? (
           <div className={pageCls.drawerActionGroup}>
-            {detailTransaction.kind === 'MEMBERSHIP_RENEWAL' && detailTransaction.status === 'PENDING' ? (
+            {canWriteTransactions && detailTransaction.kind === 'MEMBERSHIP_RENEWAL' && detailTransaction.status === 'PENDING' ? (
               <Button
                 onClick={() => handleUpdateTransactionStatus(detailTransaction, 'PROCESSING')}
                 loading={statusUpdatingTransactionId === detailTransaction.id}
@@ -917,7 +924,7 @@ export default function FinancePage() {
                 开始处理
               </Button>
             ) : null}
-            {detailTransaction.kind === 'MEMBERSHIP_RENEWAL' && detailTransaction.status === 'PROCESSING' ? (
+            {canWriteTransactions && detailTransaction.kind === 'MEMBERSHIP_RENEWAL' && detailTransaction.status === 'PROCESSING' ? (
               <Button
                 type="primary"
                 onClick={() => handleUpdateTransactionStatus(detailTransaction, 'COMPLETED')}
@@ -927,13 +934,15 @@ export default function FinancePage() {
                 完成续费
               </Button>
             ) : null}
-            <Button
-              icon={<EditOutlined />}
-              onClick={() => openEditModal(detailTransaction)}
-              disabled={statusUpdatingTransactionId !== null}
-            >
-              调整记录
-            </Button>
+            {canWriteTransactions ? (
+              <Button
+                icon={<EditOutlined />}
+                onClick={() => openEditModal(detailTransaction)}
+                disabled={statusUpdatingTransactionId !== null}
+              >
+                调整记录
+              </Button>
+            ) : null}
           </div>
         ) : null}
       >

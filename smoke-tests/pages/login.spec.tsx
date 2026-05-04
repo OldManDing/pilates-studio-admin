@@ -14,7 +14,7 @@ vi.mock('@/services/auth', () => ({
 describe('LoginPage smoke test', () => {
   it('renders the login form shell', () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <App>
           <LoginPage />
         </App>

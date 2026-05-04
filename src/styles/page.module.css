@@ -165,6 +165,7 @@
   display: inline-flex;
   align-items: center;
   min-height: 30px;
+  max-width: 100%;
   padding: 0 12px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--mint) 10%, transparent);
@@ -449,11 +450,58 @@
   border-color: color-mix(in srgb, var(--mint) 36%, transparent);
 }
 
+.settingsInput:global(.ant-select) {
+  background: transparent;
+}
+
+.settingsInput :global(.ant-select-selector) {
+  min-height: 40px !important;
+  border-radius: var(--radius-sm) !important;
+  border-color: var(--control-border-strong) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  padding: 0 11px !important;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.settingsInput:global(.ant-select):hover :global(.ant-select-selector) {
+  border-color: color-mix(in srgb, var(--mint) 36%, transparent) !important;
+}
+
+.settingsInput :global(.ant-select-selection-item),
+.settingsInput :global(.ant-select-selection-placeholder) {
+  line-height: 38px !important;
+}
+
+.settingsInput :global(.ant-select-arrow) {
+  color: var(--text-tertiary);
+}
+
+.settingsInput:global(.ant-input-number) {
+  display: inline-flex;
+  align-items: center;
+}
+
+.settingsInput:global(.ant-input-number) :global(.ant-input-number-input-wrap) {
+  flex: 1;
+  height: 100%;
+}
+
+.settingsInput:global(.ant-input-number) :global(.ant-input-number-input) {
+  height: 38px;
+  line-height: 38px;
+  padding: 0 11px;
+}
+
 .settingsInput:focus,
-.settingsInput:focus-within {
+.settingsInput:focus-within,
+.settingsInput:global(.ant-select-focused) :global(.ant-select-selector),
+.settingsInput:global(.ant-select-open) :global(.ant-select-selector) {
   background: #fff;
-  border-color: color-mix(in srgb, var(--mint) 50%, transparent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 12%, transparent);
+  border-color: color-mix(in srgb, var(--mint) 50%, transparent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 12%, transparent) !important;
 }
 
 .chartPanel {
@@ -565,6 +613,47 @@
 
 .memberRecordGridCompact {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.recordBriefGrid {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.recordBriefGridTwo {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.recordBriefField {
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(248, 250, 251, 0.84);
+  border: 1px solid var(--border-soft);
+}
+
+.recordBriefLabel {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.recordBriefValue {
+  margin-top: 8px;
+  color: var(--text-heading);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-bold);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.recordBriefValueStrong {
+  color: var(--mint);
 }
 
 .memberRecordField {
@@ -1150,6 +1239,10 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+  justify-content: flex-end;
   flex-shrink: 0;
 }
 
@@ -1255,6 +1348,10 @@
   }
 
   .memberRecordGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .recordBriefGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -1385,7 +1482,21 @@
 }
 
 @media (max-width: 768px) {
+  .statusMetaWrap {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .sectionMetaPill {
+    white-space: normal;
+  }
+
   .memberRecordGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .recordBriefGrid,
+  .recordBriefGridTwo {
     grid-template-columns: 1fr;
   }
 

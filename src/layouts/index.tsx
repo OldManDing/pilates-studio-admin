@@ -6,7 +6,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import AppSidebar from '@/components/AppSidebar';
 import cls from '@/styles/layout.module.css';
 import { MOBILE_SIDEBAR_DRAWER_WIDTH } from '@/styles/dimensions';
-import { authApi, clearTokens } from '@/services/auth';
+import { authApi, clearTokens, type AuthResponse } from '@/services/auth';
 import { hasRequiredPermissions, isOwnerOnlyPath, routePermissionMap } from '@/utils/menu';
 
 const AppLayout: FC<PropsWithChildren> = ({ children }) => {
@@ -14,7 +14,7 @@ const AppLayout: FC<PropsWithChildren> = ({ children }) => {
   const navigate = useNavigate();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<{ role: { code: string; permissions?: string[] } } | null>(null);
+  const [user, setUser] = useState<AuthResponse['user'] | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -77,7 +77,7 @@ const AppLayout: FC<PropsWithChildren> = ({ children }) => {
   return (
     <Layout className={cls.app}>
       <aside className={cls.sidebar}>
-        <AppSidebar pathname={location.pathname} onNavigate={handleNavigate} />
+        <AppSidebar pathname={location.pathname} onNavigate={handleNavigate} user={user} />
       </aside>
       <div className={cls.mobileHeader}>
         <Button
@@ -105,7 +105,7 @@ const AppLayout: FC<PropsWithChildren> = ({ children }) => {
         rootClassName={cls.mobileDrawerRoot}
         closable={false}
       >
-        <AppSidebar pathname={location.pathname} onNavigate={handleNavigate} />
+        <AppSidebar pathname={location.pathname} onNavigate={handleNavigate} user={user} />
       </Drawer>
     </Layout>
   );

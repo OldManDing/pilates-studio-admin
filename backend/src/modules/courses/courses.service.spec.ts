@@ -78,6 +78,25 @@ describe('CoursesService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('filters courses by active state when requested', async () => {
+    prisma.course.findMany.mockResolvedValue([createCourse()]);
+    prisma.course.count.mockResolvedValue(1);
+
+    const result = await service.findAll({ page: 1, pageSize: 6, isActive: true });
+
+    expect(prisma.course.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ isActive: true }),
+        skip: 0,
+        take: 6,
+      }),
+    );
+    expect(prisma.course.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({ isActive: true }),
+    });
+    expect(result.meta.total).toBe(1);
+  });
+
   it('throws not found when course does not exist', async () => {
     prisma.course.findUnique.mockResolvedValue(null);
 

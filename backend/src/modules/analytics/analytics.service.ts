@@ -16,8 +16,8 @@ export class AnalyticsService {
     const transactionRange = buildDateRange(from, to, 'analytics.transactions');
 
     const [
-      totalMembers,
-      activeMembers,
+      _totalMembers,
+      _activeMembers,
       totalBookings,
       confirmedBookings,
       completedRevenue,

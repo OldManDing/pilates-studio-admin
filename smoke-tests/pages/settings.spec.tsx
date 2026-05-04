@@ -26,6 +26,12 @@ vi.mock('@/services/settings', () => ({
 
 vi.mock('@/services/auth', () => ({
   authApi: {
+    getMe: vi.fn().mockResolvedValue({
+      id: 'admin-1',
+      email: 'owner@pilates.com',
+      displayName: 'Owner',
+      role: { code: 'OWNER', permissions: ['READ:SETTINGS', 'MANAGE:SETTINGS'] },
+    }),
     getTwoFactorStatus: vi.fn().mockResolvedValue({ enabled: false, hasSecret: false }),
     changePassword: vi.fn(),
     generateTwoFactorSecret: vi.fn(),
@@ -37,7 +43,7 @@ vi.mock('@/services/auth', () => ({
 describe('SettingsPage smoke test', () => {
   it('renders settings page shell with mocked data', async () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <App>
           <SettingsPage />
         </App>

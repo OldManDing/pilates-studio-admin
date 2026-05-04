@@ -41,10 +41,11 @@ describe('NotificationsService', () => {
       notificationSetting: {
         findUnique: jest.fn(),
         findMany: jest.fn(),
+        upsert: jest.fn(),
       },
     };
     notificationDeliveryService = {
-      deliver: jest.fn(),
+      deliver: jest.fn().mockResolvedValue({ id: 'notification-1', status: NotificationStatus.SENT }),
     };
     service = new NotificationsService(prisma, notificationDeliveryService as never);
   });
@@ -70,6 +71,10 @@ describe('NotificationsService', () => {
       }),
     );
     expect(result?.status).toBe(NotificationStatus.PENDING);
+    expect(notificationDeliveryService.deliver).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'notification-1',
+      channel: NotificationChannel.EMAIL,
+    }));
   });
 
   it('returns paginated notifications', async () => {
@@ -101,6 +106,18 @@ describe('NotificationsService', () => {
       }),
     );
     expect(result.status).toBe(NotificationStatus.READ);
+  });
+
+  it('rejects marking account deletion request as read directly', async () => {
+    prisma.notification.findUnique.mockResolvedValue(createNotification({
+      id: 'notification-deletion',
+      type: 'ACCOUNT_DELETION_REQUEST',
+    }));
+
+    await expect(service.markAsRead('notification-deletion')).rejects.toThrow(
+      'Account deletion requests must be processed through the dedicated endpoint',
+    );
+    expect(prisma.notification.update).not.toHaveBeenCalled();
   });
 
   it('marks notification as sent', async () => {
@@ -136,6 +153,33 @@ describe('NotificationsService', () => {
     ]);
   });
 
+  it('marks a locked pending notification as failed when delivery throws unexpectedly', async () => {
+    prisma.notification.findMany.mockResolvedValue([
+      createNotification({ id: 'notification-1' }),
+    ]);
+    prisma.notification.updateMany = jest.fn()
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 1 });
+    notificationDeliveryService.deliver.mockRejectedValueOnce(new Error('unexpected update failure'));
+
+    const result = await service.processPendingNotifications();
+
+    expect(prisma.notification.updateMany).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: 'notification-1',
+          status: NotificationStatus.PENDING,
+        }),
+        data: expect.objectContaining({
+          status: NotificationStatus.FAILED,
+          failureReason: 'unexpected update failure',
+        }),
+      }),
+    );
+    expect(result).toEqual([{ id: 'notification-1', status: NotificationStatus.FAILED }]);
+  });
+
   it('creates a notification from an enabled setting', async () => {
     prisma.notificationSetting.findUnique.mockResolvedValue({
       key: 'booking_confirmation',
@@ -160,6 +204,28 @@ describe('NotificationsService', () => {
       }),
     );
     expect(result?.channel).toBe(NotificationChannel.MINI_PROGRAM);
+  });
+
+  it('auto-initializes a missing default notification setting before creating', async () => {
+    prisma.notificationSetting.findUnique.mockResolvedValue(null);
+    prisma.notificationSetting.upsert.mockResolvedValue({
+      key: 'membership_renewal_request',
+      title: '会员续费申请',
+      channel: NotificationChannel.INTERNAL,
+      enabled: true,
+    });
+    prisma.notification.create.mockResolvedValue(createNotification({ channel: NotificationChannel.INTERNAL, type: 'MEMBERSHIP_RENEWAL_REQUEST' }));
+
+    const result = await service.createFromSetting('membership_renewal_request', {
+      type: 'MEMBERSHIP_RENEWAL_REQUEST',
+      content: '会员提交了续费申请。',
+      memberId: 'member-1',
+    });
+
+    expect(prisma.notificationSetting.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: { key: 'membership_renewal_request' },
+    }));
+    expect(result?.type).toBe('MEMBERSHIP_RENEWAL_REQUEST');
   });
 
   it('returns null when the notification setting is disabled', async () => {
@@ -218,6 +284,7 @@ describe('NotificationsService', () => {
       type: 'ACCOUNT_DELETION_REQUEST',
       memberId: 'member-1',
       miniUserId: 'mini-1',
+      payload: { reason: 'test' },
     }));
     prisma.notification.update.mockResolvedValue(createNotification({
       id: 'notification-3',
@@ -226,6 +293,7 @@ describe('NotificationsService', () => {
       memberId: 'member-1',
       miniUserId: 'mini-1',
       readAt: new Date(),
+      payload: { reason: 'test', accountDeletionProcessedAt: '2026-05-03T00:00:00.000Z' },
     }));
     prisma.member = { update: jest.fn().mockResolvedValue({ id: 'member-1', status: 'SUSPENDED' }) };
     prisma.miniUser = { update: jest.fn().mockResolvedValue({ id: 'mini-1', status: 'DISABLED' }) };
@@ -241,6 +309,19 @@ describe('NotificationsService', () => {
       where: { id: 'mini-1' },
       data: { status: 'DISABLED' },
     });
+    expect(prisma.notification.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'notification-3' },
+        data: expect.objectContaining({
+          status: NotificationStatus.READ,
+          payload: expect.objectContaining({
+            reason: 'test',
+            accountDeletionProcessedAt: expect.any(String),
+          }),
+          readAt: expect.any(Date),
+        }),
+      }),
+    );
     expect(result.status).toBe(NotificationStatus.READ);
   });
 });

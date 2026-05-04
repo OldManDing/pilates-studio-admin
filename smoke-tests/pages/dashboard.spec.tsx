@@ -70,7 +70,7 @@ vi.mock('@/services/transactions', () => ({
 describe('DashboardPage smoke test', () => {
   it('renders core dashboard sections with mocked data', async () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <App>
           <DashboardPage />
         </App>

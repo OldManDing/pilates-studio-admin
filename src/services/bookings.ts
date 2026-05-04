@@ -52,6 +52,7 @@ export interface BookingSummary {
   pendingCount: number;
   confirmedCount: number;
   completedCount: number;
+  cancelledCount: number;
   noShowCount: number;
 }
 

@@ -12,11 +12,10 @@ export type CoachRecordCardProps = {
   coachCodeText: string;
   statusLabel: string;
   experienceText: string;
-  phoneText: string;
   ratingText: string;
   specialtiesText: string;
   tone: AccentTone;
-  onEdit: () => void;
+  onEdit?: () => void;
   onViewDetail: () => void;
 };
 
@@ -25,7 +24,6 @@ export default function CoachRecordCard({
   coachCodeText,
   statusLabel,
   experienceText,
-  phoneText,
   ratingText,
   specialtiesText,
   tone,
@@ -49,10 +47,6 @@ export default function CoachRecordCard({
 
         <div className={styles.coachRecordGrid}>
           <div className={styles.coachRecordField}>
-            <div className={styles.coachRecordLabel}>联系电话</div>
-            <div className={styles.coachRecordValue}>{phoneText}</div>
-          </div>
-          <div className={styles.coachRecordField}>
             <div className={styles.coachRecordLabel}>学员评分</div>
             <div className={styles.coachRecordValue}>{ratingText}</div>
           </div>
@@ -64,9 +58,11 @@ export default function CoachRecordCard({
       </div>
 
       <div className={`${widgetCls.detailActionGroup} ${styles.coachRecordActions}`}>
-        <Button type="primary" size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={onEdit}>
-          编辑资料
-        </Button>
+        {onEdit ? (
+          <Button type="primary" size="large" className={pageCls.cardActionHalf} icon={<EditOutlined />} onClick={onEdit}>
+            编辑资料
+          </Button>
+        ) : null}
         <Button size="large" className={pageCls.cardActionHalf} icon={<EyeOutlined />} onClick={onViewDetail}>
           查看详情
         </Button>

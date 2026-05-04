@@ -33,8 +33,8 @@ git clone <repository-url>
 cd pilates-studio-admin
 
 # 2. 配置环境变量
-cp backend/.env.example backend/.env
-# 编辑 backend/.env，设置强密码和 JWT Secret
+cp backend/.env.example backend/local.env
+# 编辑 backend/local.env，设置强密码和 JWT Secret
 
 # 3. 编译前端
 npm install

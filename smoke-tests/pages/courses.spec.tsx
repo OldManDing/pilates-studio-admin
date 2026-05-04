@@ -39,7 +39,7 @@ vi.mock('@/services/courses', () => ({
 describe('CoursesPage smoke test', () => {
   it('renders courses page shell with mocked data', async () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <App>
           <CoursesPage />
         </App>

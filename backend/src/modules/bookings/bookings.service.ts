@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { QueryBookingsDto } from './dto/query-bookings.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
-import { AttendanceStatus, BookingStatus, MemberStatus, MembershipPlanCategory, TransactionKind, TransactionStatus } from '../../common/enums/domain.enums';
+import { AttendanceStatus, BookingSource, BookingStatus, MemberStatus, MembershipPlanCategory, TransactionKind, TransactionStatus } from '../../common/enums/domain.enums';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
 import { buildDateRange } from '../../common/utils/date-range';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -28,6 +28,7 @@ export class BookingsService {
 
   async create(dto: CreateBookingDto, requesterUserId?: string, isMiniUser = false) {
     let targetMemberId = dto.memberId;
+    const source = isMiniUser ? BookingSource.MINI_PROGRAM : (dto.source ?? BookingSource.ADMIN);
 
     if (isMiniUser) {
       if (!requesterUserId) {
@@ -125,7 +126,7 @@ export class BookingsService {
           bookingCode,
           memberId: targetMemberId,
           sessionId: dto.sessionId,
-          source: dto.source,
+          source,
           status: dto.status ?? BookingStatus.CONFIRMED,
           bookedAt: new Date(),
         },
@@ -279,11 +280,12 @@ export class BookingsService {
     const tomorrowStart = new Date(todayStart);
     tomorrowStart.setDate(tomorrowStart.getDate() + 1);
 
-    const [weekTotal, pendingCount, confirmedCount, completedCount, noShowCount, todayCount] = await Promise.all([
+    const [weekTotal, pendingCount, confirmedCount, completedCount, cancelledCount, noShowCount, todayCount] = await Promise.all([
       this.prisma.booking.count({ where }),
       this.prisma.booking.count({ where: { ...where, status: BookingStatus.PENDING } }),
       this.prisma.booking.count({ where: { ...where, status: BookingStatus.CONFIRMED } }),
       this.prisma.booking.count({ where: { ...where, status: BookingStatus.COMPLETED } }),
+      this.prisma.booking.count({ where: { ...where, status: BookingStatus.CANCELLED } }),
       this.prisma.booking.count({ where: { ...where, status: BookingStatus.NO_SHOW } }),
       this.prisma.booking.count({
         where: {
@@ -308,6 +310,7 @@ export class BookingsService {
       pendingCount,
       confirmedCount,
       completedCount,
+      cancelledCount,
       noShowCount,
     };
   }

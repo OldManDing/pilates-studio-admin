@@ -30,7 +30,7 @@ vi.mock('@/services/analytics', () => ({
 describe('AnalyticsPage smoke test', () => {
   it('renders analytics page shell with mocked data', async () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <App>
           <AnalyticsPage />
         </App>

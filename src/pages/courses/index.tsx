@@ -9,13 +9,16 @@ import { COURSE_DETAIL_DRAWER_WIDTH, CRUD_MODAL_WIDTH } from '@/styles/dimension
 import pageCls from '@/styles/page.module.css';
 import { coursesApi, type Course } from '@/services/courses';
 import { coachesApi, type Coach } from '@/services/coaches';
+import { authApi } from '@/services/auth';
 import { getErrorMessage } from '@/utils/errors';
+import { hasRequiredPermissions } from '@/utils/menu';
 import { useDebouncedValue } from '@/utils/useDebouncedValue';
 import {
   CourseBrowseShell,
   CourseDetailOverviewCard,
   type CourseListCardProps,
 } from './components';
+import styles from './index.module.css';
 
 const iconMap = {
   calendar: <CalendarOutlined />,
@@ -42,6 +45,20 @@ function readFileAsDataUrl(file: File) {
     reader.onerror = () => reject(new Error('图片读取失败'));
     reader.readAsDataURL(file);
   });
+}
+
+const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
+
+function validateImageFile(file: File) {
+  if (!file.type.startsWith('image/')) {
+    return '仅支持上传图片文件';
+  }
+
+  if (file.size > MAX_IMAGE_FILE_SIZE) {
+    return '图片文件过大，请上传 5MB 以内图片';
+  }
+
+  return '';
 }
 
 const DEFAULT_COURSE_TYPE_OPTIONS = [
@@ -75,12 +92,28 @@ export default function CoursesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(0);
+  const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
+  const [currentUserRoleCode, setCurrentUserRoleCode] = useState('');
   const [stats, setStats] = useState({
     totalCourses: 0,
     weeklySessions: 0,
     avgOccupancy: '87%',
     popularCourse: '-',
   });
+  const canWriteCourses = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['WRITE:COURSES']);
+  const canManageCourses = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['MANAGE:COURSES']);
+
+  useEffect(() => {
+    void authApi.getMe()
+      .then((me) => {
+        setCurrentUserPermissions(me.role?.permissions || []);
+        setCurrentUserRoleCode(me.role?.code || '');
+      })
+      .catch(() => {
+        setCurrentUserPermissions([]);
+        setCurrentUserRoleCode('');
+      });
+  }, []);
 
   const fetchCourses = useCallback(async (page = 1) => {
     try {
@@ -196,11 +229,17 @@ export default function CoursesPage() {
     capacityText: `${course.capacity} 人`,
     sessionCountText: `已排 ${course._count?.sessions || 0} 节`,
     primaryActionLabel: course.isActive ? '调整排期' : '恢复设置',
+    primaryActionDisabled: !canWriteCourses,
     onEdit: () => openEditModal(course),
     onViewDetail: () => setDetailCourse(course),
   }));
 
   const openCreateModal = () => {
+    if (!canWriteCourses) {
+      messageApi.warning('当前账号只有查看权限，不能上传课程图片或新增课程');
+      return;
+    }
+
     setEditingCourse(null);
     form.setFieldsValue({
       name: '',
@@ -216,6 +255,11 @@ export default function CoursesPage() {
   };
 
   const openEditModal = (course: Course) => {
+    if (!canWriteCourses) {
+      messageApi.warning('当前账号没有课程编辑权限');
+      return;
+    }
+
     setEditingCourse(course);
     form.setFieldsValue({
       name: course.name,
@@ -237,6 +281,11 @@ export default function CoursesPage() {
   };
 
   const handleSelectCourseImage = () => {
+    if (!canWriteCourses) {
+      messageApi.warning('当前账号没有课程编辑权限');
+      return;
+    }
+
     courseImageInputRef.current?.click();
   };
 
@@ -247,6 +296,12 @@ export default function CoursesPage() {
     }
 
     try {
+      const validationMessage = validateImageFile(file);
+      if (validationMessage) {
+        messageApi.warning(validationMessage);
+        return;
+      }
+
       const imageUrl = await readFileAsDataUrl(file);
       form.setFieldValue('coverImageUrl', imageUrl);
       messageApi.success('课程图片已载入，保存后生效');
@@ -258,6 +313,11 @@ export default function CoursesPage() {
   };
 
   const handleSaveCourse = async () => {
+    if (!canWriteCourses) {
+      messageApi.warning('当前账号没有课程编辑权限');
+      return;
+    }
+
     let values: CourseFormValues;
 
     try {
@@ -317,6 +377,11 @@ export default function CoursesPage() {
   };
 
   const handleDeleteCourse = async (course: Course) => {
+    if (!canManageCourses) {
+      messageApi.warning('当前账号没有课程删除权限');
+      return;
+    }
+
     try {
       await coursesApi.delete(course.id);
       const [refreshed, refreshedAllCourses] = await Promise.all([
@@ -368,7 +433,7 @@ export default function CoursesPage() {
         {contextHolder}
         <PageHeader
           title="课程管理"
-          extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增课程</ActionButton>}
+          extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal} disabled={!canWriteCourses}>新增课程</ActionButton>}
         />
         <div className={`${pageCls.centeredState} ${pageCls.centeredStateTall}`}>
           <Spin size="large" />
@@ -382,7 +447,7 @@ export default function CoursesPage() {
       {contextHolder}
       <PageHeader
         title="课程管理"
-        extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal}>新增课程</ActionButton>}
+        extra={<ActionButton icon={<PlusOutlined />} onClick={openCreateModal} disabled={!canWriteCourses}>新增课程</ActionButton>}
       />
 
       <div className={pageCls.heroGrid}>
@@ -430,6 +495,7 @@ export default function CoursesPage() {
         onCancel={closeFormModal}
         onOk={handleSaveCourse}
         confirmLoading={isSaving}
+        okButtonProps={{ disabled: !canWriteCourses }}
         okText={editingCourse ? '保存修改' : '新增课程'}
         cancelText="取消"
         zIndex={1600}
@@ -505,7 +571,7 @@ export default function CoursesPage() {
                     style={{ display: 'none' }}
                     onChange={handleCourseImageChange}
                   />
-                  <Button onClick={handleSelectCourseImage}>上传课程图片</Button>
+                  <Button onClick={handleSelectCourseImage} disabled={!canWriteCourses}>上传课程图片</Button>
                   <Form.Item noStyle shouldUpdate>
                     {() => {
                       const imageUrl = form.getFieldValue('coverImageUrl');
@@ -529,9 +595,9 @@ export default function CoursesPage() {
         onClose={() => setDetailCourse(null)}
         extra={detailCourse ? (
           <div className={pageCls.drawerActionGroup}>
-            <Button className={pageCls.courseDrawerAction} icon={<EditOutlined />} onClick={() => openEditModal(detailCourse)}>编辑</Button>
+            <Button className={pageCls.courseDrawerAction} icon={<EditOutlined />} onClick={() => openEditModal(detailCourse)} disabled={!canWriteCourses}>编辑</Button>
             <Popconfirm title="确认删除该课程吗？" okText="删除" cancelText="取消" okButtonProps={{ danger: true }} onConfirm={() => handleDeleteCourse(detailCourse)}>
-              <Button className={`${pageCls.courseDrawerAction} ${pageCls.cardActionWarning}`} icon={<DeleteOutlined />}>删除</Button>
+              <Button className={`${pageCls.courseDrawerAction} ${pageCls.cardActionWarning}`} icon={<DeleteOutlined />} disabled={!canManageCourses}>删除</Button>
             </Popconfirm>
           </div>
         ) : null}
@@ -556,7 +622,7 @@ export default function CoursesPage() {
 
             {detailCourse.coverImageUrl ? (
               <SectionCard title="课程图片" subtitle="当前课程展示图片。">
-                <img src={detailCourse.coverImageUrl} alt={detailCourse.name} style={{ width: '100%', maxWidth: 280, borderRadius: 16, border: '1px solid var(--border-subtle)' }} />
+                <img src={detailCourse.coverImageUrl} alt={detailCourse.name} className={styles.courseImagePreview} />
               </SectionCard>
             ) : null}
 
@@ -564,7 +630,7 @@ export default function CoursesPage() {
               title="课程档案"
               subtitle="保留后台管理所需的核心字段，便于核对课程基础配置与当前启用状态。"
             >
-              <Descriptions column={1} size="small" bordered>
+              <Descriptions column={1} size="small" bordered className={pageCls.detailDescriptions}>
                 <Descriptions.Item label="课程编号">{detailCourse.courseCode || '-'}</Descriptions.Item>
                 <Descriptions.Item label="课程名称">{detailCourse.name}</Descriptions.Item>
                 <Descriptions.Item label="课程类型">{detailCourse.type}</Descriptions.Item>

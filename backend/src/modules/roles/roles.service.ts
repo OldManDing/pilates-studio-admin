@@ -196,6 +196,45 @@ export class RolesService {
       }
     }
 
+    const rolePermissionsMap: Record<string, Array<{ module: string; action: string }>> = {
+      OWNER: defaultPermissions.map(({ module, action }) => ({ module, action })),
+      FRONTDESK: [
+        { module: 'MEMBERS', action: 'READ' },
+        { module: 'MEMBERS', action: 'WRITE' },
+        { module: 'PLANS', action: 'READ' },
+        { module: 'BOOKINGS', action: 'READ' },
+        { module: 'BOOKINGS', action: 'WRITE' },
+        { module: 'COURSES', action: 'READ' },
+        { module: 'COACHES', action: 'READ' },
+        { module: 'MINI_USERS', action: 'READ' },
+        { module: 'MINI_USERS', action: 'WRITE' },
+        { module: 'NOTIFICATIONS', action: 'READ' },
+        { module: 'NOTIFICATIONS', action: 'WRITE' },
+        { module: 'SETTINGS', action: 'READ' },
+      ],
+      COACH: [
+        { module: 'COURSES', action: 'READ' },
+        { module: 'COURSES', action: 'WRITE' },
+        { module: 'SESSIONS', action: 'READ' },
+        { module: 'SESSIONS', action: 'WRITE' },
+        { module: 'BOOKINGS', action: 'READ' },
+        { module: 'BOOKINGS', action: 'WRITE' },
+        { module: 'ATTENDANCE', action: 'READ' },
+        { module: 'ATTENDANCE', action: 'WRITE' },
+        { module: 'COACHES', action: 'READ' },
+        { module: 'MEMBERS', action: 'READ' },
+      ],
+      FINANCE: [
+        { module: 'TRANSACTIONS', action: 'READ' },
+        { module: 'TRANSACTIONS', action: 'WRITE' },
+        { module: 'REPORTS', action: 'READ' },
+        { module: 'ANALYTICS', action: 'READ' },
+        { module: 'MEMBERS', action: 'READ' },
+        { module: 'PLANS', action: 'READ' },
+        { module: 'NOTIFICATIONS', action: 'READ' },
+      ],
+    };
+
     // Create default roles
     const roles = [
       { code: 'OWNER', name: '店长', description: '拥有系统全部权限' },
@@ -212,6 +251,36 @@ export class RolesService {
       if (!existing) {
         await this.prisma.role.create({
           data: role as any,
+        });
+      }
+    }
+
+    for (const role of roles) {
+      const dbRole = await this.prisma.role.findUnique({ where: { code: role.code as any } });
+      if (!dbRole) {
+        continue;
+      }
+
+      const permissionLinks = rolePermissionsMap[role.code] || [];
+      await this.prisma.rolePermission.deleteMany({ where: { roleId: dbRole.id } });
+
+      for (const permissionLink of permissionLinks) {
+        const permission = await this.prisma.permission.findFirst({
+          where: {
+            module: permissionLink.module,
+            action: permissionLink.action,
+          },
+        });
+
+        if (!permission) {
+          continue;
+        }
+
+        await this.prisma.rolePermission.create({
+          data: {
+            roleId: dbRole.id,
+            permissionId: permission.id,
+          },
         });
       }
     }

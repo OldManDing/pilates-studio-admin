@@ -18,6 +18,7 @@ export type CourseListCardProps = {
   capacityText: string;
   sessionCountText: string;
   primaryActionLabel: string;
+  primaryActionDisabled?: boolean;
   onEdit: () => void;
   onViewDetail: () => void;
 };
@@ -31,10 +32,9 @@ export default function CourseListCard({
   statusLabel,
   statusTone,
   coachName,
-  durationText,
-  capacityText,
   sessionCountText,
   primaryActionLabel,
+  primaryActionDisabled = false,
   onEdit,
   onViewDetail,
 }: CourseListCardProps) {
@@ -56,23 +56,18 @@ export default function CourseListCard({
         </div>
       </div>
 
-      <div className={widgetCls.metricGrid}>
-        <div className={widgetCls.metricCard}>
-          <div className={widgetCls.metricLabel}>授课教练</div>
-          <div className={widgetCls.metricValue}>{coachName}</div>
+      <div className={`${pageCls.recordBriefGrid} ${pageCls.recordBriefGridTwo}`}>
+        <div className={pageCls.recordBriefField}>
+          <div className={pageCls.recordBriefLabel}>授课教练</div>
+          <div className={pageCls.recordBriefValue}>{coachName}</div>
         </div>
-        <div className={widgetCls.metricCard}>
-          <div className={widgetCls.metricLabel}>课程时长</div>
-          <div className={widgetCls.metricValue}>{durationText}</div>
-        </div>
-        <div className={widgetCls.metricCard}>
-          <div className={widgetCls.metricLabel}>课程容量</div>
-          <div className={widgetCls.metricValue}>{capacityText}</div>
+        <div className={pageCls.recordBriefField}>
+          <div className={pageCls.recordBriefLabel}>当前排期</div>
+          <div className={`${pageCls.recordBriefValue} ${pageCls.recordBriefValueStrong}`}>{sessionCountText}</div>
         </div>
       </div>
 
       <div className={styles.courseCardFooter}>
-        <span className={styles.courseScheduleBadge}>{sessionCountText}</span>
         <div className={styles.courseCardActions}>
           <Button
             type="primary"
@@ -80,6 +75,7 @@ export default function CourseListCard({
             className={`${pageCls.cardActionPrimary} ${pageCls.courseCardActionBtn}`}
             icon={<EditOutlined />}
             onClick={onEdit}
+            disabled={primaryActionDisabled}
           >
             {primaryActionLabel}
           </Button>

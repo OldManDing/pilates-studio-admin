@@ -1,5 +1,3 @@
-import { message } from 'antd';
-
 const API_BASE_URL = process.env.API_BASE_URL || '/api';
 
 interface RequestOptions extends RequestInit {
@@ -225,7 +223,6 @@ export const request = async <T>(
       throw error;
     }
 
-    message.error('网络请求失败，请检查网络连接');
     throw new ApiError('NETWORK_ERROR', '网络请求失败');
   }
 };
@@ -304,7 +301,6 @@ export const requestWithMeta = async <T>(
       throw error;
     }
 
-    message.error('网络请求失败，请检查网络连接');
     throw new ApiError('NETWORK_ERROR', '网络请求失败');
   }
 };

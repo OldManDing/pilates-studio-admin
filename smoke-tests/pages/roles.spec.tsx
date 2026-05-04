@@ -3,6 +3,22 @@ import { App } from 'antd';
 import { MemoryRouter } from 'react-router-dom';
 import RolesPage from '@/pages/roles';
 
+vi.mock('@/services/auth', () => ({
+  authApi: {
+    getMe: vi.fn().mockResolvedValue({
+      id: 'admin-1',
+      email: 'owner@pilates.com',
+      displayName: 'Owner',
+      role: {
+        id: 'role-1',
+        code: 'OWNER',
+        name: 'Owner',
+        permissions: ['READ:ROLES', 'MANAGE:ROLES'],
+      },
+    }),
+  },
+}));
+
 vi.mock('@/services/roles', () => ({
   rolesApi: {
     getPermissions: vi.fn().mockResolvedValue([
@@ -26,7 +42,7 @@ vi.mock('@/services/roles', () => ({
 describe('RolesPage smoke test', () => {
   it('renders roles page shell with mocked data', async () => {
     render(
-      <MemoryRouter>
+      <MemoryRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <App>
           <RolesPage />
         </App>

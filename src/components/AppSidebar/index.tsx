@@ -5,12 +5,12 @@ import { DownOutlined, LogoutOutlined, SettingOutlined, UserOutlined } from '@an
 import { Link } from 'react-router-dom';
 import cls from './index.module.css';
 import { hasRequiredPermissions, menuItems } from '@/utils/menu';
-import { clearTokens } from '@/services/auth';
-import { authApi } from '@/services/auth';
+import { authApi, clearTokens, type AuthResponse } from '@/services/auth';
 
 type Props = {
   pathname: string;
   onNavigate: (path: string) => void;
+  user: AuthResponse['user'];
 };
 
 const groupLabelMap = {
@@ -19,25 +19,12 @@ const groupLabelMap = {
   admin: '系统配置',
 } as const;
 
-const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
+const AppSidebar: FC<Props> = ({ pathname, onNavigate, user }) => {
   const { message } = App.useApp();
   const [accountOpen, setAccountOpen] = useState(false);
-  const [user, setUser] = useState<{ displayName: string; email: string; role: { code: string; permissions?: string[] } } | null>(null);
   const accountWrapRef = useRef<HTMLDivElement | null>(null);
   const accountButtonRef = useRef<HTMLButtonElement | null>(null);
   const settingsActionRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const me = await authApi.getMe();
-        setUser(me);
-      } catch {
-        // User not authenticated - this is expected for public routes
-      }
-    };
-    fetchUser();
-  }, []);
 
   useEffect(() => {
     const handleDocumentClick = (event: MouseEvent) => {
@@ -77,7 +64,7 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
     }
   }, [accountOpen]);
 
-  const visibleMenuItems = menuItems.filter((item) => user?.role.code === 'OWNER' || hasRequiredPermissions(user?.role.permissions || [], item.requiredPermissions));
+  const visibleMenuItems = menuItems.filter((item) => user.role.code === 'OWNER' || hasRequiredPermissions(user.role.permissions || [], item.requiredPermissions));
 
   const groupedMenuItems = visibleMenuItems.reduce<Record<string, typeof visibleMenuItems>>((groups, item) => {
     groups[item.group] = groups[item.group] || [];
@@ -162,14 +149,14 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
             }
           }}
         >
-          <div className={cls.avatar}>{(user?.displayName ?? '管理员').slice(0, 1)}</div>
+          <div className={cls.avatar}>{user.displayName.slice(0, 1)}</div>
           <div className={cls.userContent}>
             <div className={cls.userNameRow}>
-              <div className={cls.userName}>{user?.displayName ?? '管理员'}</div>
-              <span className={cls.userRole}>{user?.role.code === 'OWNER' ? '最高权限' : '受限权限'}</span>
+              <div className={cls.userName}>{user.displayName}</div>
+              <span className={cls.userRole}>{user.role.code === 'OWNER' ? '最高权限' : '受限权限'}</span>
             </div>
             <div className={cls.userMetaRowCompact}>
-              <div className={cls.userMeta}>{user?.email ?? 'admin@pilates.com'}</div>
+              <div className={cls.userMeta}>{user.email}</div>
               <div className={cls.userLoginMeta}>当前会话</div>
             </div>
           </div>
@@ -198,7 +185,7 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate }) => {
             </button>
             <div className={cls.accountMetaRow}>
               <UserOutlined />
-              <span>当前身份：{user?.displayName ?? '管理员'}</span>
+              <span>当前身份：{user.displayName}</span>
             </div>
           </div>
         </div>
