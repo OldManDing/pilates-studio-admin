@@ -159,20 +159,20 @@
     <tbody>
       <tr>
         <td>后台管理端</td>
-        <td><code>admin.你的域名.com</code></td>
+        <td><code>admin.xmlga.top</code></td>
         <td>门店运营人员在浏览器中访问后台管理系统。</td>
       </tr>
       <tr>
         <td>后端 API</td>
-        <td><code>api.你的域名.com</code></td>
+        <td><code>api.xmlga.top</code></td>
         <td>后台管理端和微信小程序都通过这个域名访问后端接口。</td>
       </tr>
     </tbody>
   </table>
 
   <div class="warn">
-    小程序代码里的 API 地址填写 <code>https://api.你的域名.com/api</code>；
-    微信公众平台的 request 合法域名只填写 <code>https://api.你的域名.com</code>，不要带 <code>/api</code> 路径。
+    小程序代码里的 API 地址填写 <code>https://api.xmlga.top/api</code>；
+    微信公众平台的 request 合法域名只填写 <code>https://api.xmlga.top</code>，不要带 <code>/api</code> 路径。
   </div>
 
   <h2>2. 查看域名是否已备案</h2>
@@ -180,7 +180,7 @@
   <ol>
     <li>登录 <a href="https://www.aliyun.com/" target="_blank" rel="noreferrer">阿里云官网</a>。</li>
     <li>进入控制台，在顶部搜索 <strong>ICP备案</strong> 或 <strong>备案管理</strong>。</li>
-    <li>在备案列表中查找你的主域名，例如 <code>example.com</code>。</li>
+    <li>在备案列表中查找你的主域名，例如 <code>xmlga.top</code>。</li>
     <li>如果状态显示 <strong>备案成功</strong>、<strong>已备案</strong> 或能看到备案号，说明可以继续准备微信合法域名配置。</li>
   </ol>
 
@@ -188,7 +188,7 @@
   <ol>
     <li>打开 <a href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer">工信部 ICP/IP 地址/域名信息备案管理系统</a>。</li>
     <li>进入 <strong>ICP备案查询</strong>。</li>
-    <li>输入主域名，例如 <code>example.com</code>。</li>
+    <li>输入主域名，例如 <code>xmlga.top</code>。</li>
     <li>能查到备案号，通常表示域名已备案。</li>
   </ol>
 
@@ -200,7 +200,7 @@
   <ol>
     <li>登录阿里云控制台。</li>
     <li>顶部搜索 <strong>云解析 DNS</strong>，进入 <strong>公网权威解析</strong> 或 <strong>域名解析</strong>。</li>
-    <li>找到你的主域名，例如 <code>example.com</code>，点击右侧 <strong>解析设置</strong>。</li>
+    <li>找到你的主域名，例如 <code>xmlga.top</code>，点击右侧 <strong>解析设置</strong>。</li>
     <li>点击 <strong>添加记录</strong>。</li>
     <li>先添加后台管理端解析：</li>
   </ol>
@@ -227,7 +227,7 @@
       </tr>
       <tr>
         <td>记录值</td>
-        <td>你的 ECS 公网 IPv4 地址</td>
+        <td>8.159.136.223</td>
       </tr>
       <tr>
         <td>TTL</td>
@@ -260,7 +260,7 @@
       </tr>
       <tr>
         <td>记录值</td>
-        <td>你的 ECS 公网 IPv4 地址</td>
+        <td>8.159.136.223</td>
       </tr>
       <tr>
         <td>TTL</td>
@@ -276,15 +276,15 @@
   <h2>4. 验证 DNS 是否生效</h2>
   <p>在本机 PowerShell 执行：</p>
 
-  <pre><code>nslookup admin.你的域名.com
-nslookup api.你的域名.com</code></pre>
+  <pre><code>nslookup admin.xmlga.top
+nslookup api.xmlga.top</code></pre>
 
-  <p>预期结果：两个域名都解析到同一个 ECS 公网 IP。</p>
+  <p>预期结果：两个域名都解析到同一个 ECS 公网 IP 8.159.136.223。</p>
 
   <p>也可以指定公共 DNS 服务器验证：</p>
 
-  <pre><code>nslookup admin.你的域名.com 223.5.5.5
-nslookup api.你的域名.com 223.5.5.5</code></pre>
+  <pre><code>nslookup admin.xmlga.top 223.5.5.5
+nslookup api.xmlga.top 223.5.5.5</code></pre>
 
   <h2>5. 配置 HTTPS 证书</h2>
   <p>微信小程序正式环境必须使用 HTTPS。推荐二选一：</p>
@@ -295,27 +295,27 @@ nslookup api.你的域名.com 223.5.5.5</code></pre>
 
   <p>如果使用 Certbot，服务器上可执行：</p>
 
-  <pre><code>certbot --nginx -d admin.你的域名.com -d api.你的域名.com</code></pre>
+  <pre><code>certbot --nginx -d admin.xmlga.top -d api.xmlga.top</code></pre>
 
   <div class="warn">
     申请证书前，必须先确保 <code>admin</code> 和 <code>api</code> 两个子域名已经解析到服务器，并且服务器 80/443 端口已在 ECS 安全组中放行。
   </div>
 
   <h2>6. Nginx 推荐配置</h2>
-  <p>后台和 API 可以共用同一台 Nginx。后台访问 <code>admin.你的域名.com</code>，API 访问 <code>api.你的域名.com</code>。</p>
+  <p>后台和 API 可以共用同一台 Nginx。后台访问 <code>admin.xmlga.top</code>，API 访问 <code>api.xmlga.top</code>。</p>
 
   <pre><code>server {
   listen 80;
-  server_name admin.你的域名.com api.你的域名.com;
+  server_name admin.xmlga.top api.xmlga.top;
   return 301 https://$host$request_uri;
 }
 
 server {
   listen 443 ssl http2;
-  server_name admin.你的域名.com;
+  server_name admin.xmlga.top;
 
-  ssl_certificate /etc/letsencrypt/live/admin.你的域名.com/fullchain.pem;
-  ssl_certificate_key /etc/letsencrypt/live/admin.你的域名.com/privkey.pem;
+  ssl_certificate /etc/letsencrypt/live/admin.xmlga.top/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/admin.xmlga.top/privkey.pem;
 
   root /usr/share/nginx/html;
   index index.html;
@@ -327,10 +327,10 @@ server {
 
 server {
   listen 443 ssl http2;
-  server_name api.你的域名.com;
+  server_name api.xmlga.top;
 
-  ssl_certificate /etc/letsencrypt/live/api.你的域名.com/fullchain.pem;
-  ssl_certificate_key /etc/letsencrypt/live/api.你的域名.com/privkey.pem;
+  ssl_certificate /etc/letsencrypt/live/api.xmlga.top/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/api.xmlga.top/privkey.pem;
 
   location / {
     proxy_pass http://127.0.0.1:3000;
@@ -344,13 +344,13 @@ server {
   <h2>7. 修改项目生产配置</h2>
   <p>后台生产配置草稿位置：<code>F:\pilates-studio-admin\.env.production.draft</code></p>
 
-  <pre><code>CORS_ORIGINS=https://admin.你的域名.com,https://api.你的域名.com
-WECHAT_PAY_NOTIFY_URL=https://api.你的域名.com/api/payments/wechat/notify</code></pre>
+  <pre><code>CORS_ORIGINS=https://admin.xmlga.top,https://api.xmlga.top
+WECHAT_PAY_NOTIFY_URL=https://api.xmlga.top/api/payments/wechat/notify</code></pre>
 
   <p>小程序生产配置草稿位置：<code>F:\pilates-studio-mini\.env.production.draft</code></p>
 
-  <pre><code>API_BASE_URL=https://api.你的域名.com/api
-DEVTOOLS_API_BASE_URL=https://api.你的域名.com/api
+  <pre><code>API_BASE_URL=https://api.xmlga.top/api
+DEVTOOLS_API_BASE_URL=https://api.xmlga.top/api
 APP_ENV=production
 MINI_RELEASE=true
 ALLOW_INSECURE_REAL_DEVICE_API=false
@@ -366,7 +366,7 @@ USE_MINI_OPEN_ID_LOGIN=false</code></pre>
     <li>进入 <strong>开发设置</strong>。</li>
     <li>找到 <strong>服务器域名</strong>。</li>
     <li>点击 <strong>修改</strong>，按要求扫码验证管理员身份。</li>
-    <li>在 <strong>request 合法域名</strong> 中添加：<code>https://api.你的域名.com</code></li>
+    <li>在 <strong>request 合法域名</strong> 中添加：<code>https://api.xmlga.top</code></li>
     <li>如果后续有图片下载，再在 <strong>downloadFile 合法域名</strong> 中添加图片 CDN 或 API 域名。</li>
     <li>如果后续有文件上传，再在 <strong>uploadFile 合法域名</strong> 中添加上传域名。</li>
     <li>保存配置。</li>
@@ -374,8 +374,8 @@ USE_MINI_OPEN_ID_LOGIN=false</code></pre>
 
   <div class="warn">
     微信合法域名不要填写 IP，不要填写 <code>localhost</code>，不要带端口，不要带路径。
-    正确示例：<code>https://api.你的域名.com</code>。
-    错误示例：<code>https://api.你的域名.com/api</code>、<code>http://api.你的域名.com</code>。
+    正确示例：<code>https://api.xmlga.top</code>。
+    错误示例：<code>https://api.xmlga.top/api</code>、<code>http://api.xmlga.top</code>。
   </div>
 
   <h2>9. 微信开发者工具验证</h2>
@@ -403,11 +403,11 @@ npm.cmd run release:check -- `
   <h2>11. 操作完成核对清单</h2>
   <ul class="checklist">
     <li>主域名已完成 ICP 备案，能查到备案号。</li>
-    <li><code>admin.你的域名.com</code> A 记录指向 ECS 公网 IP。</li>
-    <li><code>api.你的域名.com</code> A 记录指向 ECS 公网 IP。</li>
+    <li><code>admin.xmlga.top</code> A 记录指向 ECS 公网 IP 8.159.136.223。</li>
+    <li><code>api.xmlga.top</code> A 记录指向 ECS 公网 IP 8.159.136.223。</li>
     <li>两个子域名都已签发 HTTPS 证书。</li>
-    <li>微信公众平台 request 合法域名已添加 <code>https://api.你的域名.com</code>。</li>
-    <li>小程序生产配置中的 <code>API_BASE_URL</code> 已改为 <code>https://api.你的域名.com/api</code>。</li>
+    <li>微信公众平台 request 合法域名已添加 <code>https://api.xmlga.top</code>。</li>
+    <li>小程序生产配置中的 <code>API_BASE_URL</code> 已改为 <code>https://api.xmlga.top/api</code>。</li>
     <li>发布门禁 <code>release:check</code> 无 Blockers。</li>
   </ul>
 
