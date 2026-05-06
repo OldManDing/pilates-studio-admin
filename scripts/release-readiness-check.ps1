@@ -111,6 +111,25 @@ function Test-SecretValue {
     }
 }
 
+function Test-PlaceholderValue {
+    param(
+        [string]$Value,
+        [string]$Name,
+        [switch]$Required
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        if ($Required) {
+            Add-Failure "$Name is missing."
+        }
+        return
+    }
+
+    if ($Value -match "replace-with|your_|yourdomain|example\.com|change-before-production|placeholder") {
+        Add-Failure "$Name still looks like a placeholder."
+    }
+}
+
 function Test-GitWorktree {
     param([string]$Root)
 
@@ -205,12 +224,15 @@ if ($backendEnv.Count -gt 0) {
     if ($corsOrigins -match "\*" -or $corsOrigins -match "localhost|127\.0\.0\.1") {
         Add-Failure "CORS_ORIGINS must use only production HTTPS origins."
     }
+    Test-PlaceholderValue -Value $corsOrigins -Name "CORS_ORIGINS" -Required
 
     $wechatAppId = Get-ConfigValue -Values $backendEnv -Key "WECHAT_APPID"
     $wechatSecret = Get-ConfigValue -Values $backendEnv -Key "WECHAT_SECRET"
     if ([string]::IsNullOrWhiteSpace($wechatAppId) -or [string]::IsNullOrWhiteSpace($wechatSecret)) {
         Add-Warning "WeChat login is not fully configured in backend env."
     }
+    Test-PlaceholderValue -Value $wechatAppId -Name "WECHAT_APPID"
+    Test-PlaceholderValue -Value $wechatSecret -Name "WECHAT_SECRET"
 
     $wechatPayEnabled = Get-ConfigValue -Values $backendEnv -Key "WECHAT_PAY_ENABLED"
     $wechatPayMock = Get-ConfigValue -Values $backendEnv -Key "WECHAT_PAY_MOCK"
@@ -234,6 +256,7 @@ if ($backendEnv.Count -gt 0) {
         if ($notifyUrl -and $notifyUrl -notmatch "^https://") {
             Add-Failure "WECHAT_PAY_NOTIFY_URL must be HTTPS."
         }
+        Test-PlaceholderValue -Value $notifyUrl -Name "WECHAT_PAY_NOTIFY_URL" -Required
     } else {
         Add-Warning "WECHAT_PAY_ENABLED is not true. This is acceptable only for offline/manual payment launch."
     }
@@ -253,6 +276,7 @@ if ($miniEnv.Count -gt 0) {
     if ($apiBase -match "localhost|127\.0\.0\.1") {
         Add-Failure "Mini program API_BASE_URL must not use localhost or 127.0.0.1."
     }
+    Test-PlaceholderValue -Value $apiBase -Name "Mini program API_BASE_URL" -Required
 
     if ((Get-ConfigValue -Values $miniEnv -Key "ALLOW_INSECURE_REAL_DEVICE_API") -eq "true") {
         Add-Failure "ALLOW_INSECURE_REAL_DEVICE_API must be false for release."
@@ -262,8 +286,10 @@ if ($miniEnv.Count -gt 0) {
         Add-Failure "USE_MINI_OPEN_ID_LOGIN must be false for release."
     }
 
-    Assert-RequiredValue -Values $miniEnv -Key "SUPPORT_PHONE" -Context "Mini program" | Out-Null
-    Assert-RequiredValue -Values $miniEnv -Key "SUPPORT_EMAIL" -Context "Mini program" | Out-Null
+    $supportPhone = Assert-RequiredValue -Values $miniEnv -Key "SUPPORT_PHONE" -Context "Mini program"
+    $supportEmail = Assert-RequiredValue -Values $miniEnv -Key "SUPPORT_EMAIL" -Context "Mini program"
+    Test-PlaceholderValue -Value $supportPhone -Name "SUPPORT_PHONE" -Required
+    Test-PlaceholderValue -Value $supportEmail -Name "SUPPORT_EMAIL" -Required
 
     $projectConfigPath = Join-Path $MiniRoot "project.config.json"
     if (Test-Path -LiteralPath $projectConfigPath) {
