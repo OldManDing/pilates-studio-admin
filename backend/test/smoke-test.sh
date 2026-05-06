@@ -1,9 +1,9 @@
 #!/bin/bash
-# Smoke Test for Pilates Studio Backend API
+# Smoke Test for 愈己CareMe工作室 Backend API
 
 set -e
 
-echo "=== Pilates Studio Backend Smoke Test ==="
+echo "=== 愈己CareMe工作室 Backend Smoke Test ==="
 echo ""
 
 # Check if server is running

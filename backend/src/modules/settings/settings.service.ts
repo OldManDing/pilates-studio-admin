@@ -22,7 +22,7 @@ export class SettingsService {
 
     if (!settings) {
       return {
-        studioName: '普拉提工作室',
+        studioName: '愈己CareMe工作室',
         phone: '',
         email: '',
         businessHours: '',

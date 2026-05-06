@@ -51,7 +51,7 @@ describe('SettingsService', () => {
     const result = await service.getStudioSettings();
 
     expect(result).toEqual({
-      studioName: '普拉提工作室',
+      studioName: '愈己CareMe工作室',
       phone: '',
       email: '',
       businessHours: '',
@@ -62,11 +62,11 @@ describe('SettingsService', () => {
 
   it('updates existing studio settings when a record exists', async () => {
     prisma.studioSetting.findFirst.mockResolvedValue({ id: 'studio-1' });
-    prisma.studioSetting.update.mockResolvedValue({ id: 'studio-1', studioName: 'Pilates Studio' });
+    prisma.studioSetting.update.mockResolvedValue({ id: 'studio-1', studioName: '愈己CareMe工作室' });
 
-    const result = await service.updateStudioSettings({ studioName: 'Pilates Studio' } as never);
+    const result = await service.updateStudioSettings({ studioName: '愈己CareMe工作室' } as never);
 
-    expect(prisma.studioSetting.update).toHaveBeenCalledWith({ where: { id: 'studio-1' }, data: { studioName: 'Pilates Studio' } });
+    expect(prisma.studioSetting.update).toHaveBeenCalledWith({ where: { id: 'studio-1' }, data: { studioName: '愈己CareMe工作室' } });
     expect(result.id).toBe('studio-1');
   });
 

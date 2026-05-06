@@ -29,7 +29,7 @@ export default function ForgotPasswordPage() {
     <div className={pageCls.authShell}>
       <div className={cls.backdrop} />
       <div className={pageCls.authPanel}>
-        <div className={cls.brand}>普拉提工作室</div>
+        <div className={cls.brand}>愈己CareMe工作室</div>
         <h1 className={cls.title}>找回登录密码</h1>
         <p className={cls.subtitle}>输入账号后提交申请，由管理员协助重置密码。</p>
 

@@ -12,7 +12,7 @@ export class HealthController {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
-      service: 'pilates-studio-backend',
+      service: 'careme-studio-backend',
     };
   }
 

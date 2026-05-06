@@ -1,5 +1,5 @@
 # ============================================
-# Pilates Studio - Development Docker Compose
+# 愈己CareMe工作室 - Development Docker Compose
 # ============================================
 # Usage: docker-compose -f docker-compose.dev.yml up -d
 #

@@ -1,4 +1,4 @@
-# Pilates Studio API Test Script
+# 愈己CareMe工作室 API Test Script
 param(
     [string]$BaseUrl = $(if ($env:API_BASE_URL) { $env:API_BASE_URL } else { "http://localhost:3000/api" }),
     [string]$AdminEmail = $(if ($env:SEED_ADMIN_EMAIL) { $env:SEED_ADMIN_EMAIL } else { "admin@pilates.com" }),
@@ -11,7 +11,7 @@ if ([string]::IsNullOrWhiteSpace($AdminPassword)) {
 }
 
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host "Pilates Studio API Test Suite" -ForegroundColor Cyan
+Write-Host "愈己CareMe工作室 API Test Suite" -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 
 # 1. Login and get token

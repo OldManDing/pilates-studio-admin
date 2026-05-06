@@ -1,5 +1,5 @@
 # ============================================
-# Pilates Studio - Production Docker Compose
+# 愈己CareMe工作室 - Production Docker Compose
 # ============================================
 # Usage:
 #   cp backend/.env.example backend/.env

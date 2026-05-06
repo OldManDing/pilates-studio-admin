@@ -62,7 +62,7 @@ export default function LoginPage() {
       <div className={pageCls.authShell}>
         <div className={cls.backdrop} />
         <div className={pageCls.authPanel}>
-          <div className={cls.brand}>普拉提工作室</div>
+          <div className={cls.brand}>愈己CareMe工作室</div>
           <h1 className={cls.title}>门店管理后台</h1>
           <p className={cls.subtitle}>正在校验登录状态...</p>
         </div>
@@ -127,7 +127,7 @@ export default function LoginPage() {
     <div className={pageCls.authShell}>
       <div className={cls.backdrop} />
       <div className={pageCls.authPanel}>
-        <div className={cls.brand}>普拉提工作室</div>
+        <div className={cls.brand}>愈己CareMe工作室</div>
         <h1 className={cls.title}>门店管理后台</h1>
         <p className={cls.subtitle}>{mfaChallenge ? '输入动态验证码完成登录。' : '使用管理员账号登录。'}</p>
 

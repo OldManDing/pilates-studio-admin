@@ -1,8 +1,8 @@
 {
-  "name": "pilates-studio-backend",
+  "name": "careme-studio-backend",
   "version": "0.1.0",
   "private": true,
-  "description": "NestJS + Prisma backend for Pilates Studio admin and mini program",
+  "description": "NestJS + Prisma backend for 愈己CareMe工作室 admin and mini program",
   "scripts": {
     "dev": "nest start --watch",
     "start": "node dist/src/main.js",

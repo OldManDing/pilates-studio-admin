@@ -357,7 +357,7 @@ async function main() {
     update: {},
     create: {
       id: '1',
-      studioName: 'Pilates Studio',
+      studioName: '愈己CareMe工作室',
       phone: '400-123-4567',
       email: 'info@pilates.com',
       businessHours: '周一至周日 9:00-21:00',

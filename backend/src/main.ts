@@ -86,8 +86,8 @@ async function bootstrap() {
   // Swagger documentation (disable in production if needed)
   if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_SWAGGER === 'true') {
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('Pilates Studio API')
-      .setDescription('Pilates Studio Admin & Mini Program API')
+      .setTitle('愈己CareMe工作室 API')
+      .setDescription('愈己CareMe工作室 Admin & Mini Program API')
       .setVersion('1.0.0')
       .addBearerAuth()
       .build();

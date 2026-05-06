@@ -2,7 +2,7 @@
 
 ## Project mission
 
-Build a production-ready Pilates Studio system based on the existing admin UI style.
+Build a production-ready 愈己CareMe工作室 system based on the existing admin UI style.
 The final deliverables include:
 
 1. Admin web frontend
@@ -60,7 +60,7 @@ Unless the repository already defines otherwise, use:
 
 ## UI constraints
 
-- Preserve the existing Pilates Studio brand language:
+- Preserve the existing 愈己CareMe工作室 brand language:
   - mint/teal primary
   - purple/orange/pink accents
   - light gray surfaces

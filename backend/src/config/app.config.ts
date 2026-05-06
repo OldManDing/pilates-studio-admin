@@ -1,6 +1,6 @@
 export default () => ({
   app: {
-    name: process.env.APP_NAME ?? 'pilates-studio-backend',
+    name: process.env.APP_NAME ?? 'careme-studio-backend',
     port: Number(process.env.PORT ?? 3000),
     apiPrefix: process.env.API_PREFIX ?? 'api',
   },

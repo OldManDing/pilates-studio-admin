@@ -6,7 +6,7 @@ import SettingsPage from '@/pages/settings';
 vi.mock('@/services/settings', () => ({
   settingsApi: {
     getStudio: vi.fn().mockResolvedValue({
-      studioName: 'Pilates Studio',
+      studioName: '愈己CareMe工作室',
       phone: '400-820-8899',
       email: 'hello@pilates.com',
       businessHours: '06:00-22:00',

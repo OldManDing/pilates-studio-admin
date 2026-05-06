@@ -1,6 +1,6 @@
-# Pilates Studio - Security Checklist
+# 愈己CareMe工作室 - Security Checklist
 
-This document provides a comprehensive security checklist for deploying Pilates Studio in production.
+This document provides a comprehensive security checklist for deploying 愈己CareMe工作室 in production.
 
 ## Pre-Deployment Security Checklist
 

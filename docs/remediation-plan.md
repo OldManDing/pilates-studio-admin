@@ -1,4 +1,4 @@
-# Pilates Studio Admin - Audit Remediation Plan
+# 愈己CareMe工作室 Admin - Audit Remediation Plan
 
 ## Overview
 

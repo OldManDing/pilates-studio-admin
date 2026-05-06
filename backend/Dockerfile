@@ -1,11 +1,13 @@
 # ============================================
-# Pilates Studio Backend - Production Dockerfile
+# 愈己CareMe工作室 Backend - Production Dockerfile
 # ============================================
 
 # Build stage
 FROM node:20-alpine AS builder
 
 WORKDIR /app
+
+RUN apk add --no-cache openssl
 
 # Copy package files
 COPY package*.json ./
@@ -28,8 +30,8 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+# Install dumb-init for proper signal handling and OpenSSL for Prisma engines
+RUN apk add --no-cache dumb-init openssl
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs

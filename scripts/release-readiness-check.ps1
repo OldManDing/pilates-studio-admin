@@ -1,4 +1,4 @@
-# Pilates Studio release readiness gate.
+# 愈己CareMe工作室 release readiness gate.
 # This script checks local release configuration before production deployment.
 
 param(
@@ -159,7 +159,7 @@ function Test-BuildArtifact {
     }
 }
 
-Write-Host "Pilates Studio release readiness check" -ForegroundColor Cyan
+Write-Host "愈己CareMe工作室 release readiness check" -ForegroundColor Cyan
 Write-Host "Admin root: $AdminRoot"
 Write-Host "Mini root:  $MiniRoot"
 

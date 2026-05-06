@@ -19,6 +19,10 @@
   flex-shrink: 0;
 }
 
+.brand > div:last-child {
+  min-width: 0;
+}
+
 .logo {
   width: 52px;
   height: 52px;
@@ -35,6 +39,8 @@
   font-size: var(--font-size-lg);
   font-weight: var(--font-bold);
   margin-bottom: var(--space-1);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .brandMeta {
