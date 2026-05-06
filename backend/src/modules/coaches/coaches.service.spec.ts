@@ -1,5 +1,5 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { CoachStatus } from '../../common/enums/domain.enums';
+import { BookingStatus, CoachStatus } from '../../common/enums/domain.enums';
 import { CoachesService } from './coaches.service';
 
 const createCoach = (overrides: Partial<Record<string, unknown>> = {}) => ({
@@ -40,8 +40,12 @@ describe('CoachesService', () => {
       courseSession: {
         count: jest.fn(),
       },
+      member: {
+        findUnique: jest.fn(),
+      },
       booking: {
         count: jest.fn(),
+        findMany: jest.fn(),
       },
     };
 
@@ -122,5 +126,48 @@ describe('CoachesService', () => {
       upcomingSessions: 5,
       totalBookings: 20,
     });
+  });
+
+  it('returns current mini user coach summaries from booking history', async () => {
+    prisma.member.findUnique.mockResolvedValue({ id: 'member-1' });
+    prisma.coach.findMany.mockResolvedValue([
+      createCoach({
+        courses: [{ id: 'course-1', name: 'Morning Flow', type: 'PILATES' }],
+      }),
+    ]);
+    prisma.booking.findMany.mockResolvedValue([
+      {
+        status: BookingStatus.COMPLETED,
+        bookedAt: new Date('2026-05-01T00:00:00.000Z'),
+        session: {
+          coachId: 'coach-1',
+          startsAt: new Date('2026-05-01T01:00:00.000Z'),
+          course: { id: 'course-1', name: 'Morning Flow', type: 'PILATES' },
+        },
+      },
+      {
+        status: BookingStatus.CONFIRMED,
+        bookedAt: new Date('2026-05-02T00:00:00.000Z'),
+        session: {
+          coachId: 'coach-1',
+          startsAt: new Date('2026-05-02T01:00:00.000Z'),
+          course: { id: 'course-2', name: 'Evening Flow', type: 'PILATES' },
+        },
+      },
+    ]);
+
+    const result = await service.findMyCoaches('mini-user-1');
+
+    expect(prisma.coach.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { status: CoachStatus.ACTIVE },
+      }),
+    );
+    expect(result.coaches[0]).toEqual(expect.objectContaining({
+      bookingCount: 2,
+      completedCount: 1,
+      upcomingCount: 1,
+      lastCourseName: 'Morning Flow',
+    }));
   });
 });

@@ -201,7 +201,8 @@ describe('Auth -> Members -> Bookings integration flow', () => {
       id: sessionId,
       capacity: 10,
       bookedCount: 0,
-      course: { id: 'course-1', name: 'Morning Flow' },
+      isActive: true,
+      course: { id: 'course-1', name: 'Morning Flow', isActive: true },
       _count: { bookings: 0 },
     });
 

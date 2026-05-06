@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { AllowMiniUser } from '../../common/decorators/allow-mini-user.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { CoachesService } from './coaches.service';
 import { CreateCoachDto } from './dto/create-coach.dto';
@@ -45,6 +46,14 @@ export class CoachesController {
   @ApiOperation({ summary: 'Get active coaches only' })
   async findActive() {
     return this.coachesService.findActive();
+  }
+
+  @Get('my')
+  @AllowMiniUser()
+  @RequirePermissions('READ:COACHES')
+  @ApiOperation({ summary: 'Get current mini-program member coach relationship summary' })
+  async findMine(@CurrentUser('sub') userId: string) {
+    return this.coachesService.findMyCoaches(userId);
   }
 
   @Get(':id/schedule')

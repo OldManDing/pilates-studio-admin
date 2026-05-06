@@ -187,6 +187,7 @@ describe('TransactionsService', () => {
     prisma.transaction.aggregate
       .mockResolvedValueOnce({ _sum: { amountCents: 100000 } })
       .mockResolvedValueOnce({ _sum: { amountCents: 20000 } })
+      .mockResolvedValueOnce({ _sum: { amountCents: 0 } })
       .mockResolvedValueOnce({ _sum: { amountCents: 5000 } })
       .mockResolvedValueOnce({ _sum: { amountCents: 30000 } });
 
@@ -197,6 +198,38 @@ describe('TransactionsService', () => {
       pendingAmountCents: 20000,
       refundedAmountCents: 5000,
       todayRevenueCents: 30000,
+    });
+  });
+
+  it('returns explicit completed revenue in current mini user summary', async () => {
+    prisma.member.findUnique.mockResolvedValue({ id: 'member-1' });
+    prisma.transaction.findMany.mockResolvedValue([
+      { kind: TransactionKind.MEMBERSHIP_PURCHASE, status: TransactionStatus.COMPLETED, amountCents: 100000 },
+      { kind: TransactionKind.MEMBERSHIP_RENEWAL, status: TransactionStatus.PENDING, amountCents: 20000 },
+      { kind: TransactionKind.REFUND, status: TransactionStatus.REFUNDED, amountCents: 5000 },
+    ]);
+
+    const result = await service.getMySummary('mini-user-1', {});
+
+    expect(result).toEqual({
+      totalRevenue: 100000,
+      completedRevenue: 100000,
+      totalAmount: 125000,
+      pendingAmount: 20000,
+      processingAmount: 0,
+      refundedAmount: 5000,
+      failedAmount: 0,
+      transactionCount: 3,
+      byKind: {
+        MEMBERSHIP_PURCHASE: { count: 1, total: 100000 },
+        MEMBERSHIP_RENEWAL: { count: 1, total: 20000 },
+        REFUND: { count: 1, total: 5000 },
+      },
+      byStatus: {
+        COMPLETED: { count: 1, total: 100000 },
+        PENDING: { count: 1, total: 20000 },
+        REFUNDED: { count: 1, total: 5000 },
+      },
     });
   });
 });

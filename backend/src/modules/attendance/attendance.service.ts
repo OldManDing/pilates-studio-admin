@@ -199,8 +199,8 @@ export class AttendanceService {
   }
 
   async findAll(query: PaginationDto & { sessionId?: string; memberId?: string }): Promise<PaginatedResponse<any>> {
-    const page = query.page ?? 1;
-    const pageSize = query.pageSize ?? 10;
+    const page = Math.max(Number(query.page ?? 1) || 1, 1);
+    const pageSize = Math.min(Math.max(Number(query.pageSize ?? 10) || 10, 1), 100);
     const { sessionId, memberId } = query;
     const skip = (page - 1) * pageSize;
 

@@ -16,6 +16,7 @@ import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { UpdateTransactionStatusDto } from './dto/update-transaction-status.dto';
 import { QueryTransactionDto } from './dto/query-transaction.dto';
+import { RefundTransactionDto } from './dto/refund-transaction.dto';
 
 @ApiTags('Transactions')
 @ApiBearerAuth()
@@ -102,5 +103,16 @@ export class TransactionsController {
     @Body() dto: UpdateTransactionStatusDto,
   ) {
     return this.transactionsService.updateStatus(id, dto);
+  }
+
+  @Post(':id/refund')
+  @RequirePermissions('WRITE:TRANSACTIONS')
+  @ApiOperation({ summary: 'Create refund transaction for an original payment' })
+  @ApiParam({ name: 'id', description: 'Original transaction ID' })
+  async refund(
+    @Param('id') id: string,
+    @Body() dto: RefundTransactionDto,
+  ) {
+    return this.transactionsService.refund(id, dto);
   }
 }

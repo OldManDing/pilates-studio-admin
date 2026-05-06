@@ -202,6 +202,7 @@ model Coach {
   name          String
   phone         String        @unique
   email         String?
+  avatarUrl     String?       @db.LongText
   status        CoachStatus   @default(ACTIVE)
   experience    String?
   rating        Decimal?      @db.Decimal(3, 2)
@@ -232,6 +233,7 @@ model Course {
   id              String          @id @default(cuid())
   courseCode      String          @unique
   name            String
+  description     String?         @db.Text
   type            String
   level           String
   durationMinutes Int
@@ -257,6 +259,7 @@ model CourseSession {
   capacity    Int
   bookedCount Int          @default(0)
   location    String?
+  isActive    Boolean      @default(true)
   bookings    Booking[]
   attendance  Attendance[]
   reviews     CourseReview[]
@@ -377,4 +380,17 @@ model Notification {
   readAt      DateTime?
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
+}
+
+model KnowledgeArticle {
+  id        String   @id @default(cuid())
+  category  String
+  question  String
+  answer    String   @db.Text
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category, isActive, sortOrder])
 }

@@ -67,6 +67,9 @@ export const transactionsApi = {
   updateStatus: (id: string, status: TransactionStatus) =>
     api.patch<Transaction>(`/transactions/${id}/status`, { status }),
 
+  refund: (id: string, data: { amountCents?: number; reason?: string }) =>
+    api.post<Transaction>(`/transactions/${id}/refund`, data),
+
   getSummary: () =>
     api.get<{
       totalRevenueCents: number;

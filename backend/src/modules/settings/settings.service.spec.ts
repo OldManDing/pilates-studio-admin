@@ -30,6 +30,7 @@ describe('SettingsService', () => {
       attendance: { findMany: jest.fn(), upsert: jest.fn() },
       courseReview: { findMany: jest.fn(), upsert: jest.fn() },
       transaction: { findMany: jest.fn(), upsert: jest.fn() },
+      knowledgeArticle: { findMany: jest.fn(), upsert: jest.fn() },
       studioSetting: {
         findFirst: jest.fn(),
         update: jest.fn(),

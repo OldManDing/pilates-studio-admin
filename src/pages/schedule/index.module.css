@@ -1,0 +1,224 @@
+.scheduleFilters {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(260px, 1.5fr) minmax(160px, 1fr) minmax(160px, 1fr) minmax(160px, 0.9fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.filterSelect {
+  width: 100% !important;
+}
+
+.rangePicker {
+  width: 100%;
+  min-height: 44px;
+  border-radius: var(--radius-sm) !important;
+  border-color: var(--control-border) !important;
+  background: var(--control-surface) !important;
+  box-shadow: var(--control-shadow);
+}
+
+.rangePicker:hover {
+  border-color: var(--control-border-strong) !important;
+  background: var(--control-surface-hover) !important;
+}
+
+.rangePicker:global(.ant-picker-focused),
+.rangePicker:global(.ant-picker-open) {
+  background: #fff !important;
+  border-color: color-mix(in srgb, var(--mint) 50%, transparent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 12%, transparent) !important;
+}
+
+.rangePicker :global(.ant-picker-input > input),
+.rangePicker :global(.ant-picker-separator),
+.rangePicker :global(.ant-picker-suffix) {
+  color: var(--button-text-secondary);
+}
+
+.rangePicker :global(.ant-picker-input > input) {
+  font-weight: var(--font-semibold);
+}
+
+.sessionCard {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr) minmax(180px, 220px);
+  gap: 18px;
+  align-items: stretch;
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.sessionCard:hover {
+  border-color: color-mix(in srgb, var(--mint) 18%, transparent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.sessionDateBlock {
+  min-height: 118px;
+  padding: 14px 12px;
+  border-radius: var(--radius-md);
+  background: rgba(237, 248, 243, 0.88);
+  border: 1px solid color-mix(in srgb, var(--mint) 16%, transparent);
+  color: var(--mint);
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 6px;
+}
+
+.sessionDay {
+  color: var(--mint);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-black);
+  line-height: 1;
+}
+
+.sessionWeek {
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+}
+
+.sessionTime {
+  margin-top: 4px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid color-mix(in srgb, var(--mint) 14%, transparent);
+  color: var(--mint);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+}
+
+.sessionMain {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.sessionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sessionTitle {
+  margin: 0;
+  color: var(--text-heading);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-bold);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.sessionSub {
+  margin-top: 5px;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.sessionMetaGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metaCard {
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(248, 250, 251, 0.86);
+  border: 1px solid var(--border-soft);
+}
+
+.metaLabel {
+  display: block;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+  letter-spacing: 0.03em;
+}
+
+.metaValue,
+.metaValueDanger {
+  display: block;
+  margin-top: 8px;
+  color: var(--text-heading);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-bold);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.metaValueDanger {
+  color: var(--text-orange);
+}
+
+.sessionActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 16px;
+  border-left: 1px solid var(--border-soft);
+}
+
+.sessionActions :global(.ant-btn) {
+  width: 100%;
+}
+
+@media (max-width: 1200px) {
+  .scheduleFilters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 992px) {
+  .sessionCard {
+    grid-template-columns: 92px minmax(0, 1fr);
+  }
+
+  .sessionActions {
+    grid-column: 1 / -1;
+    padding-left: 0;
+    border-left: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .scheduleFilters {
+    grid-template-columns: 1fr;
+  }
+
+  .sessionCard {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .sessionDateBlock {
+    min-height: auto;
+    grid-template-columns: auto auto 1fr;
+    justify-items: start;
+    align-items: center;
+  }
+
+  .sessionMetaGrid,
+  .sessionActions {
+    grid-template-columns: 1fr;
+  }
+}

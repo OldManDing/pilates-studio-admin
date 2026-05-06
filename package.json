@@ -9,6 +9,7 @@
     "smoke-test": "vitest run smoke-tests",
     "smoke-test:watch": "vitest smoke-tests",
     "smoke-test:cov": "vitest run smoke-tests --coverage",
+    "release:check": "powershell -ExecutionPolicy Bypass -File scripts/release-readiness-check.ps1",
     "lint": "eslint src config --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint src config --ext .js,.jsx,.ts,.tsx --fix",
     "format": "prettier --check package.json .eslintrc.cjs .prettierrc.json",

@@ -18,6 +18,7 @@ export interface Coach {
   name: string;
   phone: string;
   email?: string;
+  avatarUrl?: string;
   status: CoachStatus;
   experience?: string;
   rating?: number;
@@ -30,6 +31,7 @@ export interface CreateCoachData {
   name: string;
   phone: string;
   email?: string;
+  avatarUrl?: string;
   status?: CoachStatus;
   experience?: string;
   bio?: string;

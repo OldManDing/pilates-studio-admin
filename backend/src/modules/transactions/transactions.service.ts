@@ -6,6 +6,7 @@ import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
 import { UpdateTransactionStatusDto } from './dto/update-transaction-status.dto';
 import { QueryTransactionDto } from './dto/query-transaction.dto';
+import { RefundTransactionDto } from './dto/refund-transaction.dto';
 import {
   MemberStatus,
   MembershipPlanCategory,
@@ -154,6 +155,68 @@ export class TransactionsService {
     });
   }
 
+  async refund(id: string, dto: RefundTransactionDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const original = await tx.transaction.findUnique({
+        where: { id },
+        include: { member: true, plan: true },
+      });
+
+      if (!original) {
+        throw new NotFoundException('Transaction not found');
+      }
+
+      if (original.kind === TransactionKind.REFUND) {
+        throw new BadRequestException('Cannot refund a refund transaction');
+      }
+
+      if (original.status !== TransactionStatus.COMPLETED) {
+        throw new BadRequestException('Only completed transactions can be refunded');
+      }
+
+      const amountCents = dto.amountCents ?? Math.abs(original.amountCents);
+      if (amountCents <= 0 || amountCents > Math.abs(original.amountCents)) {
+        throw new BadRequestException('Refund amount is invalid');
+      }
+
+      const transactionCode = await this.generateTransactionCode();
+      const reason = dto.reason?.trim();
+
+      const refundTransaction = await tx.transaction.create({
+        data: {
+          transactionCode,
+          memberId: original.memberId,
+          planId: original.planId,
+          kind: TransactionKind.REFUND,
+          status: TransactionStatus.COMPLETED,
+          amountCents: -amountCents,
+          paymentMethod: original.paymentMethod,
+          paymentProvider: original.paymentProvider,
+          paymentTransactionId: original.paymentTransactionId,
+          happenedAt: new Date(),
+          notes: `Refund for ${original.transactionCode}${reason ? `: ${reason}` : ''}`,
+        },
+        include: {
+          member: {
+            select: { id: true, name: true, phone: true },
+          },
+          plan: true,
+        },
+      });
+
+      await tx.transaction.update({
+        where: { id },
+        data: {
+          notes: [original.notes, `Refunded ${amountCents} cents by ${refundTransaction.transactionCode}${reason ? `: ${reason}` : ''}`]
+            .filter(Boolean)
+            .join('\n'),
+        },
+      });
+
+      return refundTransaction;
+    });
+  }
+
   async markPaymentCompleted(
     id: string,
     options?: { paymentTransactionId?: string; paidAt?: Date; paymentPayload?: Record<string, unknown> },
@@ -183,7 +246,7 @@ export class TransactionsService {
   }
 
   async getSummary() {
-    const [totalRevenue, pendingAmount, refundedAmount, todayRevenue] = await Promise.all([
+    const [totalRevenue, pendingAmount, refundedAmount, refundTransactions, todayRevenue] = await Promise.all([
       this.prisma.transaction.aggregate({
         where: { status: TransactionStatus.COMPLETED },
         _sum: { amountCents: true },
@@ -197,6 +260,10 @@ export class TransactionsService {
         _sum: { amountCents: true },
       }),
       this.prisma.transaction.aggregate({
+        where: { kind: TransactionKind.REFUND },
+        _sum: { amountCents: true },
+      }),
+      this.prisma.transaction.aggregate({
         where: {
           status: TransactionStatus.COMPLETED,
           happenedAt: {
@@ -207,11 +274,14 @@ export class TransactionsService {
       }),
     ]);
 
+    const readAggregateSum = (value: { _sum?: { amountCents?: number | null } } | null | undefined) =>
+      value?._sum?.amountCents ?? 0;
+
     return {
-      totalRevenueCents: totalRevenue._sum.amountCents || 0,
-      pendingAmountCents: pendingAmount._sum.amountCents || 0,
-      refundedAmountCents: refundedAmount._sum.amountCents || 0,
-      todayRevenueCents: todayRevenue._sum.amountCents || 0,
+      totalRevenueCents: readAggregateSum(totalRevenue),
+      pendingAmountCents: readAggregateSum(pendingAmount),
+      refundedAmountCents: Math.abs(readAggregateSum(refundedAmount)) + Math.abs(readAggregateSum(refundTransactions)),
+      todayRevenueCents: readAggregateSum(todayRevenue),
     };
   }
 
@@ -223,6 +293,12 @@ export class TransactionsService {
     if (!member) {
       return {
         totalRevenue: 0,
+        completedRevenue: 0,
+        totalAmount: 0,
+        pendingAmount: 0,
+        processingAmount: 0,
+        refundedAmount: 0,
+        failedAmount: 0,
         transactionCount: 0,
         byKind: {},
         byStatus: {},
@@ -246,13 +322,42 @@ export class TransactionsService {
 
     const summary = {
       totalRevenue: 0,
+      completedRevenue: 0,
+      totalAmount: 0,
+      pendingAmount: 0,
+      processingAmount: 0,
+      refundedAmount: 0,
+      failedAmount: 0,
       transactionCount: transactions.length,
       byKind: {} as Record<string, { count: number; total: number }>,
       byStatus: {} as Record<string, { count: number; total: number }>,
     };
 
     transactions.forEach((transaction) => {
-      summary.totalRevenue += transaction.amountCents;
+      summary.totalAmount += transaction.amountCents;
+
+      if (transaction.status === TransactionStatus.COMPLETED) {
+        summary.completedRevenue += transaction.amountCents;
+        summary.totalRevenue += transaction.amountCents;
+      }
+
+      if (transaction.status === TransactionStatus.PENDING) {
+        summary.pendingAmount += transaction.amountCents;
+      }
+
+      if (transaction.status === TransactionStatus.PROCESSING) {
+        summary.processingAmount += transaction.amountCents;
+      }
+
+      if (transaction.kind === TransactionKind.REFUND) {
+        summary.refundedAmount += Math.abs(transaction.amountCents);
+      } else if (transaction.status === TransactionStatus.REFUNDED) {
+        summary.refundedAmount += transaction.amountCents;
+      }
+
+      if (transaction.status === TransactionStatus.FAILED) {
+        summary.failedAmount += transaction.amountCents;
+      }
 
       const kindSummary = summary.byKind[transaction.kind] ?? { count: 0, total: 0 };
       kindSummary.count += 1;

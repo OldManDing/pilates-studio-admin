@@ -5,6 +5,7 @@ import { getToneColor } from '@/utils/format';
 const statusToneMap: Record<string, 'mint' | 'violet' | 'orange' | 'pink' | 'slate'> = {
   正常: 'mint',
   ACTIVE: 'mint',
+  开放预约: 'mint',
   已确认: 'mint',
   CONFIRMED: 'mint',
   在职: 'mint',
@@ -17,7 +18,9 @@ const statusToneMap: Record<string, 'mint' | 'violet' | 'orange' | 'pink' | 'sla
   COMPLETED: 'violet',
   已发送: 'violet',
   SENT: 'violet',
+  已签到: 'mint',
   待确认: 'orange',
+  待签到: 'orange',
   待发送: 'orange',
   待处理: 'orange',
   PENDING: 'orange',
@@ -33,6 +36,7 @@ const statusToneMap: Record<string, 'mint' | 'violet' | 'orange' | 'pink' | 'sla
   失败: 'pink',
   FAILED: 'pink',
   NO_SHOW: 'pink',
+  未到: 'pink',
   未到场: 'pink',
   已满: 'pink',
   REFUNDED: 'pink',
@@ -43,6 +47,7 @@ const statusToneMap: Record<string, 'mint' | 'violet' | 'orange' | 'pink' | 'sla
   INACTIVE: 'slate',
   停用: 'slate',
   已停用: 'slate',
+  已暂停: 'slate',
 };
 
 const neutralTone = {

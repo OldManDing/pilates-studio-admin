@@ -152,7 +152,8 @@ export class RolesService {
 
   async initializeDefaultRoles() {
     const defaultPermissions = [
-      { module: 'ADMIN', action: 'MANAGE', description: '管理系统管理员账号' },
+      { module: 'ADMINS', action: 'READ', description: '查看系统管理员账号' },
+      { module: 'ADMINS', action: 'MANAGE', description: '管理系统管理员账号' },
       { module: 'ROLES', action: 'MANAGE', description: '管理角色与权限配置' },
       { module: 'MEMBERS', action: 'READ', description: '查看会员信息' },
       { module: 'MEMBERS', action: 'WRITE', description: '新增、编辑会员' },
@@ -178,6 +179,9 @@ export class RolesService {
       { module: 'ANALYTICS', action: 'READ', description: '查看数据分析' },
       { module: 'NOTIFICATIONS', action: 'READ', description: '查看通知记录与状态' },
       { module: 'NOTIFICATIONS', action: 'WRITE', description: '创建通知并标记已读' },
+      { module: 'KNOWLEDGE', action: 'READ', description: '查看帮助知识库' },
+      { module: 'KNOWLEDGE', action: 'WRITE', description: '新增、编辑帮助知识库' },
+      { module: 'KNOWLEDGE', action: 'MANAGE', description: '删除帮助知识库内容' },
       { module: 'REPORTS', action: 'READ', description: '查看经营报表' },
       { module: 'SETTINGS', action: 'READ', description: '查看系统设置' },
       { module: 'SETTINGS', action: 'MANAGE', description: '管理系统设置' },
@@ -210,6 +214,8 @@ export class RolesService {
         { module: 'MINI_USERS', action: 'WRITE' },
         { module: 'NOTIFICATIONS', action: 'READ' },
         { module: 'NOTIFICATIONS', action: 'WRITE' },
+        { module: 'KNOWLEDGE', action: 'READ' },
+        { module: 'KNOWLEDGE', action: 'WRITE' },
         { module: 'SETTINGS', action: 'READ' },
       ],
       COACH: [
@@ -223,6 +229,7 @@ export class RolesService {
         { module: 'ATTENDANCE', action: 'WRITE' },
         { module: 'COACHES', action: 'READ' },
         { module: 'MEMBERS', action: 'READ' },
+        { module: 'KNOWLEDGE', action: 'READ' },
       ],
       FINANCE: [
         { module: 'TRANSACTIONS', action: 'READ' },
@@ -232,6 +239,7 @@ export class RolesService {
         { module: 'MEMBERS', action: 'READ' },
         { module: 'PLANS', action: 'READ' },
         { module: 'NOTIFICATIONS', action: 'READ' },
+        { module: 'KNOWLEDGE', action: 'READ' },
       ],
     };
 

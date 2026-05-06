@@ -5,6 +5,7 @@ export interface Course {
   id: string;
   courseCode: string;
   name: string;
+  description?: string;
   type: string;
   level: string;
   durationMinutes: number;
@@ -22,6 +23,7 @@ export interface Course {
 
 export interface CreateCourseData {
   name: string;
+  description?: string;
   type: string;
   level: string;
   durationMinutes: number;

@@ -6,6 +6,11 @@ export class CreateCourseDto {
   @IsString()
   name: string;
 
+  @ApiPropertyOptional({ description: 'Course introduction shown in mini program' })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
   @ApiProperty({ example: 'EQUIPMENT' })
   @IsString()
   type: string;

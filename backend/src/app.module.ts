@@ -17,6 +17,7 @@ import { CoachesModule } from './modules/coaches/coaches.module';
 import { CourseSessionsModule } from './modules/course-sessions/course-sessions.module';
 import { CoursesModule } from './modules/courses/courses.module';
 import { HealthModule } from './modules/health/health.module';
+import { KnowledgeModule } from './modules/knowledge/knowledge.module';
 import { MembershipRenewalsModule } from './modules/membership-renewals/membership-renewals.module';
 import { MembershipPlansModule } from './modules/membership-plans/membership-plans.module';
 import { MembersModule } from './modules/members/members.module';
@@ -47,6 +48,7 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
     PrismaModule,
     AuthModule,
     HealthModule,
+    KnowledgeModule,
     AdminsModule,
     RolesModule,
     MembersModule,

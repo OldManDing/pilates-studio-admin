@@ -35,7 +35,8 @@ const createSession = (overrides: Partial<Record<string, unknown>> = {}) => ({
   id: 'session-1',
   capacity: 10,
   bookedCount: 2,
-  course: { id: 'course-1', name: 'Morning Flow' },
+  isActive: true,
+  course: { id: 'course-1', name: 'Morning Flow', isActive: true },
   _count: { bookings: 2 },
   ...overrides,
 });
@@ -165,6 +166,46 @@ describe('BookingsService', () => {
   });
 
   describe('booking lifecycle', () => {
+    it('returns training records with server-side summary for the current mini user', async () => {
+      const completedRecord = createBooking({
+        status: BookingStatus.COMPLETED,
+        session: {
+          id: 'session-1',
+          startsAt: new Date('2026-05-01T01:00:00.000Z'),
+          endsAt: new Date('2026-05-01T02:00:00.000Z'),
+          coachId: 'coach-1',
+          course: { id: 'course-1', name: 'Morning Flow', type: 'PILATES', level: 'BEGINNER', durationMinutes: 60 },
+          coach: { id: 'coach-1', name: 'Coach Lin' },
+        },
+      });
+      prisma.member.findUnique.mockResolvedValue({ id: 'member-1' });
+      prisma.booking.findMany
+        .mockResolvedValueOnce([completedRecord])
+        .mockResolvedValueOnce([
+          { session: { startsAt: new Date('2026-05-01T01:00:00.000Z'), endsAt: new Date('2026-05-01T02:00:00.000Z'), coachId: 'coach-1' } },
+          { session: { startsAt: new Date('2026-05-02T01:00:00.000Z'), endsAt: new Date('2026-05-02T02:30:00.000Z'), coachId: 'coach-2' } },
+        ]);
+      prisma.booking.count.mockResolvedValue(2);
+
+      const result = await service.findMyTrainingRecords('mini-user-1', { page: 1, pageSize: 20 });
+
+      expect(prisma.booking.findMany).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          where: { memberId: 'member-1', status: BookingStatus.COMPLETED },
+          take: 20,
+        }),
+      );
+      expect(result.summary).toEqual({
+        sessions: 2,
+        totalMinutes: 150,
+        totalHours: 3,
+        coachCount: 2,
+      });
+      expect(result.records).toEqual([completedRecord]);
+      expect(result.meta.total).toBe(2);
+    });
+
     it('rejects create when the session cannot be found', async () => {
       prisma.courseSession.findUnique.mockResolvedValue(null);
 

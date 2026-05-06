@@ -141,6 +141,7 @@ export class SettingsService {
       attendance,
       courseReviews,
       transactions,
+      knowledgeArticles,
       adminUsers,
     ] = await Promise.all([
       this.prisma.studioSetting.findMany(),
@@ -168,6 +169,7 @@ export class SettingsService {
         where: startsAt ? { happenedAt: { gte: startsAt } } : undefined,
         include: { member: true },
       }),
+      this.prisma.knowledgeArticle.findMany(),
       includeAdminUsers
         ? this.prisma.adminUser.findMany({
             select: {
@@ -205,6 +207,7 @@ export class SettingsService {
         attendance,
         courseReviews,
         transactions,
+        knowledgeArticles,
         adminUsers,
       },
     };
@@ -417,6 +420,16 @@ export class SettingsService {
           }
         }
 
+        if (data.knowledgeArticles?.length) {
+          for (const article of data.knowledgeArticles) {
+            await prisma.knowledgeArticle.upsert({
+              where: { id: article.id },
+              update: article,
+              create: article,
+            });
+          }
+        }
+
         // Restore admin users (for internal backups)
         if (data.adminUsers?.length) {
           for (const adminUser of data.adminUsers) {
@@ -471,6 +484,7 @@ export class SettingsService {
     this.ensureArrayPayload(data.attendance, 'attendance');
     this.ensureArrayPayload(data.courseReviews, 'courseReviews');
     this.ensureArrayPayload(data.transactions, 'transactions');
+    this.ensureArrayPayload(data.knowledgeArticles, 'knowledgeArticles');
     this.ensureArrayPayload(data.adminUsers, 'adminUsers');
 
     data.membershipPlans?.forEach((plan: any, index: number) => {
@@ -512,6 +526,13 @@ export class SettingsService {
       this.ensureEnumValue(transaction.kind, TransactionKind, `transactions[${index}].kind`);
       this.ensureEnumValue(transaction.status, TransactionStatus, `transactions[${index}].status`);
       this.ensureNumber(transaction.amountCents, `transactions[${index}].amountCents`);
+    });
+
+    data.knowledgeArticles?.forEach((article: any, index: number) => {
+      this.ensureRequired(article, ['id', 'category', 'question', 'answer'], `knowledgeArticles[${index}]`);
+      if (article.sortOrder !== undefined) {
+        this.ensureNumber(article.sortOrder, `knowledgeArticles[${index}].sortOrder`);
+      }
     });
 
     data.adminUsers?.forEach((adminUser: any, index: number) => {

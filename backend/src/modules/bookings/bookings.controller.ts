@@ -76,6 +76,17 @@ export class BookingsController {
     return this.bookingsService.findMyBookings(userId, query);
   }
 
+  @Get('my/training-records')
+  @AllowMiniUser()
+  @RequirePermissions('READ:BOOKINGS')
+  @ApiOperation({ summary: 'Get current mini-program member training records' })
+  async getMyTrainingRecords(
+    @CurrentUser('sub') userId: string,
+    @Query() query: PaginationDto,
+  ) {
+    return this.bookingsService.findMyTrainingRecords(userId, query);
+  }
+
   @Get(':id')
   @AllowMiniUser()
   @RequirePermissions('READ:BOOKINGS')

@@ -1,4 +1,5 @@
 import { api, requestWithMeta } from '@/utils/request';
+import type { PaginatedResponse } from './members';
 
 export interface CourseSession {
   id: string;
@@ -8,6 +9,8 @@ export interface CourseSession {
   startsAt: string;
   endsAt: string;
   capacity: number;
+  bookedCount?: number;
+  location?: string;
   isActive: boolean;
   course?: {
     id: string;
@@ -31,13 +34,27 @@ export interface CreateCourseSessionData {
   startsAt: string;
   endsAt: string;
   capacity?: number;
+  location?: string;
   isActive?: boolean;
 }
 
 export const courseSessionsApi = {
-  getAll: async (params?: { from?: string; to?: string; courseId?: string; coachId?: string }) => {
+  getAll: async (params?: { from?: string; to?: string; courseId?: string; coachId?: string; isActive?: boolean }) => {
     const res = await requestWithMeta<CourseSession[]>('/course-sessions', { params });
     return res.data || [];
+  },
+
+  getPaged: async (params?: { page?: number; pageSize?: number; from?: string; to?: string; courseId?: string; coachId?: string; isActive?: boolean; upcoming?: boolean }) => {
+    const res = await requestWithMeta<CourseSession[]>('/course-sessions', { params: params || {} });
+    return {
+      data: res.data || [],
+      meta: res.meta ?? {
+        page: params?.page ?? 1,
+        pageSize: params?.pageSize ?? 10,
+        total: res.data?.length ?? 0,
+        totalPages: res.data?.length ? 1 : 0,
+      },
+    } as PaginatedResponse<CourseSession>;
   },
 
   getUpcoming: async () => {

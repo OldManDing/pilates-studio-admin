@@ -1,4 +1,4 @@
-import { IsString, IsDateString, IsOptional, IsInt, Min } from 'class-validator';
+import { IsString, IsDateString, IsOptional, IsInt, Min, IsBoolean } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateCourseSessionDto {
@@ -27,4 +27,14 @@ export class UpdateCourseSessionDto {
   @IsInt()
   @Min(1)
   capacity?: number;
+
+  @ApiPropertyOptional({ description: 'Studio room or location shown to members' })
+  @IsOptional()
+  @IsString()
+  location?: string;
+
+  @ApiPropertyOptional({ description: 'Whether this session is open for mini-program booking' })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }

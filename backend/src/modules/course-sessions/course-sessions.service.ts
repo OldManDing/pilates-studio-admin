@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { PrismaService } from '../prisma/prisma.service';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
 import { CreateCourseSessionDto } from './dto/create-course-session.dto';
+import { QueryCourseSessionsDto } from './dto/query-course-sessions.dto';
 import { UpdateCourseSessionDto } from './dto/update-course-session.dto';
 import { BookingStatus } from '../../common/enums/domain.enums';
 
@@ -45,6 +46,8 @@ export class CourseSessionsService {
         endsAt,
         capacity: dto.capacity ?? course.capacity,
         bookedCount: 0,
+        location: dto.location,
+        isActive: dto.isActive ?? true,
       },
       include: {
         course: {
@@ -63,24 +66,43 @@ export class CourseSessionsService {
   }
 
   async findUpcoming(pagination: PaginationDto): Promise<PaginatedResponse<any>> {
-    const page = pagination.page ?? 1;
-    const pageSize = pagination.pageSize ?? 10;
+    return this.findAll({ ...pagination, upcoming: true, isActive: true });
+  }
+
+  async findAll(query: QueryCourseSessionsDto): Promise<PaginatedResponse<any>> {
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 10;
     const skip = (page - 1) * pageSize;
-    const now = new Date();
+
+    const where: any = {
+      ...(query.courseId ? { courseId: query.courseId } : {}),
+      ...(query.coachId ? { coachId: query.coachId } : {}),
+      ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
+    };
+
+    if (query.upcoming) {
+      where.startsAt = { gte: new Date() };
+    }
+
+    if (query.from || query.to) {
+      where.startsAt = {
+        ...(where.startsAt || {}),
+        ...(query.from ? { gte: new Date(query.from) } : {}),
+        ...(query.to ? { lte: new Date(query.to) } : {}),
+      };
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.courseSession.findMany({
-        where: {
-          startsAt: { gte: now },
-        },
+        where,
         skip,
         take: pageSize,
         include: {
           course: {
-            select: { id: true, name: true, type: true, level: true, durationMinutes: true },
+            select: { id: true, name: true, description: true, type: true, level: true, durationMinutes: true, coverImageUrl: true, isActive: true },
           },
           coach: {
-            select: { id: true, name: true },
+            select: { id: true, name: true, avatarUrl: true },
           },
           _count: {
             select: {
@@ -90,9 +112,7 @@ export class CourseSessionsService {
         },
         orderBy: { startsAt: 'asc' },
       }),
-      this.prisma.courseSession.count({
-        where: { startsAt: { gte: now } },
-      }),
+      this.prisma.courseSession.count({ where }),
     ]);
 
     const sessions = data.map((session) => this.withActiveBookedCount(session));
@@ -181,7 +201,9 @@ export class CourseSessionsService {
         ...(dto.coachId ? { coachId: dto.coachId } : {}),
         ...(dto.startsAt ? { startsAt } : {}),
         ...(dto.endsAt ? { endsAt } : {}),
-        ...(dto.capacity ? { capacity: dto.capacity } : {}),
+        ...(dto.capacity !== undefined ? { capacity: dto.capacity } : {}),
+        ...(dto.location !== undefined ? { location: dto.location } : {}),
+        ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
       },
       include: {
         course: {
@@ -260,6 +282,7 @@ export class CourseSessionsService {
 
     if (options.upcoming) {
       where.startsAt = { gte: new Date() };
+      where.isActive = true;
     } else {
       if (options.from || options.to) {
         where.startsAt = {};

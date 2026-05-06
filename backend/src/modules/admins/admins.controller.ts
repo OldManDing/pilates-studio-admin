@@ -20,7 +20,7 @@ export class AdminsController {
   constructor(private readonly adminsService: AdminsService) {}
 
   @Get()
-  @RequirePermissions('MANAGE:ADMINS')
+  @RequirePermissions('READ:ADMINS')
   @ApiOperation({ summary: 'Get all admins' })
   async findAll(@Query('search') search?: string) {
     return this.adminsService.findAll(search);

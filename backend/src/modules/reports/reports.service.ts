@@ -127,6 +127,7 @@ export class ReportsService {
       totalTransactions,
       completedRevenue,
       refundedAmount,
+      refundKindAmount,
       transactionsByKind,
     ] = await Promise.all([
       this.prisma.transaction.count({ where }),
@@ -136,6 +137,10 @@ export class ReportsService {
       }),
       this.prisma.transaction.aggregate({
         where: { ...where, status: TransactionStatus.REFUNDED },
+        _sum: { amountCents: true },
+      }),
+      this.prisma.transaction.aggregate({
+        where: { ...where, kind: TransactionKind.REFUND },
         _sum: { amountCents: true },
       }),
       this.prisma.transaction.groupBy({
@@ -149,7 +154,7 @@ export class ReportsService {
     return {
       totalTransactions,
       completedRevenueCents: completedRevenue._sum.amountCents || 0,
-      refundedAmountCents: refundedAmount._sum.amountCents || 0,
+      refundedAmountCents: Math.abs(refundedAmount._sum.amountCents || 0) + Math.abs(refundKindAmount._sum.amountCents || 0),
       transactionsByKind,
     };
   }

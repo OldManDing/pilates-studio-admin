@@ -13,9 +13,9 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { AllowMiniUser } from '../../common/decorators/allow-mini-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
-import { PaginationDto } from '../../common/dto/pagination.dto';
 import { CourseSessionsService } from './course-sessions.service';
 import { CreateCourseSessionDto } from './dto/create-course-session.dto';
+import { QueryCourseSessionsDto } from './dto/query-course-sessions.dto';
 import { UpdateCourseSessionDto } from './dto/update-course-session.dto';
 
 @ApiTags('Course Sessions')
@@ -34,16 +34,21 @@ export class CourseSessionsController {
   @Get()
   @AllowMiniUser()
   @RequirePermissions('READ:COURSES')
-  @ApiOperation({ summary: 'Get upcoming course sessions' })
-  async findAll(@Query() pagination: PaginationDto) {
-    return this.sessionsService.findUpcoming(pagination);
+  @ApiOperation({ summary: 'Get course sessions' })
+  async findAll(@Query() query: QueryCourseSessionsDto) {
+    return this.sessionsService.findAll(query);
   }
 
   @Get('upcoming')
   @AllowMiniUser()
   @RequirePermissions('READ:COURSES')
   @ApiOperation({ summary: 'Get upcoming course sessions' })
-  async findUpcoming(@Query() pagination: PaginationDto) {
+  async findUpcoming(@Query() query: QueryCourseSessionsDto) {
+    const pagination = {
+      ...query,
+      upcoming: true,
+      isActive: true,
+    };
     return this.sessionsService.findUpcoming(pagination);
   }
 

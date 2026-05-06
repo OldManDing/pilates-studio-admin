@@ -16,6 +16,11 @@ export class CreateCoachDto {
   @IsEmail()
   email?: string;
 
+  @ApiPropertyOptional({ description: 'Coach avatar as URL or data URL' })
+  @IsOptional()
+  @IsString()
+  avatarUrl?: string;
+
   @ApiPropertyOptional({ enum: CoachStatus, default: CoachStatus.ACTIVE })
   @IsOptional()
   @IsEnum(CoachStatus)

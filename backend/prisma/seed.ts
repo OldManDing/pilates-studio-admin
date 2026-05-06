@@ -12,7 +12,8 @@ async function main() {
   }
 
   const defaultPermissions = [
-    { module: 'ADMIN', action: 'MANAGE', description: '管理系统管理员账号' },
+    { module: 'ADMINS', action: 'READ', description: '查看系统管理员账号' },
+    { module: 'ADMINS', action: 'MANAGE', description: '管理系统管理员账号' },
     { module: 'ROLES', action: 'READ', description: '查看角色与权限配置' },
     { module: 'ROLES', action: 'MANAGE', description: '管理角色与权限配置' },
     { module: 'MEMBERS', action: 'READ', description: '查看会员信息' },
@@ -39,6 +40,9 @@ async function main() {
     { module: 'ANALYTICS', action: 'READ', description: '查看数据分析' },
     { module: 'NOTIFICATIONS', action: 'READ', description: '查看通知记录与状态' },
     { module: 'NOTIFICATIONS', action: 'WRITE', description: '创建通知并标记已读' },
+    { module: 'KNOWLEDGE', action: 'READ', description: '查看帮助知识库' },
+    { module: 'KNOWLEDGE', action: 'WRITE', description: '新增、编辑帮助知识库' },
+    { module: 'KNOWLEDGE', action: 'MANAGE', description: '删除帮助知识库内容' },
     { module: 'REPORTS', action: 'READ', description: '查看经营报表' },
     { module: 'SETTINGS', action: 'READ', description: '查看系统设置' },
     { module: 'SETTINGS', action: 'MANAGE', description: '管理系统设置' },
@@ -58,6 +62,8 @@ async function main() {
       { module: 'MINI_USERS', action: 'WRITE' },
       { module: 'NOTIFICATIONS', action: 'READ' },
       { module: 'NOTIFICATIONS', action: 'WRITE' },
+      { module: 'KNOWLEDGE', action: 'READ' },
+      { module: 'KNOWLEDGE', action: 'WRITE' },
       { module: 'SETTINGS', action: 'READ' },
     ],
     [AdminRoleCode.COACH]: [
@@ -71,6 +77,7 @@ async function main() {
       { module: 'ATTENDANCE', action: 'WRITE' },
       { module: 'COACHES', action: 'READ' },
       { module: 'MEMBERS', action: 'READ' },
+      { module: 'KNOWLEDGE', action: 'READ' },
     ],
     [AdminRoleCode.FINANCE]: [
       { module: 'TRANSACTIONS', action: 'READ' },
@@ -80,6 +87,7 @@ async function main() {
       { module: 'MEMBERS', action: 'READ' },
       { module: 'PLANS', action: 'READ' },
       { module: 'NOTIFICATIONS', action: 'READ' },
+      { module: 'KNOWLEDGE', action: 'READ' },
     ],
   };
 
@@ -381,6 +389,57 @@ async function main() {
   }
 
   console.log(`Created ${notificationSettings.length} notification settings`);
+
+  const faqItems = [
+    {
+      category: 'booking',
+      question: '如何预约课程？',
+      answer: '进入「预约」页面，选择日期与课程类型，点击课程即可查看详情并完成预约。',
+      sortOrder: 10,
+    },
+    {
+      category: 'booking',
+      question: '如何取消或改约？',
+      answer: '课程开始前 4 小时可在「我的预约」中取消。超过时限取消会按未到场规则扣除一次权益；改约请先取消原预约后重新预约。',
+      sortOrder: 20,
+    },
+    {
+      category: 'member',
+      question: '会员卡如何续费？',
+      answer: '进入「会员中心」，点击「续费会员」后选择方案并完成支付。当前会籍未到期时，仅支持同方案续费顺延。',
+      sortOrder: 30,
+    },
+    {
+      category: 'account',
+      question: '如何注销账户？',
+      answer: '进入「设置」提交账号注销申请，门店会在核实历史权益和身份后处理。',
+      sortOrder: 40,
+    },
+  ];
+
+  for (const faq of faqItems) {
+    const existing = await prisma.knowledgeArticle.findFirst({
+      where: {
+        category: faq.category,
+        question: faq.question,
+      },
+    });
+
+    if (existing) {
+      await prisma.knowledgeArticle.update({
+        where: { id: existing.id },
+        data: {
+          answer: faq.answer,
+          sortOrder: faq.sortOrder,
+          isActive: true,
+        },
+      });
+    } else {
+      await prisma.knowledgeArticle.create({ data: faq });
+    }
+  }
+
+  console.log(`Created ${faqItems.length} knowledge FAQ items`);
 
   console.log('Seed completed successfully!');
 }

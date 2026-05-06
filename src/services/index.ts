@@ -12,3 +12,5 @@ export * from './settings';
 export * from './membershipPlans';
 export * from './roles';
 export * from './notifications';
+export * from './attendance';
+export * from './knowledge';

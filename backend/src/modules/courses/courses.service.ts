@@ -26,6 +26,7 @@ export class CoursesService {
       data: {
         courseCode,
         name: dto.name,
+        description: dto.description,
         type: dto.type,
         level: dto.level,
         durationMinutes: dto.durationMinutes,

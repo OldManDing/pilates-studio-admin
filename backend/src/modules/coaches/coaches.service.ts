@@ -8,7 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateCoachDto } from './dto/create-coach.dto';
 import { QueryCoachesDto } from './dto/query-coaches.dto';
 import { UpdateCoachDto } from './dto/update-coach.dto';
-import { CoachStatus } from '../../common/enums/domain.enums';
+import { BookingStatus, CoachStatus } from '../../common/enums/domain.enums';
 import { PaginatedResponse } from '../../common/dto/pagination.dto';
 
 @Injectable()
@@ -34,6 +34,7 @@ export class CoachesService {
         name: dto.name,
         phone: dto.phone,
         email: dto.email,
+        avatarUrl: dto.avatarUrl,
         status: dto.status || CoachStatus.ACTIVE,
         experience: dto.experience,
         bio: dto.bio,
@@ -107,6 +108,100 @@ export class CoachesService {
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async findMyCoaches(miniUserId: string) {
+    const [member, coaches] = await Promise.all([
+      this.prisma.member.findUnique({
+        where: { miniUserId },
+        select: { id: true },
+      }),
+      this.prisma.coach.findMany({
+        where: { status: CoachStatus.ACTIVE },
+        include: {
+          specialties: true,
+          certificates: true,
+          courses: {
+            select: { id: true, name: true, type: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    const summaries = new Map<string, {
+      bookingCount: number;
+      completedCount: number;
+      upcomingCount: number;
+      lastBookingAt: Date | null;
+      lastCourseName: string | null;
+    }>();
+
+    coaches.forEach((coach) => {
+      summaries.set(coach.id, {
+        bookingCount: 0,
+        completedCount: 0,
+        upcomingCount: 0,
+        lastBookingAt: null,
+        lastCourseName: null,
+      });
+    });
+
+    if (member && coaches.length > 0) {
+      const coachIds = coaches.map((coach) => coach.id);
+      const bookings = await this.prisma.booking.findMany({
+        where: {
+          memberId: member.id,
+          session: {
+            coachId: { in: coachIds },
+          },
+        },
+        include: {
+          session: {
+            include: {
+              course: { select: { id: true, name: true, type: true } },
+            },
+          },
+        },
+        orderBy: { bookedAt: 'desc' },
+      });
+
+      bookings.forEach((booking) => {
+        const coachId = booking.session?.coachId;
+        if (!coachId || !summaries.has(coachId)) {
+          return;
+        }
+
+        const summary = summaries.get(coachId)!;
+        summary.bookingCount += 1;
+
+        if (booking.status === BookingStatus.COMPLETED) {
+          summary.completedCount += 1;
+        }
+
+        if (booking.status === BookingStatus.PENDING || booking.status === BookingStatus.CONFIRMED) {
+          summary.upcomingCount += 1;
+        }
+
+        if (!summary.lastBookingAt) {
+          summary.lastBookingAt = booking.session?.startsAt ?? booking.bookedAt ?? null;
+          summary.lastCourseName = booking.session?.course?.name ?? null;
+        }
+      });
+    }
+
+    return {
+      coaches: coaches.map((coach) => ({
+        coach,
+        ...(summaries.get(coach.id) ?? {
+          bookingCount: 0,
+          completedCount: 0,
+          upcomingCount: 0,
+          lastBookingAt: null,
+          lastCourseName: null,
+        }),
+      })),
+    };
   }
 
   async findOne(id: string) {

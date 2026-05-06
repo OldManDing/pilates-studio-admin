@@ -7,8 +7,6 @@
 # Run backend locally with: npm run dev
 # ============================================
 
-version: "3.8"
-
 services:
   mysql:
     image: mysql:8.0

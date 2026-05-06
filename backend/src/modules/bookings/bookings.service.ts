@@ -98,6 +98,10 @@ export class BookingsService {
         throw new NotFoundException('Course session not found');
       }
 
+      if (!session.isActive || !session.course?.isActive) {
+        throw new BadRequestException('Session is not open for booking');
+      }
+
       const activeBookingCount = await tx.booking.count({
         where: {
           sessionId: dto.sessionId,
@@ -535,6 +539,97 @@ export class BookingsService {
 
     return {
       data,
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    };
+  }
+
+  async findMyTrainingRecords(
+    miniUserId: string,
+    query: PaginationDto,
+  ) {
+    const member = await this.prisma.member.findUnique({
+      where: { miniUserId },
+      select: { id: true },
+    });
+
+    const page = Number(query.page) || 1;
+    const pageSize = Number(query.pageSize) || 50;
+
+    if (!member) {
+      return {
+        summary: {
+          sessions: 0,
+          totalMinutes: 0,
+          totalHours: 0,
+          coachCount: 0,
+        },
+        records: [],
+        meta: { page, pageSize, total: 0, totalPages: 0 },
+      };
+    }
+
+    const where: Prisma.BookingWhereInput = {
+      memberId: member.id,
+      status: BookingStatus.COMPLETED,
+    };
+    const skip = (page - 1) * pageSize;
+
+    const [records, total, summaryBookings] = await Promise.all([
+      this.prisma.booking.findMany({
+        where,
+        skip,
+        take: pageSize,
+        include: {
+          member: {
+            select: { id: true, name: true, phone: true },
+          },
+          session: {
+            include: {
+              course: { select: { id: true, name: true, type: true, level: true, durationMinutes: true } },
+              coach: { select: { id: true, name: true } },
+            },
+          },
+          attendance: true,
+        },
+        orderBy: { bookedAt: 'desc' },
+      }),
+      this.prisma.booking.count({ where }),
+      this.prisma.booking.findMany({
+        where,
+        select: {
+          session: {
+            select: {
+              startsAt: true,
+              endsAt: true,
+              coachId: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    const totalMinutes = summaryBookings.reduce((sum, booking) => {
+      const startsAt = booking.session?.startsAt?.getTime?.() ?? 0;
+      const endsAt = booking.session?.endsAt?.getTime?.() ?? 0;
+      const duration = endsAt > startsAt ? Math.round((endsAt - startsAt) / 60000) : 0;
+
+      return sum + duration;
+    }, 0);
+    const coachIds = new Set(summaryBookings.map((booking) => booking.session?.coachId).filter(Boolean));
+
+    return {
+      summary: {
+        sessions: total,
+        totalMinutes,
+        totalHours: Math.round(totalMinutes / 60),
+        coachCount: coachIds.size,
+      },
+      records,
       meta: {
         page,
         pageSize,

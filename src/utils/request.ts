@@ -1,7 +1,7 @@
 const API_BASE_URL = process.env.API_BASE_URL || '/api';
 
 interface RequestOptions extends RequestInit {
-  params?: Record<string, string | number | undefined>;
+  params?: Record<string, string | number | boolean | undefined>;
   responseType?: 'json' | 'blob';
 }
 
@@ -139,7 +139,7 @@ const refreshAccessToken = async () => {
   return refreshingPromise;
 };
 
-const buildUrl = (endpoint: string, params?: Record<string, string | number | undefined>) => {
+const buildUrl = (endpoint: string, params?: Record<string, string | number | boolean | undefined>) => {
   const url = new URL(endpoint, window.location.origin);
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
