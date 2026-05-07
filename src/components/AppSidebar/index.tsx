@@ -94,7 +94,7 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate, user }) => {
     <div className={cls.wrapper}>
       <div className={cls.brand}>
         <div className={cls.logo}>愈</div>
-        <div>
+        <div className={cls.brandCopy}>
           <div className={cls.brandTitle}>愈己CareMe工作室</div>
           <div className={cls.brandMeta}>高端门店管理系统</div>
         </div>
@@ -122,7 +122,7 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate, user }) => {
                     }}
                   >
                     <div className={cls.icon}>{item.icon}</div>
-                    <div>
+                    <div className={cls.itemText}>
                       <div className={cls.label}>{item.label}</div>
                       <div className={cls.desc}>{item.description}</div>
                     </div>
