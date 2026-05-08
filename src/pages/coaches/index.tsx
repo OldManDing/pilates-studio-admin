@@ -1,6 +1,6 @@
 import { CalendarOutlined, DeleteOutlined, EditOutlined, FilterOutlined, HeartOutlined, PlusOutlined, SearchOutlined, StarOutlined, TeamOutlined, UploadOutlined } from '@ant-design/icons';
-import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Pagination, Popconfirm, Row, Select, Spin, message } from 'antd';
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Pagination, Popconfirm, Row, Select, Spin, Upload, message, type UploadProps } from 'antd';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
 import FilterModalFooter from '@/components/FilterModalFooter';
@@ -115,7 +115,6 @@ export default function CoachesPage() {
   const [detailCoach, setDetailCoach] = useState<Coach | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSavingCoach, setIsSavingCoach] = useState(false);
-  const coachAvatarInputRef = useRef<HTMLInputElement | null>(null);
   const [deletingCoachId, setDeletingCoachId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
@@ -242,26 +241,12 @@ export default function CoachesPage() {
     form.resetFields();
   };
 
-  const handleSelectCoachAvatar = () => {
-    if (!canWriteCoaches) {
-      messageApi.warning('当前账号没有教练写入权限');
-      return;
-    }
-
-    coachAvatarInputRef.current?.click();
-  };
-
-  const handleCoachAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
+  const handleCoachAvatarUpload: UploadProps['beforeUpload'] = async (file) => {
     try {
       const validationMessage = validateImageFile(file);
       if (validationMessage) {
         messageApi.warning(validationMessage);
-        return;
+        return Upload.LIST_IGNORE;
       }
 
       const avatarUrl = await readFileAsDataUrl(file);
@@ -269,9 +254,9 @@ export default function CoachesPage() {
       messageApi.success('教练照片已载入，保存后生效');
     } catch (err) {
       messageApi.error(getErrorMessage(err, '教练照片读取失败'));
-    } finally {
-      event.target.value = '';
     }
+
+    return Upload.LIST_IGNORE;
   };
 
   const handleSaveCoach = async () => {
@@ -553,13 +538,6 @@ export default function CoachesPage() {
               </Form.Item>
               <Form.Item label="教练照片">
                 <div className={styles.coachAvatarUpload}>
-                  <input
-                    ref={coachAvatarInputRef}
-                    type="file"
-                    accept="image/*"
-                    className={styles.coachAvatarInput}
-                    onChange={handleCoachAvatarChange}
-                  />
                   <Form.Item noStyle shouldUpdate>
                     {() => {
                       const avatarUrl = form.getFieldValue('avatarUrl');
@@ -571,9 +549,17 @@ export default function CoachesPage() {
                     }}
                   </Form.Item>
                   <div className={styles.coachAvatarActions}>
-                    <Button icon={<UploadOutlined />} onClick={handleSelectCoachAvatar} disabled={!canWriteCoaches}>
-                      上传教练照片
-                    </Button>
+                    <Upload
+                      accept="image/*"
+                      beforeUpload={handleCoachAvatarUpload}
+                      disabled={!canWriteCoaches}
+                      maxCount={1}
+                      showUploadList={false}
+                    >
+                      <Button icon={<UploadOutlined />} disabled={!canWriteCoaches}>
+                        上传教练照片
+                      </Button>
+                    </Upload>
                     <Form.Item noStyle shouldUpdate>
                       {() => form.getFieldValue('avatarUrl') ? (
                         <Button onClick={() => form.setFieldValue('avatarUrl', '')} disabled={!canWriteCoaches}>
