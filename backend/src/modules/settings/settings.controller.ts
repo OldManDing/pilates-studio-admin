@@ -1,13 +1,15 @@
-import { Controller, Get, Put, Body, Post, Res, UploadedFile, UseInterceptors, HttpCode, HttpStatus, Query, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Put, Body, Post, Res, UploadedFile, UseInterceptors, HttpCode, HttpStatus, Query, ForbiddenException, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AllowMiniUser } from '../../common/decorators/allow-mini-user.decorator';
 import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
+import { SkipAuth } from '../../common/decorators/skip-auth.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SettingsService } from './settings.service';
 import { UpdateStudioDto } from './dto/update-studio.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
+import { UpdateMiniPageImageDto } from './dto/update-mini-page-image.dto';
 
 @ApiTags('Settings')
 @ApiBearerAuth()
@@ -28,6 +30,23 @@ export class SettingsController {
   @ApiOperation({ summary: 'Update studio settings' })
   async updateStudioSettings(@Body() dto: UpdateStudioDto) {
     return this.settingsService.updateStudioSettings(dto);
+  }
+
+  @Get('mini-page-images')
+  @SkipAuth()
+  @ApiOperation({ summary: 'Get mini-program page image settings' })
+  async getMiniPageImages() {
+    return this.settingsService.getMiniPageImages();
+  }
+
+  @Put('mini-page-images/:pageKey')
+  @RequirePermissions('MANAGE:SETTINGS')
+  @ApiOperation({ summary: 'Update mini-program page image setting' })
+  async updateMiniPageImage(
+    @Param('pageKey') pageKey: string,
+    @Body() dto: UpdateMiniPageImageDto,
+  ) {
+    return this.settingsService.updateMiniPageImage(pageKey, dto);
   }
 
   @Get('notifications')

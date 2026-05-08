@@ -71,7 +71,31 @@ const DEFAULT_COURSE_TYPE_OPTIONS = [
   'YOGA',
   'FLOW',
   'STRETCH',
+  'COMBO',
 ];
+
+const courseTypeLabelMap: Record<string, string> = {
+  MAT: '垫上普拉提',
+  REFORMER: '核心床普拉提',
+  CADILLAC: '凯迪拉克床',
+  CHAIR: '普拉提椅',
+  BARREL: '梯桶训练',
+  PRIVATE: '私教课程',
+  YOGA: '瑜伽',
+  FLOW: '流动训练',
+  STRETCH: '拉伸修复',
+  COMBO: '综合训练',
+};
+
+const getCourseTypeLabel = (type?: string) => {
+  const normalizedType = type?.trim();
+
+  if (!normalizedType) {
+    return '-';
+  }
+
+  return courseTypeLabelMap[normalizedType] || courseTypeLabelMap[normalizedType.toUpperCase()] || normalizedType;
+};
 
 export default function CoursesPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -170,7 +194,24 @@ export default function CoursesPage() {
   );
 
   const normalizedCourseTypeOptions = useMemo(
-    () => Array.from(new Set([...DEFAULT_COURSE_TYPE_OPTIONS, ...courseTypeOptions])),
+    () => {
+      const options = new Map<string, string>();
+
+      courseTypeOptions.forEach((item) => {
+        const normalized = item.trim();
+        if (normalized) {
+          options.set(normalized.toUpperCase(), normalized);
+        }
+      });
+
+      DEFAULT_COURSE_TYPE_OPTIONS.forEach((item) => {
+        if (!options.has(item.toUpperCase())) {
+          options.set(item.toUpperCase(), item);
+        }
+      });
+
+      return Array.from(options.values());
+    },
     [courseTypeOptions],
   );
 
@@ -220,7 +261,7 @@ export default function CoursesPage() {
     summaryText: course.isActive
       ? '可继续排期与维护。'
       : '当前已停用，保留档案。',
-    typeLabel: course.type,
+    typeLabel: getCourseTypeLabel(course.type),
     levelLabel: course.level,
     statusLabel: course.isActive ? '正常开课' : '已停用',
     statusTone: course.isActive ? 'active' : 'inactive',
@@ -463,7 +504,7 @@ export default function CoursesPage() {
         searchValue={searchValue}
         searchPlaceholder="按课程名称或教练搜索"
         typeValue={typeFilter}
-        typeOptions={[{ label: '全部类型', value: '全部' }, ...courseTypeOptions.map((item) => ({ label: item, value: item }))]}
+        typeOptions={[{ label: '全部类别', value: '全部' }, ...normalizedCourseTypeOptions.map((item) => ({ label: getCourseTypeLabel(item), value: item }))]}
         levelValue={levelFilter}
         levelOptions={[{ label: '全部难度', value: '全部' }, ...courseLevelOptions.map((item) => ({ label: item, value: item }))]}
         resetLabel="重置筛选"
@@ -510,12 +551,12 @@ export default function CoursesPage() {
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="type" label="课程类型" rules={[{ required: true, message: '请输入课程类型' }]}>
+              <Form.Item name="type" label="课程类别" rules={[{ required: true, message: '请选择课程类别' }]}>
                 <Select
                   className={pageCls.settingsInput}
                   showSearch
-                  placeholder="请选择课程类型"
-                  options={normalizedCourseTypeOptions.map((item) => ({ label: item, value: item }))}
+                  placeholder="请选择课程类别"
+                  options={normalizedCourseTypeOptions.map((item) => ({ label: getCourseTypeLabel(item), value: item }))}
                 />
               </Form.Item>
             </Col>
@@ -610,7 +651,7 @@ export default function CoursesPage() {
               summaryText={detailCourse.isActive
                 ? `当前已排 ${detailCourse._count?.sessions || 0} 节，可继续维护课程设置与排期关系。`
                 : `课程当前已停用，保留 ${detailCourse._count?.sessions || 0} 节关联排期记录。`}
-              typeLabel={detailCourse.type}
+              typeLabel={getCourseTypeLabel(detailCourse.type)}
               levelLabel={detailCourse.level}
               statusLabel={detailCourse.isActive ? '正常开课' : '已停用'}
               statusTone={detailCourse.isActive ? 'active' : 'inactive'}
@@ -633,7 +674,7 @@ export default function CoursesPage() {
               <Descriptions column={1} size="small" bordered className={pageCls.detailDescriptions}>
                 <Descriptions.Item label="课程编号">{detailCourse.courseCode || '-'}</Descriptions.Item>
                 <Descriptions.Item label="课程名称">{detailCourse.name}</Descriptions.Item>
-                <Descriptions.Item label="课程类型">{detailCourse.type}</Descriptions.Item>
+                <Descriptions.Item label="课程类别">{getCourseTypeLabel(detailCourse.type)}</Descriptions.Item>
                 <Descriptions.Item label="课程难度">{detailCourse.level}</Descriptions.Item>
                 <Descriptions.Item label="授课教练">{detailCourse.coach?.name || '-'}</Descriptions.Item>
                 <Descriptions.Item label="课程时长">{detailCourse.durationMinutes} 分钟</Descriptions.Item>

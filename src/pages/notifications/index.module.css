@@ -119,6 +119,32 @@
   overflow: hidden;
 }
 
+.failureReason,
+.deliveryNote {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.failureReason {
+  color: #9f1239;
+  background: color-mix(in srgb, var(--pink) 10%, white);
+  border: 1px solid color-mix(in srgb, var(--pink) 24%, transparent);
+}
+
+.deliveryNote {
+  color: var(--orange);
+  background: color-mix(in srgb, var(--orange) 10%, white);
+  border: 1px solid color-mix(in srgb, var(--orange) 22%, transparent);
+}
+
+.failureReason span,
+.deliveryNote span {
+  font-weight: var(--font-bold);
+}
+
 .notificationAside {
   display: flex;
   min-width: 0;

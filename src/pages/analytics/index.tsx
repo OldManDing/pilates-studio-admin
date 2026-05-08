@@ -23,6 +23,22 @@ const iconMap = {
 
 type ChartPoint = { label: string; value: number };
 
+const transactionKindLabelMap: Record<string, string> = {
+  MEMBERSHIP_PURCHASE: '会籍购买',
+  MEMBERSHIP_RENEWAL: '会籍续费',
+  CLASS_PACKAGE_PURCHASE: '课包购买',
+  PRIVATE_CLASS_PURCHASE: '私教购买',
+  REFUND: '退款',
+  ADJUSTMENT: '手工调整',
+};
+
+const getTransactionKindLabel = (kind: string) => {
+  const normalized = kind.trim();
+  const upperKey = normalized.toUpperCase();
+
+  return transactionKindLabelMap[normalized] || transactionKindLabelMap[upperKey] || normalized;
+};
+
 export default function AnalyticsPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const isMobile = useIsMobile();
@@ -59,7 +75,10 @@ export default function AnalyticsPage() {
           satisfaction: overview.stats.satisfaction === null ? '-' : `${overview.stats.satisfaction}%`,
         });
 
-        const popularity = overview.transactionPopularity || [];
+        const popularity = (overview.transactionPopularity || []).map((item) => ({
+          ...item,
+          label: getTransactionKindLabel(item.label),
+        }));
         setCoursePopularity(popularity);
         setBookingDistribution(bookingDistributionData);
         setMemberRetentionTrend(retentionTrend);
@@ -100,6 +119,7 @@ export default function AnalyticsPage() {
 
   const PopularityTooltipRenderer = createChartTooltip({
     labelMap: { value: '交易次数' },
+    titleFormatter: (label) => getTransactionKindLabel(String(label ?? '')),
   });
 
   if (loading) {
@@ -174,10 +194,10 @@ export default function AnalyticsPage() {
                 <ResponsiveContainer>
                   <BarChart data={coursePopularity}>
                     <CartesianGrid vertical={false} stroke={chartGrid} strokeDasharray="3 5" />
-                    <XAxis dataKey="label" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} tick={axisTick} />
+                    <XAxis dataKey="label" axisLine={false} tickLine={false} interval={isMobile ? 1 : 0} tick={axisTick} tickFormatter={(label) => getTransactionKindLabel(String(label))} />
                     <YAxis axisLine={false} tickLine={false} tick={axisTick} />
                     <Tooltip content={<PopularityTooltipRenderer />} />
-                    <Bar dataKey="value" fill="var(--mint)" radius={[10, 10, 0, 0]} barSize={isMobile ? 18 : 28} />
+                    <Bar dataKey="value" name="交易次数" fill="var(--mint)" radius={[10, 10, 0, 0]} barSize={isMobile ? 18 : 28} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (

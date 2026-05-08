@@ -90,7 +90,7 @@ describe('NotificationDeliveryService', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
-  it('retries mini-program delivery and records the failure reason', async () => {
+  it('keeps mini-program inbox delivery visible when subscribe message push fails', async () => {
     jest.spyOn(global, 'fetch' as any).mockRejectedValue(new Error('temporary network error'));
     configService.get.mockImplementation((key: string) => {
       if (key === 'wechat.appId') return 'appid';
@@ -111,15 +111,15 @@ describe('NotificationDeliveryService', () => {
     expect(prisma.notification.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          status: NotificationStatus.FAILED,
-          failureReason: 'temporary network error',
+          status: NotificationStatus.SENT,
+          failureReason: '小程序消息中心已生成；微信订阅消息推送失败：临时网络异常',
         }),
       }),
     );
-    expect(result).toEqual({ id: 'notification-1', status: NotificationStatus.FAILED });
+    expect(result).toEqual({ id: 'notification-1', status: NotificationStatus.SENT });
   });
 
-  it('marks unsupported delivery attempts as failed when credentials are missing', async () => {
+  it('keeps mini-program inbox delivery visible when subscribe message config is missing', async () => {
     const result = await service.deliver({
       id: 'notification-1',
       channel: NotificationChannel.MINI_PROGRAM,
@@ -132,12 +132,12 @@ describe('NotificationDeliveryService', () => {
     expect(prisma.notification.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          status: NotificationStatus.FAILED,
-          failureReason: 'Missing WeChat credentials, template id, or recipient openId',
+          status: NotificationStatus.SENT,
+          failureReason: '小程序消息中心已生成；微信订阅消息未发送：缺少微信配置、订阅消息模板或接收人 openId',
         }),
       }),
     );
-    expect(result).toEqual({ id: 'notification-1', status: NotificationStatus.FAILED });
+    expect(result).toEqual({ id: 'notification-1', status: NotificationStatus.SENT });
   });
 
   it('sends EMAIL notifications through nodemailer when config and recipient are present', async () => {
@@ -194,7 +194,7 @@ describe('NotificationDeliveryService', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           status: NotificationStatus.FAILED,
-          failureReason: 'Missing SMTP configuration or recipient email',
+          failureReason: '邮件未发送：缺少 SMTP 配置或接收人邮箱',
         }),
       }),
     );

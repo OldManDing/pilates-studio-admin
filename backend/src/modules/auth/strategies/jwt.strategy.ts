@@ -4,6 +4,13 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 
+const ROLE_DISPLAY_NAMES: Record<string, string> = {
+  OWNER: '店长',
+  FRONTDESK: '前台',
+  COACH: '教练',
+  FINANCE: '财务',
+};
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
@@ -44,7 +51,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       role: {
         id: admin.role.id,
         code: admin.role.code,
-        name: admin.role.name,
+        name: ROLE_DISPLAY_NAMES[admin.role.code] || admin.role.name,
         permissions: admin.role.permissions.map(
           (rp) => `${rp.permission.action}:${rp.permission.module}`,
         ),

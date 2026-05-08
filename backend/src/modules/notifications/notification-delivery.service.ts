@@ -32,7 +32,7 @@ export class NotificationDeliveryService {
         return this.deliverEmail(notification);
       case NotificationChannel.SMS:
       default:
-        return this.markAsFailed(notification.id, `No delivery adapter configured for channel ${notification.channel}`);
+        return this.markAsFailed(notification.id, this.getUnsupportedChannelReason(notification.channel));
     }
   }
 
@@ -57,7 +57,7 @@ export class NotificationDeliveryService {
     const recipientEmail = fullNotification?.member?.email ?? null;
 
     if (!host || !port || !user || !password || !from || !recipientEmail) {
-      return this.markAsFailed(notification.id, 'Missing SMTP configuration or recipient email');
+      return this.markAsFailed(notification.id, '邮件未发送：缺少 SMTP 配置或接收人邮箱');
     }
 
     const transporter = nodemailer.createTransport({
@@ -80,8 +80,8 @@ export class NotificationDeliveryService {
 
       return this.markAsSent(notification.id);
     } catch (error) {
-      const reason = error instanceof Error ? error.message : 'Unknown email delivery error';
-      return this.markAsFailed(notification.id, reason);
+      const reason = error instanceof Error ? error.message : '未知邮件投递错误';
+      return this.markAsFailed(notification.id, `邮件发送失败：${this.translateDeliveryError(reason)}`);
     }
   }
 
@@ -99,10 +99,13 @@ export class NotificationDeliveryService {
     const templateId = this.resolveTemplateId(notification.type);
 
     if (!appId || !secret || !openId || !templateId) {
-      return this.markAsFailed(notification.id, 'Missing WeChat credentials, template id, or recipient openId');
+      return this.markAsSent(
+        notification.id,
+        '小程序消息中心已生成；微信订阅消息未发送：缺少微信配置、订阅消息模板或接收人 openId',
+      );
     }
 
-    let lastError = 'Unknown WeChat delivery failure';
+    let lastError = '未知微信订阅消息投递错误';
     const maxAttempts = 3;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -128,9 +131,9 @@ export class NotificationDeliveryService {
           return this.markAsSent(notification.id);
         }
 
-        lastError = body.errmsg || `WeChat API error ${body.errcode ?? response.status}`;
+        lastError = body.errmsg || `微信接口返回异常：${body.errcode ?? response.status}`;
       } catch (error) {
-        lastError = error instanceof Error ? error.message : 'Unknown WeChat delivery error';
+        lastError = this.translateDeliveryError(error instanceof Error ? error.message : '未知微信订阅消息投递错误');
       }
 
       if (attempt < maxAttempts) {
@@ -138,7 +141,10 @@ export class NotificationDeliveryService {
       }
     }
 
-    return this.markAsFailed(notification.id, lastError);
+    return this.markAsSent(
+      notification.id,
+      `小程序消息中心已生成；微信订阅消息推送失败：${lastError}`,
+    );
   }
 
   private resolveTemplateId(type?: string) {
@@ -170,7 +176,7 @@ export class NotificationDeliveryService {
     );
     const body = (await response.json()) as { access_token?: string; expires_in?: number; errcode?: number; errmsg?: string };
     if (!response.ok || !body.access_token || body.errcode) {
-      throw new Error(body.errmsg || 'Failed to fetch WeChat access token');
+      throw new Error(body.errmsg || '获取微信 access_token 失败');
     }
 
     const expiresInMs = Math.max((body.expires_in ?? 7200) - 60, 60) * 1000;
@@ -180,13 +186,13 @@ export class NotificationDeliveryService {
     return body.access_token;
   }
 
-  private async markAsSent(id: string) {
+  private async markAsSent(id: string, failureReason: string | null = null) {
     const updated = await this.prisma.notification.update({
       where: { id },
       data: {
         status: NotificationStatus.SENT,
         sentAt: new Date(),
-        failureReason: null,
+        failureReason,
       },
     });
 
@@ -198,7 +204,7 @@ export class NotificationDeliveryService {
       where: { id },
       data: {
         status: NotificationStatus.FAILED,
-        failureReason: reason,
+        failureReason: this.translateDeliveryError(reason),
       },
     });
 
@@ -207,5 +213,66 @@ export class NotificationDeliveryService {
 
   private async delay(ms: number) {
     await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private getUnsupportedChannelReason(channel: NotificationChannel) {
+    const channelLabels: Record<NotificationChannel, string> = {
+      [NotificationChannel.INTERNAL]: '站内通知',
+      [NotificationChannel.MINI_PROGRAM]: '小程序订阅消息',
+      [NotificationChannel.EMAIL]: '邮件',
+      [NotificationChannel.SMS]: '短信',
+    };
+
+    return `发送失败：暂未配置${channelLabels[channel] ?? channel}投递服务`;
+  }
+
+  private translateDeliveryError(reason: string) {
+    const normalized = reason.trim();
+    const exactReasonMap: Record<string, string> = {
+      'Missing SMTP configuration or recipient email': '邮件未发送：缺少 SMTP 配置或接收人邮箱',
+      'Unknown email delivery error': '未知邮件投递错误',
+      'Unknown WeChat delivery failure': '未知微信订阅消息投递错误',
+      'Unknown WeChat delivery error': '未知微信订阅消息投递错误',
+      'Failed to fetch WeChat access token': '获取微信 access_token 失败',
+      'Unknown notification delivery error': '未知通知投递错误',
+      'temporary network error': '临时网络异常',
+    };
+    const phraseReasonMap: Array<[string, string]> = [
+      ['Invalid openid', 'OpenID 无效'],
+      ['invalid openid', 'OpenID 无效'],
+      ['openid is invalid', 'OpenID 无效'],
+      ['template_id is invalid', '订阅消息模板 ID 无效'],
+      ['invalid template_id', '订阅消息模板 ID 无效'],
+      ['access_token expired', 'access_token 已过期'],
+      ['invalid credential', '微信凭证无效'],
+      ['invalid appid', 'AppID 无效'],
+      ['user refuse to accept the msg', '用户未订阅或拒收该消息'],
+      ['system error', '微信系统错误'],
+      ['api unauthorized', '微信接口未授权'],
+    ];
+
+    if (exactReasonMap[normalized]) {
+      return exactReasonMap[normalized];
+    }
+
+    const translatedByPhrase = phraseReasonMap.reduce(
+      (current, [english, chinese]) => current.split(english).join(chinese),
+      normalized,
+    );
+    if (translatedByPhrase !== normalized) {
+      return translatedByPhrase;
+    }
+
+    const unsupportedChannelMatch = normalized.match(/^No delivery adapter configured for channel (.+)$/);
+    if (unsupportedChannelMatch) {
+      return this.getUnsupportedChannelReason(unsupportedChannelMatch[1] as NotificationChannel);
+    }
+
+    const wechatApiMatch = normalized.match(/^WeChat API error (.+)$/);
+    if (wechatApiMatch) {
+      return `微信接口返回异常：${wechatApiMatch[1]}`;
+    }
+
+    return normalized || '未知通知投递错误';
   }
 }

@@ -263,4 +263,15 @@ describe('Auth -> Members -> Bookings integration flow', () => {
       type: 'BOOKING_CONFIRMATION',
     }));
   });
+
+  it('rejects login when only the password letter case is wrong', async () => {
+    const loginResponse = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: 'owner@pilates.com', password: adminLoginSecret.toLowerCase() })
+      .expect(401);
+
+    expect(loginResponse.body.success).toBe(false);
+    expect(loginResponse.body.error.message).toBe('账号或密码错误，请检查后重新输入');
+    expect(prisma.refreshToken.create).not.toHaveBeenCalled();
+  });
 });

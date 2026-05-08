@@ -19,6 +19,6 @@ export class LoginMfaChallengeDto {
   @ApiProperty({ description: 'Short-lived MFA token to continue login' })
   mfaToken: string;
 
-  @ApiProperty({ example: 'Two-factor verification required' })
+  @ApiProperty({ example: '请输入两步验证码以完成登录' })
   message: string;
 }

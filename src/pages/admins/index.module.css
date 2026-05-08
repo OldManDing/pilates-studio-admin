@@ -1,7 +1,7 @@
 .adminFilters {
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(220px, 420px) auto;
+  grid-template-columns: minmax(220px, 420px);
   gap: 10px;
   align-items: center;
 }

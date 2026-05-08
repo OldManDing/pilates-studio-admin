@@ -35,11 +35,13 @@ export class NotificationsService {
   }
 
   async create(dto: CreateNotificationDto) {
-    if (dto.channel === NotificationChannel.MINI_PROGRAM && dto.miniUserId) {
+    const recipientData = await this.resolveNotificationRecipient(dto);
+
+    if (dto.channel === NotificationChannel.MINI_PROGRAM && recipientData.miniUserId) {
       const preferenceKey = this.getMiniNotificationPreferenceKey(dto.type);
       const preference = await this.prisma.notificationSetting.findUnique({
         where: {
-          key: `mini-user:${dto.miniUserId}:${preferenceKey}`,
+          key: `mini-user:${recipientData.miniUserId}:${preferenceKey}`,
         },
       });
 
@@ -55,9 +57,9 @@ export class NotificationsService {
         title: dto.title,
         content: dto.content,
         payload: dto.payload as Prisma.InputJsonValue | undefined,
-        memberId: dto.memberId,
-        miniUserId: dto.miniUserId,
-        adminUserId: dto.adminUserId,
+        memberId: recipientData.memberId,
+        miniUserId: recipientData.miniUserId,
+        adminUserId: recipientData.adminUserId,
         status: NotificationStatus.PENDING,
       },
       include: {
@@ -69,7 +71,7 @@ export class NotificationsService {
       },
     });
 
-    this.triggerImmediateDelivery(created);
+    await this.deliverCreatedNotification(created);
 
     return created;
   }
@@ -409,7 +411,7 @@ export class NotificationsService {
         miniUser: notification.miniUser,
       });
     } catch (error) {
-      const reason = error instanceof Error ? error.message : 'Unknown notification delivery error';
+      const reason = this.translateDeliveryError(error instanceof Error ? error.message : 'Unknown notification delivery error');
 
       await this.prisma.notification.updateMany({
         where: {
@@ -438,6 +440,57 @@ export class NotificationsService {
     return 'systemNotification';
   }
 
+  private async resolveNotificationRecipient(dto: CreateNotificationDto) {
+    let memberId = dto.memberId;
+    let miniUserId = dto.miniUserId;
+
+    if (dto.channel === NotificationChannel.MINI_PROGRAM) {
+      if (memberId && !miniUserId) {
+        const member = await this.prisma.member.findUnique({
+          where: { id: memberId },
+          select: { miniUserId: true },
+        });
+
+        if (!member) {
+          throw new NotFoundException('Member not found');
+        }
+
+        if (!member.miniUserId) {
+          throw new BadRequestException('该会员未绑定小程序用户，无法发送小程序通知');
+        }
+
+        miniUserId = member.miniUserId;
+      }
+
+      if (miniUserId && !memberId) {
+        const miniUser = await this.prisma.miniUser.findUnique({
+          where: { id: miniUserId },
+          select: {
+            member: {
+              select: { id: true },
+            },
+          },
+        });
+
+        if (!miniUser) {
+          throw new NotFoundException('Mini user not found');
+        }
+
+        memberId = miniUser.member?.id;
+      }
+
+      if (!miniUserId) {
+        throw new BadRequestException('请选择已绑定的小程序用户或会员');
+      }
+    }
+
+    return {
+      memberId,
+      miniUserId,
+      adminUserId: dto.adminUserId,
+    };
+  }
+
   private async ensureDefaultNotificationSetting(key: string) {
     const defaultSetting = this.defaultNotificationSettings[key as keyof typeof this.defaultNotificationSettings];
     if (!defaultSetting) {
@@ -461,7 +514,7 @@ export class NotificationsService {
     });
   }
 
-  private triggerImmediateDelivery(notification: {
+  private async deliverCreatedNotification(notification: {
     id: string;
     channel: string;
     type?: string;
@@ -470,14 +523,87 @@ export class NotificationsService {
     payload?: Prisma.JsonValue;
     miniUser?: { openId?: string | null } | null;
   }) {
-    void this.notificationDeliveryService.deliver({
-      id: notification.id,
-      channel: notification.channel as NotificationChannel,
-      type: notification.type,
-      title: notification.title,
-      content: notification.content,
-      payload: notification.payload as Record<string, unknown> | null,
-      miniUser: notification.miniUser,
-    }).catch(() => undefined);
+    const channel = notification.channel as NotificationChannel;
+
+    try {
+      await this.notificationDeliveryService.deliver({
+        id: notification.id,
+        channel,
+        type: notification.type,
+        title: notification.title,
+        content: notification.content,
+        payload: notification.payload as Record<string, unknown> | null,
+        miniUser: notification.miniUser,
+      });
+    } catch (error) {
+      const reason = this.translateDeliveryError(error instanceof Error ? error.message : 'Unknown notification delivery error');
+      const miniProgramFailureReason = `小程序消息中心已生成；发送处理异常：${reason}`;
+
+      await this.prisma.notification.update({
+        where: { id: notification.id },
+        data: channel === NotificationChannel.MINI_PROGRAM
+          ? {
+              status: NotificationStatus.SENT,
+              sentAt: new Date(),
+              failureReason: miniProgramFailureReason,
+            }
+          : {
+              status: NotificationStatus.FAILED,
+              failureReason: reason,
+            },
+      });
+    }
+  }
+
+  private translateDeliveryError(reason: string) {
+    const normalized = reason.trim();
+    const exactReasonMap: Record<string, string> = {
+      'Missing SMTP configuration or recipient email': '邮件未发送：缺少 SMTP 配置或接收人邮箱',
+      'Unknown email delivery error': '未知邮件投递错误',
+      'Unknown WeChat delivery failure': '未知微信订阅消息投递错误',
+      'Unknown WeChat delivery error': '未知微信订阅消息投递错误',
+      'Failed to fetch WeChat access token': '获取微信 access_token 失败',
+      'Unknown notification delivery error': '未知通知投递错误',
+      'temporary network error': '临时网络异常',
+      'delivery unavailable': '投递服务不可用',
+      'unexpected update failure': '通知状态更新异常',
+    };
+    const phraseReasonMap: Array<[string, string]> = [
+      ['Invalid openid', 'OpenID 无效'],
+      ['invalid openid', 'OpenID 无效'],
+      ['openid is invalid', 'OpenID 无效'],
+      ['template_id is invalid', '订阅消息模板 ID 无效'],
+      ['invalid template_id', '订阅消息模板 ID 无效'],
+      ['access_token expired', 'access_token 已过期'],
+      ['invalid credential', '微信凭证无效'],
+      ['invalid appid', 'AppID 无效'],
+      ['user refuse to accept the msg', '用户未订阅或拒收该消息'],
+      ['system error', '微信系统错误'],
+      ['api unauthorized', '微信接口未授权'],
+    ];
+
+    if (exactReasonMap[normalized]) {
+      return exactReasonMap[normalized];
+    }
+
+    const translatedByPhrase = phraseReasonMap.reduce(
+      (current, [english, chinese]) => current.split(english).join(chinese),
+      normalized,
+    );
+    if (translatedByPhrase !== normalized) {
+      return translatedByPhrase;
+    }
+
+    const unsupportedChannelMatch = normalized.match(/^No delivery adapter configured for channel (.+)$/);
+    if (unsupportedChannelMatch) {
+      return `发送失败：暂未配置 ${unsupportedChannelMatch[1]} 投递服务`;
+    }
+
+    const wechatApiMatch = normalized.match(/^WeChat API error (.+)$/);
+    if (wechatApiMatch) {
+      return `微信接口返回异常：${wechatApiMatch[1]}`;
+    }
+
+    return normalized || '未知通知投递错误';
   }
 }

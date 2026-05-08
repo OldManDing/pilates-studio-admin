@@ -1,4 +1,10 @@
 import { api } from '@/utils/request';
+import {
+  ADMIN_ACCESS_TOKEN_KEY,
+  ADMIN_REFRESH_TOKEN_KEY,
+  clearAdminSession,
+  touchAdminSession,
+} from '@/utils/session';
 
 export interface LoginCredentials {
   email: string;
@@ -61,16 +67,16 @@ export const authApi = {
 };
 
 export const setTokens = (accessToken: string, refreshToken: string) => {
-  localStorage.setItem('pilates_access_token', accessToken);
-  localStorage.setItem('pilates_refresh_token', refreshToken);
+  localStorage.setItem(ADMIN_ACCESS_TOKEN_KEY, accessToken);
+  localStorage.setItem(ADMIN_REFRESH_TOKEN_KEY, refreshToken);
+  touchAdminSession();
 };
 
 export const clearTokens = () => {
-  localStorage.removeItem('pilates_access_token');
-  localStorage.removeItem('pilates_refresh_token');
+  clearAdminSession();
 };
 
 export const getTokens = () => ({
-  accessToken: localStorage.getItem('pilates_access_token'),
-  refreshToken: localStorage.getItem('pilates_refresh_token'),
+  accessToken: localStorage.getItem(ADMIN_ACCESS_TOKEN_KEY),
+  refreshToken: localStorage.getItem(ADMIN_REFRESH_TOKEN_KEY),
 });

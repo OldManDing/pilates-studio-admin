@@ -43,6 +43,12 @@ describe('NotificationsService', () => {
         findMany: jest.fn(),
         upsert: jest.fn(),
       },
+      member: {
+        findUnique: jest.fn(),
+      },
+      miniUser: {
+        findUnique: jest.fn(),
+      },
     };
     notificationDeliveryService = {
       deliver: jest.fn().mockResolvedValue({ id: 'notification-1', status: NotificationStatus.SENT }),
@@ -75,6 +81,70 @@ describe('NotificationsService', () => {
       id: 'notification-1',
       channel: NotificationChannel.EMAIL,
     }));
+  });
+
+  it('resolves linked mini user when creating mini-program notification for a member', async () => {
+    prisma.member.findUnique.mockResolvedValue({ miniUserId: 'mini-user-1' });
+    prisma.notificationSetting.findUnique.mockResolvedValue({ enabled: true });
+    prisma.notification.create.mockResolvedValue(createNotification({
+      channel: NotificationChannel.MINI_PROGRAM,
+      memberId: 'member-1',
+      miniUserId: 'mini-user-1',
+    }));
+
+    const result = await service.create({
+      channel: NotificationChannel.MINI_PROGRAM,
+      type: 'SYSTEM_NOTICE',
+      title: '系统通知',
+      content: '请查看门店通知',
+      memberId: 'member-1',
+    });
+
+    expect(prisma.notification.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          memberId: 'member-1',
+          miniUserId: 'mini-user-1',
+        }),
+      }),
+    );
+    expect(result?.miniUserId).toBe('mini-user-1');
+  });
+
+  it('keeps manually created mini-program notifications visible when immediate delivery throws', async () => {
+    prisma.member.findUnique.mockResolvedValue({ miniUserId: 'mini-user-1' });
+    prisma.notificationSetting.findUnique.mockResolvedValue({ enabled: true });
+    prisma.notification.create.mockResolvedValue(createNotification({
+      channel: NotificationChannel.MINI_PROGRAM,
+      memberId: 'member-1',
+      miniUserId: 'mini-user-1',
+      miniUser: { id: 'mini-user-1', openId: 'openid-1' },
+    }));
+    prisma.notification.update.mockResolvedValue(createNotification({
+      channel: NotificationChannel.MINI_PROGRAM,
+      status: NotificationStatus.SENT,
+      failureReason: '小程序消息中心已生成；发送处理异常：投递服务不可用',
+    }));
+    notificationDeliveryService.deliver.mockRejectedValueOnce(new Error('delivery unavailable'));
+
+    await service.create({
+      channel: NotificationChannel.MINI_PROGRAM,
+      type: 'SYSTEM_NOTICE',
+      title: '系统通知',
+      content: '请查看门店通知',
+      memberId: 'member-1',
+    });
+
+    expect(prisma.notification.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'notification-1' },
+        data: expect.objectContaining({
+          status: NotificationStatus.SENT,
+          sentAt: expect.any(Date),
+          failureReason: '小程序消息中心已生成；发送处理异常：投递服务不可用',
+        }),
+      }),
+    );
   });
 
   it('returns paginated notifications', async () => {
@@ -173,7 +243,7 @@ describe('NotificationsService', () => {
         }),
         data: expect.objectContaining({
           status: NotificationStatus.FAILED,
-          failureReason: 'unexpected update failure',
+          failureReason: '通知状态更新异常',
         }),
       }),
     );
@@ -187,6 +257,7 @@ describe('NotificationsService', () => {
       channel: NotificationChannel.MINI_PROGRAM,
       enabled: true,
     });
+    prisma.member.findUnique.mockResolvedValue({ miniUserId: 'mini-1' });
     prisma.notification.create.mockResolvedValue(createNotification({ channel: NotificationChannel.MINI_PROGRAM }));
 
     const result = await service.createFromSetting('booking_confirmation', {
@@ -248,6 +319,7 @@ describe('NotificationsService', () => {
 
   it('skips mini notification creation when member preference disables it', async () => {
     prisma.notificationSetting.findUnique.mockResolvedValueOnce({ enabled: false });
+    prisma.miniUser.findUnique.mockResolvedValue({ member: { id: 'member-1' } });
 
     const result = await service.create({
       channel: NotificationChannel.MINI_PROGRAM,

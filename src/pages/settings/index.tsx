@@ -8,7 +8,7 @@ import StatusTag from '@/components/StatusTag';
 import { SETTINGS_DETAIL_DRAWER_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
-import { settingsApi, type NotificationSetting } from '@/services/settings';
+import { DEFAULT_MINI_PAGE_IMAGES, settingsApi, type MiniPageImageSetting, type NotificationSetting } from '@/services/settings';
 import { authApi } from '@/services/auth';
 import { getErrorMessage } from '@/utils/errors';
 import { hasRequiredPermissions } from '@/utils/menu';
@@ -273,6 +273,29 @@ const provinceCityDistrictData = [
         ]
       }
     ]
+  },
+  {
+    value: '江苏省',
+    label: '江苏省',
+    children: [
+      {
+        value: '南京市',
+        label: '南京市',
+        children: [
+          { value: '玄武区', label: '玄武区' },
+          { value: '秦淮区', label: '秦淮区' },
+          { value: '建邺区', label: '建邺区' },
+          { value: '鼓楼区', label: '鼓楼区' },
+          { value: '浦口区', label: '浦口区' },
+          { value: '栖霞区', label: '栖霞区' },
+          { value: '雨花台区', label: '雨花台区' },
+          { value: '江宁区', label: '江宁区' },
+          { value: '六合区', label: '六合区' },
+          { value: '溧水区', label: '溧水区' },
+          { value: '高淳区', label: '高淳区' }
+        ]
+      }
+    ]
   }
 ];
 
@@ -286,8 +309,11 @@ export default function SettingsPage() {
   const [savedStoreInfo, setSavedStoreInfo] = useState<StoreInfoValues>(defaultStoreInfo);
   const [storeSavedAt, setStoreSavedAt] = useState('');
   const [notifications, setNotifications] = useState<NotificationSetting[]>([]);
+  const [miniPageImages, setMiniPageImages] = useState<MiniPageImageSetting[]>([]);
   const [notificationSavedAt, setNotificationSavedAt] = useState('');
+  const [miniPageImageSavedAt, setMiniPageImageSavedAt] = useState('');
   const [isSavingStoreInfo, setIsSavingStoreInfo] = useState(false);
+  const [savingMiniPageImageKey, setSavingMiniPageImageKey] = useState<string | null>(null);
   const [initializingNotifications, setInitializingNotifications] = useState(false);
   const [togglingNotificationKey, setTogglingNotificationKey] = useState<string | null>(null);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
@@ -314,6 +340,7 @@ export default function SettingsPage() {
   const [openDataDrawer, setOpenDataDrawer] = useState<DataDrawerKey>(null);
   const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
   const [currentUserRoleCode, setCurrentUserRoleCode] = useState('');
+  const miniPageImageInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const watchedStoreInfo = Form.useWatch([], storeForm) as Partial<StoreInfoValues> | undefined;
   const canManageSettings = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['MANAGE:SETTINGS']);
 
@@ -321,9 +348,12 @@ export default function SettingsPage() {
     const fetchSettings = async () => {
       try {
         setLoading(true);
-        const [studioData, notificationsData, twoFactorStatus, currentUser] = await Promise.all([
+        const [studioData, notificationsData, miniPageImagesData, twoFactorStatus, currentUser] = await Promise.all([
           settingsApi.getStudio().catch(() => null),
           settingsApi.getNotifications().catch(() => []),
+          settingsApi.getMiniPageImages()
+            .then((data) => (data.length > 0 ? data : DEFAULT_MINI_PAGE_IMAGES))
+            .catch(() => DEFAULT_MINI_PAGE_IMAGES),
           authApi.getTwoFactorStatus().catch(() => ({ enabled: false, hasSecret: false })),
           authApi.getMe().catch(() => null),
         ]);
@@ -382,6 +412,8 @@ export default function SettingsPage() {
           const initialized = await settingsApi.getNotifications().catch(() => []);
           setNotifications(initialized);
         }
+
+        setMiniPageImages(miniPageImagesData);
 
         setTwoFactorEnabled(twoFactorStatus.enabled);
         setSecurityState((current) => ({
@@ -442,6 +474,11 @@ export default function SettingsPage() {
   const storeChanged = JSON.stringify(normalizeStoreFormValues(watchedStoreInfo)) !== JSON.stringify(normalizeStoreFormValues(savedStoreInfo));
   const storeSavedLabel = storeSavedAt ? `最近保存 ${storeSavedAt}` : '尚未记录';
   const notificationSavedLabel = notificationSavedAt ? `最近保存 ${notificationSavedAt}` : '尚未记录';
+  const miniPageImageSavedLabel = miniPageImageSavedAt ? `最近保存 ${miniPageImageSavedAt}` : '尚未记录';
+  const configuredMiniPageImageCount = useMemo(
+    () => miniPageImages.filter((item) => !item.isDefault).length,
+    [miniPageImages]
+  );
 
   const settingsOverviewMetaItems = useMemo<SettingsOverviewMetaItem[]>(() => [
     {
@@ -483,6 +520,7 @@ export default function SettingsPage() {
   ], [dataHealthyCount, enabledNotificationCount, notificationSavedLabel, notifications.length, securityHealthyCount]);
 
   const notificationSectionLabel = `${enabledNotificationCount}/${notifications.length || 0} 已启用`;
+  const miniPageImageSectionLabel = `${configuredMiniPageImageCount}/${miniPageImages.length || 0} 已配置`;
   const securitySectionLabel = securityHealthyCount === securityActionsList.length ? '状态稳定' : '需要跟进';
   const dataSectionLabel = dataHealthyCount === dataActionsList.length ? '入口可用' : '待处理';
 
@@ -603,6 +641,61 @@ export default function SettingsPage() {
       message.error(getErrorMessage(err, '店面图片读取失败'));
     } finally {
       event.target.value = '';
+    }
+  };
+
+  const handleSelectMiniPageImage = (pageKey: string) => {
+    if (!canManageSettings) {
+      message.warning('当前账号没有小程序页面图片管理权限');
+      return;
+    }
+
+    miniPageImageInputRefs.current[pageKey]?.click();
+  };
+
+  const handleMiniPageImageChange = async (pageKey: string, event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const validationMessage = validateImageFile(file);
+      if (validationMessage) {
+        message.warning(validationMessage);
+        return;
+      }
+
+      setSavingMiniPageImageKey(pageKey);
+      const imageUrl = await readFileAsDataUrl(file);
+      const updated = await settingsApi.updateMiniPageImage(pageKey, { imageUrl });
+      setMiniPageImages((current) => current.map((item) => (item.pageKey === pageKey ? updated : item)));
+      setMiniPageImageSavedAt(todayText());
+      message.success(`${updated.label}头图已保存`);
+    } catch (err) {
+      message.error(getErrorMessage(err, '小程序页面图片保存失败'));
+    } finally {
+      setSavingMiniPageImageKey(null);
+      event.target.value = '';
+    }
+  };
+
+  const handleResetMiniPageImage = async (pageKey: string) => {
+    if (!canManageSettings) {
+      message.warning('当前账号没有小程序页面图片管理权限');
+      return;
+    }
+
+    try {
+      setSavingMiniPageImageKey(pageKey);
+      const updated = await settingsApi.updateMiniPageImage(pageKey, { imageUrl: '' });
+      setMiniPageImages((current) => current.map((item) => (item.pageKey === pageKey ? updated : item)));
+      setMiniPageImageSavedAt(todayText());
+      message.success(`${updated.label}头图已恢复默认`);
+    } catch (err) {
+      message.error(getErrorMessage(err, '恢复默认图片失败'));
+    } finally {
+      setSavingMiniPageImageKey(null);
     }
   };
 
@@ -924,6 +1017,84 @@ export default function SettingsPage() {
             </div>
 
           </Form>
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        title="小程序页面图片"
+        subtitle="只配置各页面顶部图片；课程封面、教练头像和门店图片仍在原模块维护。"
+        extra={<span className={styles.settingsSectionPill}>{miniPageImageSectionLabel}</span>}
+      >
+        <div className={styles.settingsSectionStack}>
+          <div className={styles.settingsSectionSummaryCompact}>
+            <div className={styles.settingsSectionSummaryText}>
+              上传后会自动保存并同步到小程序；恢复默认后，小程序继续使用内置默认头图。
+            </div>
+            <div className={styles.settingsSectionSubnote}>{miniPageImageSavedLabel}</div>
+          </div>
+
+          {miniPageImages.length > 0 ? (
+            <div className={styles.miniPageImageGrid}>
+              {miniPageImages.map((item) => {
+                const isSaving = savingMiniPageImageKey === item.pageKey;
+                const previewImage = item.imageUrl?.trim();
+
+                return (
+                  <div key={item.pageKey} className={styles.miniPageImageCard}>
+                    <input
+                      ref={(node) => {
+                        miniPageImageInputRefs.current[item.pageKey] = node;
+                      }}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(event) => handleMiniPageImageChange(item.pageKey, event)}
+                    />
+                    <div className={styles.miniPageImagePreview}>
+                      {previewImage ? (
+                        <img src={previewImage} alt={`${item.label}头图预览`} className={styles.miniPageImagePreviewImage} />
+                      ) : (
+                        <div className={styles.miniPageImagePlaceholder}>
+                          <span>{item.label}</span>
+                          <small>使用默认图</small>
+                        </div>
+                      )}
+                    </div>
+                    <div className={styles.miniPageImageContent}>
+                      <div>
+                        <div className={widgetCls.recordTitle}>{item.label}</div>
+                        <div className={widgetCls.smallText}>{item.path}</div>
+                      </div>
+                      <span className={styles.settingsSectionPill}>{item.isDefault ? '默认图' : '已上传'}</span>
+                    </div>
+                    <div className={styles.miniPageImageActions}>
+                      <Button
+                        className={pageCls.cardActionSecondary}
+                        onClick={() => handleSelectMiniPageImage(item.pageKey)}
+                        loading={isSaving}
+                        disabled={!canManageSettings || (savingMiniPageImageKey !== null && !isSaving)}
+                      >
+                        上传图片
+                      </Button>
+                      <Button
+                        onClick={() => handleResetMiniPageImage(item.pageKey)}
+                        disabled={!canManageSettings || item.isDefault || (savingMiniPageImageKey !== null && !isSaving)}
+                      >
+                        恢复默认
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className={styles.settingsEmptyStateCard}>
+              <div>
+                <div className={widgetCls.recordTitle}>小程序页面图片暂未加载</div>
+                <div className={widgetCls.smallText}>请检查后端设置接口是否正常。</div>
+              </div>
+            </div>
+          )}
         </div>
       </SectionCard>
 

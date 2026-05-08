@@ -32,6 +32,7 @@ export interface NotificationRecord {
   title: string;
   content: string;
   payload?: Record<string, unknown>;
+  failureReason?: string | null;
   memberId?: string | null;
   miniUserId?: string | null;
   adminUserId?: string | null;

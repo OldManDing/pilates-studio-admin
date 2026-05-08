@@ -115,10 +115,10 @@ async function main() {
 
   // Create roles
   const roles = [
-    { code: AdminRoleCode.OWNER, name: 'Owner', description: '系统所有者，拥有所有权限' },
-    { code: AdminRoleCode.FRONTDESK, name: 'Front Desk', description: '前台，管理会员和预约' },
-    { code: AdminRoleCode.COACH, name: 'Coach', description: '教练，管理课程和签到' },
-    { code: AdminRoleCode.FINANCE, name: 'Finance', description: '财务，管理交易和报表' },
+    { code: AdminRoleCode.OWNER, name: '店长', description: '系统所有者，拥有所有权限' },
+    { code: AdminRoleCode.FRONTDESK, name: '前台', description: '前台，管理会员和预约' },
+    { code: AdminRoleCode.COACH, name: '教练', description: '教练，管理课程和签到' },
+    { code: AdminRoleCode.FINANCE, name: '财务', description: '财务，管理交易和报表' },
   ];
 
   for (const role of roles) {

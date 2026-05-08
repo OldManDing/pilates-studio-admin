@@ -112,9 +112,11 @@ Base prefix: `/api`
 ## Settings
 
 - `GET /settings/studio`
-- `PATCH /settings/studio`
+- `PUT /settings/studio`
+- `GET /settings/mini-page-images`
+- `PUT /settings/mini-page-images/:pageKey`
 - `GET /settings/notifications`
-- `PATCH /settings/notifications/:key`
+- `PUT /settings/notifications`
 - `POST /settings/security/password`
 - `POST /settings/security/two-factor`
 - `POST /settings/data/backup`

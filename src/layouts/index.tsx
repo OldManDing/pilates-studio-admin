@@ -1,13 +1,24 @@
 import type { FC, PropsWithChildren } from 'react';
 import { useEffect, useState } from 'react';
-import { Button, Drawer, Layout, Spin } from 'antd';
+import { Button, Drawer, Layout, Spin, message } from 'antd';
 import { MenuOutlined } from '@ant-design/icons';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import AppSidebar from '@/components/AppSidebar';
 import cls from '@/styles/layout.module.css';
 import { MOBILE_SIDEBAR_DRAWER_WIDTH } from '@/styles/dimensions';
 import { authApi, clearTokens, type AuthResponse } from '@/services/auth';
+import {
+  ADMIN_ACCESS_TOKEN_KEY,
+  ADMIN_LAST_ACTIVITY_KEY,
+  ADMIN_SESSION_TIMEOUT_MS,
+  clearAdminSession,
+  getAdminLastActivityAt,
+  hasAdminSessionTimedOut,
+  touchAdminSession,
+} from '@/utils/session';
 import { hasRequiredPermissions, isOwnerOnlyPath, routePermissionMap } from '@/utils/menu';
+
+const SESSION_ACTIVITY_EVENTS = ['click', 'keydown', 'pointerdown', 'scroll', 'touchstart'] as const;
 
 const AppLayout: FC<PropsWithChildren> = ({ children }) => {
   const location = useLocation();
@@ -18,7 +29,7 @@ const AppLayout: FC<PropsWithChildren> = ({ children }) => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('pilates_access_token');
+      const token = localStorage.getItem(ADMIN_ACCESS_TOKEN_KEY);
       if (!token) {
         const nextPath = `${location.pathname}${location.search}${location.hash}`;
         navigate('/login', { replace: true, state: { from: nextPath } });
@@ -39,6 +50,80 @@ const AppLayout: FC<PropsWithChildren> = ({ children }) => {
 
     checkAuth();
   }, [location.pathname, location.search, location.hash, navigate]);
+
+  useEffect(() => {
+    if (!user) {
+      return undefined;
+    }
+
+    if (!getAdminLastActivityAt()) {
+      touchAdminSession();
+    }
+
+    let timeoutId: number | undefined;
+    let hasRedirected = false;
+
+    const redirectForTimeout = () => {
+      if (hasRedirected) return;
+      hasRedirected = true;
+      clearAdminSession();
+      message.warning('会话已超时，请重新登录');
+      const nextPath = `${location.pathname}${location.search}${location.hash}`;
+      navigate('/login', { replace: true, state: { from: nextPath } });
+    };
+
+    const scheduleTimeoutCheck = () => {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+
+      const lastActivityAt = getAdminLastActivityAt() ?? Date.now();
+      const remaining = Math.max(0, ADMIN_SESSION_TIMEOUT_MS - (Date.now() - lastActivityAt));
+      timeoutId = window.setTimeout(() => {
+        if (hasAdminSessionTimedOut()) {
+          redirectForTimeout();
+        } else {
+          scheduleTimeoutCheck();
+        }
+      }, remaining || 1);
+    };
+
+    const handleActivity = () => {
+      if (hasAdminSessionTimedOut()) {
+        redirectForTimeout();
+        return;
+      }
+
+      touchAdminSession();
+      scheduleTimeoutCheck();
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === ADMIN_ACCESS_TOKEN_KEY && !event.newValue) {
+        redirectForTimeout();
+      }
+
+      if (event.key === ADMIN_LAST_ACTIVITY_KEY) {
+        scheduleTimeoutCheck();
+      }
+    };
+
+    SESSION_ACTIVITY_EVENTS.forEach((eventName) => {
+      window.addEventListener(eventName, handleActivity, { passive: true });
+    });
+    window.addEventListener('storage', handleStorage);
+    scheduleTimeoutCheck();
+
+    return () => {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+      SESSION_ACTIVITY_EVENTS.forEach((eventName) => {
+        window.removeEventListener(eventName, handleActivity);
+      });
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [location.hash, location.pathname, location.search, navigate, user]);
 
   if (loading) {
     return (

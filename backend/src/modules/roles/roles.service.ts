@@ -4,12 +4,19 @@ import { CreateRoleDto } from './dto/create-role.dto';
 
 const RESERVED_ROLE_CODES = ['OWNER', 'FRONTDESK', 'COACH', 'FINANCE'] as const;
 
+const ROLE_DISPLAY_NAMES: Record<string, string> = {
+  OWNER: '店长',
+  FRONTDESK: '前台',
+  COACH: '教练',
+  FINANCE: '财务',
+};
+
 @Injectable()
 export class RolesService {
   constructor(private prisma: PrismaService) {}
 
   async findAll() {
-    return this.prisma.role.findMany({
+    const roles = await this.prisma.role.findMany({
       include: {
         permissions: {
           include: {
@@ -22,6 +29,8 @@ export class RolesService {
       },
       orderBy: { createdAt: 'asc' },
     });
+
+    return roles.map((role) => this.localizeRoleName(role));
   }
 
   async findOne(id: string) {
@@ -43,7 +52,7 @@ export class RolesService {
       throw new NotFoundException('Role not found');
     }
 
-    return role;
+    return this.localizeRoleName(role);
   }
 
   async create(dto: CreateRoleDto) {
@@ -260,6 +269,14 @@ export class RolesService {
         await this.prisma.role.create({
           data: role as any,
         });
+      } else {
+        await this.prisma.role.update({
+          where: { id: existing.id },
+          data: {
+            name: role.name,
+            description: role.description,
+          },
+        });
       }
     }
 
@@ -292,5 +309,12 @@ export class RolesService {
         });
       }
     }
+  }
+
+  private localizeRoleName<T extends { code: string; name: string }>(role: T): T {
+    return {
+      ...role,
+      name: ROLE_DISPLAY_NAMES[role.code] || role.name,
+    };
   }
 }

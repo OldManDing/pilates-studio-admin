@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateStudioDto } from './dto/update-studio.dto';
 import { UpdateNotificationDto } from './dto/update-notification.dto';
+import { UpdateMiniPageImageDto } from './dto/update-mini-page-image.dto';
 import { BookingStatus, CoachStatus, MembershipPlanCategory, NotificationChannel, TransactionKind, TransactionStatus, MemberStatus } from '../../common/enums/domain.enums';
 
 @Injectable()
@@ -16,6 +17,40 @@ export class SettingsService {
     { key: 'membership_expiry', title: '会籍到期', channel: 'SMS', description: '会员卡即将到期时发送通知' },
     { key: 'payment_receipt', title: '支付凭证', channel: 'EMAIL', description: '支付成功后发送电子收据' },
   ] as const;
+
+  private readonly defaultMiniPageImages = [
+    { pageKey: 'home', label: '首页', path: '/pages/index/index', defaultImageUrl: '/assets/ui/hero-studio.jpg' },
+    { pageKey: 'courses', label: '预约', path: '/pages/courses/index', defaultImageUrl: '/assets/ui/hero-courses.jpg' },
+    { pageKey: 'profile', label: '我的', path: '/pages/profile/index', defaultImageUrl: '/assets/ui/hero-profile.jpg' },
+    { pageKey: 'coaches', label: '教练列表', path: '/pages/coaches/index', defaultImageUrl: '/assets/ui/hero-courses.jpg' },
+    { pageKey: 'membership', label: '会员中心', path: '/pages/membership/index', defaultImageUrl: '/assets/ui/hero-profile.jpg' },
+    { pageKey: 'membershipRenew', label: '续费会员', path: '/pages/membership-renew/index', defaultImageUrl: '/assets/ui/hero-profile.jpg' },
+    { pageKey: 'myBookings', label: '我的预约', path: '/pages/my-bookings/index', defaultImageUrl: '/assets/ui/hero-courses.jpg' },
+    { pageKey: 'trainingRecords', label: '训练记录', path: '/pages/training-records/index', defaultImageUrl: '/assets/ui/hero-courses.jpg' },
+    { pageKey: 'myCoaches', label: '我的教练', path: '/pages/my-coaches/index', defaultImageUrl: '/assets/ui/hero-courses.jpg' },
+    { pageKey: 'notifications', label: '消息通知', path: '/pages/notifications/index', defaultImageUrl: '/assets/ui/hero-profile.jpg' },
+    { pageKey: 'help', label: '帮助反馈', path: '/pages/help/index', defaultImageUrl: '/assets/ui/hero-studio.jpg' },
+    { pageKey: 'settings', label: '设置', path: '/pages/settings/index', defaultImageUrl: '/assets/ui/hero-profile.jpg' },
+    { pageKey: 'accountSecurity', label: '账户安全', path: '/pages/account-security/index', defaultImageUrl: '/assets/ui/hero-profile.jpg' },
+    { pageKey: 'agreement', label: '用户协议', path: '/pages/agreement/index', defaultImageUrl: '/assets/ui/hero-profile.jpg' },
+    { pageKey: 'privacy', label: '隐私政策', path: '/pages/privacy/index', defaultImageUrl: '/assets/ui/hero-profile.jpg' },
+    { pageKey: 'transactions', label: '消费记录', path: '/pages/transactions/index', defaultImageUrl: '/assets/ui/hero-profile.jpg' },
+  ] as const;
+
+  private buildMiniPageImagePayload(
+    setting: { pageKey: string; label: string; path: string; defaultImageUrl: string },
+    imageUrl?: string | null,
+    updatedAt?: Date,
+  ) {
+    const normalizedImageUrl = imageUrl?.trim() || '';
+
+    return {
+      ...setting,
+      imageUrl: normalizedImageUrl,
+      isDefault: !normalizedImageUrl,
+      updatedAt: updatedAt?.toISOString(),
+    };
+  }
 
   async getStudioSettings() {
     const settings = await this.prisma.studioSetting.findFirst();
@@ -47,6 +82,39 @@ export class SettingsService {
     return this.prisma.studioSetting.create({
       data: dto,
     });
+  }
+
+  async getMiniPageImages() {
+    const settings = await this.prisma.miniPageImage.findMany({
+      where: {
+        pageKey: {
+          in: this.defaultMiniPageImages.map((item) => item.pageKey),
+        },
+      },
+    });
+    const settingsMap = new Map(settings.map((setting) => [setting.pageKey, setting]));
+
+    return this.defaultMiniPageImages.map((defaultSetting) => {
+      const savedSetting = settingsMap.get(defaultSetting.pageKey);
+      return this.buildMiniPageImagePayload(defaultSetting, savedSetting?.imageUrl, savedSetting?.updatedAt);
+    });
+  }
+
+  async updateMiniPageImage(pageKey: string, dto: UpdateMiniPageImageDto) {
+    const defaultSetting = this.defaultMiniPageImages.find((item) => item.pageKey === pageKey);
+
+    if (!defaultSetting) {
+      throw new NotFoundException('小程序页面图片配置不存在');
+    }
+
+    const normalizedImageUrl = dto.imageUrl?.trim() || '';
+    const savedSetting = await this.prisma.miniPageImage.upsert({
+      where: { pageKey },
+      update: { imageUrl: normalizedImageUrl },
+      create: { pageKey, imageUrl: normalizedImageUrl },
+    });
+
+    return this.buildMiniPageImagePayload(defaultSetting, savedSetting.imageUrl, savedSetting.updatedAt);
   }
 
   async getNotificationSettings() {
@@ -142,6 +210,7 @@ export class SettingsService {
       courseReviews,
       transactions,
       knowledgeArticles,
+      miniPageImages,
       adminUsers,
     ] = await Promise.all([
       this.prisma.studioSetting.findMany(),
@@ -170,6 +239,7 @@ export class SettingsService {
         include: { member: true },
       }),
       this.prisma.knowledgeArticle.findMany(),
+      this.prisma.miniPageImage.findMany(),
       includeAdminUsers
         ? this.prisma.adminUser.findMany({
             select: {
@@ -208,6 +278,7 @@ export class SettingsService {
         courseReviews,
         transactions,
         knowledgeArticles,
+        miniPageImages,
         adminUsers,
       },
     };
@@ -248,6 +319,16 @@ export class SettingsService {
               where: { key: notificationSetting.key },
               update: notificationSetting,
               create: notificationSetting,
+            });
+          }
+        }
+
+        if (data.miniPageImages?.length) {
+          for (const miniPageImage of data.miniPageImages) {
+            await prisma.miniPageImage.upsert({
+              where: { pageKey: miniPageImage.pageKey },
+              update: miniPageImage,
+              create: miniPageImage,
             });
           }
         }
@@ -471,6 +552,7 @@ export class SettingsService {
 
     this.ensureArrayPayload(data.membershipPlans, 'membershipPlans');
     this.ensureArrayPayload(data.studioSettings, 'studioSettings');
+    this.ensureArrayPayload(data.miniPageImages, 'miniPageImages');
     this.ensureArrayPayload(data.notificationSettings, 'notificationSettings');
     this.ensureArrayPayload(data.roles, 'roles');
     this.ensureArrayPayload(data.permissions, 'permissions');
@@ -532,6 +614,13 @@ export class SettingsService {
       this.ensureRequired(article, ['id', 'category', 'question', 'answer'], `knowledgeArticles[${index}]`);
       if (article.sortOrder !== undefined) {
         this.ensureNumber(article.sortOrder, `knowledgeArticles[${index}].sortOrder`);
+      }
+    });
+
+    data.miniPageImages?.forEach((image: any, index: number) => {
+      this.ensureRequired(image, ['id', 'pageKey'], `miniPageImages[${index}]`);
+      if (!this.defaultMiniPageImages.some((item) => item.pageKey === image.pageKey)) {
+        throw new BadRequestException(`miniPageImages[${index}].pageKey 包含无效页面`);
       }
     });
 

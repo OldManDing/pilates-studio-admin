@@ -95,6 +95,27 @@ type ComposerFormValues = {
   content: string;
 };
 
+const notificationTemplateOptions = [
+  { type: 'SYSTEM_NOTICE', title: '系统通知', description: '用于发送普通系统消息或门店公告。' },
+  { type: 'STORE_NOTICE', title: '门店通知', description: '用于发送门店运营安排、假期调整等消息。' },
+  { type: 'BOOKING_CONFIRMATION', title: '预约确认', description: '会员预约成功后的确认通知。' },
+  { type: 'BOOKING_CANCELLED', title: '预约取消', description: '预约取消后的提醒通知。' },
+  { type: 'BOOKING_REMINDER', title: '课程提醒', description: '课程开始前的提醒通知。' },
+  { type: 'ATTENDANCE_CHECKED_IN', title: '签到成功', description: '会员完成签到后的记录通知。' },
+  { type: 'MEMBERSHIP_EXPIRY', title: '会籍到期', description: '会员卡即将到期的提醒通知。' },
+  { type: 'MEMBERSHIP_RENEWAL_REQUEST', title: '续费申请', description: '会员提交续费申请后的跟进通知。' },
+  { type: 'MINI_PROGRAM_FEEDBACK', title: '小程序反馈', description: '用户从小程序提交反馈后的站内通知。' },
+  { type: 'ACCOUNT_DELETION_REQUEST', title: '注销申请', description: '用户提交账号注销后的处理通知。' },
+] as const;
+
+const notificationTypeOptions = notificationTemplateOptions.map((option) => ({
+  value: option.type,
+  label: `${option.title} · ${option.type}`,
+}));
+
+const notificationTitleOptions = Array.from(new Set(notificationTemplateOptions.map((option) => option.title)))
+  .map((title) => ({ value: title, label: title }));
+
 const PAGE_SIZE = 10;
 const RECIPIENT_PAGE_SIZE = 100;
 const emptyRecipientOptions: Record<RecipientType, RecipientSelectOption[]> = {
@@ -123,6 +144,70 @@ const getCompletionTimeLabel = (notification: NotificationRecord) =>
 const getCompletionTimeValue = (notification: NotificationRecord) =>
   isDeletionProcessed(notification) ? getDeletionProcessedAt(notification) || notification.readAt : notification.readAt;
 
+const getDeliveryReasonText = (notification: NotificationRecord) => {
+  const reason = notification.failureReason?.trim();
+  if (reason) {
+    return translateDeliveryReason(reason);
+  }
+
+  return notification.status === 'FAILED' ? '未返回具体失败原因，请检查发送渠道配置、接收对象联系方式或小程序订阅消息模板。' : '';
+};
+
+const translateDeliveryReason = (reason: string) => {
+  const exactReasonMap: Record<string, string> = {
+    'Missing SMTP configuration or recipient email': '邮件未发送：缺少 SMTP 配置或接收人邮箱',
+    'Unknown email delivery error': '未知邮件投递错误',
+    'Unknown WeChat delivery failure': '未知微信订阅消息投递错误',
+    'Unknown WeChat delivery error': '未知微信订阅消息投递错误',
+    'Failed to fetch WeChat access token': '获取微信 access_token 失败',
+    'Unknown notification delivery error': '未知通知投递错误',
+    'temporary network error': '临时网络异常',
+    'delivery unavailable': '投递服务不可用',
+    'unexpected update failure': '通知状态更新异常',
+  };
+  const phraseReasonMap: Array<[string, string]> = [
+    ['Invalid openid', 'OpenID 无效'],
+    ['invalid openid', 'OpenID 无效'],
+    ['openid is invalid', 'OpenID 无效'],
+    ['template_id is invalid', '订阅消息模板 ID 无效'],
+    ['invalid template_id', '订阅消息模板 ID 无效'],
+    ['access_token expired', 'access_token 已过期'],
+    ['invalid credential', '微信凭证无效'],
+    ['invalid appid', 'AppID 无效'],
+    ['user refuse to accept the msg', '用户未订阅或拒收该消息'],
+    ['system error', '微信系统错误'],
+    ['api unauthorized', '微信接口未授权'],
+  ];
+
+  const translatedExact = exactReasonMap[reason];
+  if (translatedExact) {
+    return translatedExact;
+  }
+
+  const translatedByPhrase = phraseReasonMap.reduce(
+    (current, [english, chinese]) => current.split(english).join(chinese),
+    reason,
+  );
+  if (translatedByPhrase !== reason) {
+    return translatedByPhrase;
+  }
+
+  const unsupportedChannelMatch = reason.match(/^No delivery adapter configured for channel (.+)$/);
+  if (unsupportedChannelMatch) {
+    return `发送失败：暂未配置 ${unsupportedChannelMatch[1]} 投递服务`;
+  }
+
+  const wechatApiMatch = reason.match(/^WeChat API error (.+)$/);
+  if (wechatApiMatch) {
+    return `微信接口返回异常：${wechatApiMatch[1]}`;
+  }
+
+  return Object.entries(exactReasonMap).reduce(
+    (current, [englishReason, chineseReason]) => current.split(englishReason).join(chineseReason),
+    reason,
+  );
+};
+
 const channelLabelMap: Record<NotificationChannel, string> = {
   INTERNAL: '站内通知',
   MINI_PROGRAM: '小程序',
@@ -143,15 +228,18 @@ const recipientTypeLabelMap: Record<RecipientType, string> = {
   admin: '管理员',
 };
 
+const getDefaultChannelForRecipientType = (type: RecipientType): Extract<NotificationChannel, 'INTERNAL' | 'MINI_PROGRAM' | 'EMAIL'> =>
+  type === 'admin' ? 'INTERNAL' : 'MINI_PROGRAM';
+
 const recipientChannelOptions: Record<RecipientType, Array<{ label: string; value: Extract<NotificationChannel, 'INTERNAL' | 'MINI_PROGRAM' | 'EMAIL'> }>> = {
   member: [
-    { label: channelLabelMap.INTERNAL, value: 'INTERNAL' },
     { label: channelLabelMap.MINI_PROGRAM, value: 'MINI_PROGRAM' },
+    { label: channelLabelMap.INTERNAL, value: 'INTERNAL' },
     { label: channelLabelMap.EMAIL, value: 'EMAIL' },
   ],
   miniUser: [
-    { label: channelLabelMap.INTERNAL, value: 'INTERNAL' },
     { label: channelLabelMap.MINI_PROGRAM, value: 'MINI_PROGRAM' },
+    { label: channelLabelMap.INTERNAL, value: 'INTERNAL' },
   ],
   admin: [
     { label: channelLabelMap.INTERNAL, value: 'INTERNAL' },
@@ -414,7 +502,7 @@ export default function NotificationsPage() {
     if (composerOpen && recipientType === 'admin' && !canReadAdmins) {
       composerForm.setFieldValue('recipientType', 'member');
       composerForm.resetFields(['recipientId']);
-      composerForm.setFieldValue('channel', 'INTERNAL');
+      composerForm.setFieldValue('channel', getDefaultChannelForRecipientType('member'));
     }
   }, [canReadAdmins, composerForm, composerOpen, recipientType]);
 
@@ -473,9 +561,9 @@ export default function NotificationsPage() {
     composerForm.setFieldsValue({
       recipientType: 'member',
       recipientId: '',
-      channel: 'INTERNAL',
-      type: '',
-      title: '',
+      channel: getDefaultChannelForRecipientType('member'),
+      type: 'SYSTEM_NOTICE',
+      title: '系统通知',
       content: '',
     });
     setComposerOpen(true);
@@ -736,6 +824,12 @@ export default function NotificationsPage() {
                         </div>
 
                         <p className={styles.notificationPreview}>{notification.content}</p>
+                        {notification.status === 'FAILED' || notification.failureReason ? (
+                          <div className={notification.status === 'FAILED' ? styles.failureReason : styles.deliveryNote}>
+                            <span>{notification.status === 'FAILED' ? '失败原因' : '发送说明'}：</span>
+                            {getDeliveryReasonText(notification)}
+                          </div>
+                        ) : null}
                       </div>
 
                       <aside className={styles.notificationAside}>
@@ -831,9 +925,9 @@ export default function NotificationsPage() {
           >
             <Select
               className={pageCls.settingsInput}
-              onChange={() => {
+              onChange={(nextRecipientType: RecipientType) => {
                 composerForm.resetFields(['recipientId']);
-                composerForm.setFieldValue('channel', 'INTERNAL');
+                composerForm.setFieldValue('channel', getDefaultChannelForRecipientType(nextRecipientType));
               }}
               options={(Object.keys(recipientTypeLabelMap) as RecipientType[])
                 .filter((key) => key !== 'admin' || canReadAdmins)
@@ -875,12 +969,30 @@ export default function NotificationsPage() {
             />
           </Form.Item>
 
-          <Form.Item name="type" label="通知类型" rules={[{ required: true, message: '请输入通知类型' }]}> 
-            <Input className={pageCls.settingsInput} placeholder="请输入通知类型" />
+          <Form.Item name="type" label="消息类型" rules={[{ required: true, message: '请选择消息类型' }]}>
+            <Select
+              showSearch
+              className={pageCls.settingsInput}
+              placeholder="请选择消息类型"
+              options={notificationTypeOptions}
+              optionFilterProp="label"
+              onChange={(value) => {
+                const template = notificationTemplateOptions.find((option) => option.type === value);
+                if (template) {
+                  composerForm.setFieldValue('title', template.title);
+                }
+              }}
+            />
           </Form.Item>
 
-          <Form.Item name="title" label="通知标题" rules={[{ required: true, message: '请输入通知标题' }]}> 
-            <Input className={pageCls.settingsInput} placeholder="例如：课程提醒" />
+          <Form.Item name="title" label="通知标题" rules={[{ required: true, message: '请选择通知标题' }]}> 
+            <Select
+              showSearch
+              className={pageCls.settingsInput}
+              placeholder="请选择通知标题"
+              options={notificationTitleOptions}
+              optionFilterProp="label"
+            />
           </Form.Item>
 
           <Form.Item name="content" label="通知内容" rules={[{ required: true, message: '请输入通知内容' }]}> 
@@ -968,6 +1080,11 @@ export default function NotificationsPage() {
                 <Descriptions.Item label="发送时间">{formatDateTime(detailNotification.sentAt)}</Descriptions.Item>
                 <Descriptions.Item label="更新时间">{formatDateTime(detailNotification.updatedAt)}</Descriptions.Item>
                 <Descriptions.Item label="当前状态">{getStatusLabel(detailNotification)}</Descriptions.Item>
+                {(detailNotification.status === 'FAILED' || detailNotification.failureReason) ? (
+                  <Descriptions.Item label={detailNotification.status === 'FAILED' ? '失败原因' : '发送说明'}>
+                    {getDeliveryReasonText(detailNotification)}
+                  </Descriptions.Item>
+                ) : null}
               </Descriptions>
             </SectionCard>
           </div>

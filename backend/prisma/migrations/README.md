@@ -38,6 +38,9 @@
 - studio_settings
 - notification_settings
 
+### 006_add_mini_page_images
+- mini_page_images / MiniPageImage
+
 ## Notes
 
 - Keep analytics/reporting query-driven at first.

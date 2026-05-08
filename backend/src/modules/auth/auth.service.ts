@@ -8,6 +8,15 @@ import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { VerifyLoginTwoFactorDto } from './dto/verify-login-2fa.dto';
 
+const INVALID_LOGIN_MESSAGE = '账号或密码错误，请检查后重新输入';
+
+const ROLE_DISPLAY_NAMES: Record<string, string> = {
+  OWNER: '店长',
+  FRONTDESK: '前台',
+  COACH: '教练',
+  FINANCE: '财务',
+};
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -33,7 +42,7 @@ export class AuthService {
     });
 
     if (!admin) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException(INVALID_LOGIN_MESSAGE);
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -42,12 +51,12 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException(INVALID_LOGIN_MESSAGE);
     }
 
     if (admin.twoFactorEnabled) {
       if (!admin.twoFactorSecret) {
-        throw new UnauthorizedException('Two-factor authentication is not configured correctly');
+        throw new UnauthorizedException('两步验证未正确配置，请联系管理员处理');
       }
 
       const mfaToken = this.jwtService.sign(
@@ -58,7 +67,7 @@ export class AuthService {
       return {
         requiresTwoFactor: true as const,
         mfaToken,
-        message: 'Two-factor verification required',
+        message: '请输入两步验证码以完成登录',
       };
     }
 
@@ -71,11 +80,11 @@ export class AuthService {
     try {
       payload = this.jwtService.verify(dto.mfaToken);
     } catch {
-      throw new UnauthorizedException('Invalid or expired two-factor login token');
+      throw new UnauthorizedException('两步验证登录凭证无效或已过期，请重新登录');
     }
 
     if (payload.purpose !== '2fa-login') {
-      throw new UnauthorizedException('Invalid two-factor login token');
+      throw new UnauthorizedException('两步验证登录凭证无效，请重新登录');
     }
 
     const admin = await this.prisma.adminUser.findUnique({
@@ -94,7 +103,7 @@ export class AuthService {
     });
 
     if (!admin || !admin.twoFactorEnabled || !admin.twoFactorSecret) {
-      throw new UnauthorizedException('Two-factor login is not available for this account');
+      throw new UnauthorizedException('当前账号未开启两步验证登录');
     }
 
     const verificationResult = await verify({
@@ -103,7 +112,7 @@ export class AuthService {
     });
 
     if (!verificationResult.valid) {
-      throw new UnauthorizedException('Invalid verification code');
+      throw new UnauthorizedException('验证码错误，请重新输入');
     }
 
     return this.createAuthSession(admin);
@@ -208,7 +217,7 @@ export class AuthService {
       role: {
         id: admin.role.id,
         code: admin.role.code,
-        name: admin.role.name,
+        name: ROLE_DISPLAY_NAMES[admin.role.code] || admin.role.name,
         permissions: admin.role.permissions.map(
           (rp) => `${rp.permission.action}:${rp.permission.module}`,
         ),
@@ -410,7 +419,7 @@ export class AuthService {
         role: {
           id: admin.role.id,
           code: admin.role.code,
-          name: admin.role.name,
+          name: ROLE_DISPLAY_NAMES[admin.role.code] || admin.role.name,
           permissions: admin.role.permissions.map(
             (rp) => `${rp.permission.action}:${rp.permission.module}`,
           ),

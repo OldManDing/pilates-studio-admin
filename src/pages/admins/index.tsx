@@ -32,6 +32,7 @@ import { CRUD_MODAL_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import { getErrorMessage } from '@/utils/errors';
 import { hasRequiredPermissions } from '@/utils/menu';
+import { useDebouncedValue } from '@/utils/useDebouncedValue';
 import styles from './index.module.css';
 
 type AdminFormValues = {
@@ -54,6 +55,23 @@ const iconMap = {
   managed: <KeyOutlined />,
 };
 
+type AdminRoleCode = 'OWNER' | 'FRONTDESK' | 'COACH' | 'FINANCE';
+
+const roleCodeLabel: Record<AdminRoleCode, string> = {
+  OWNER: '店长',
+  FRONTDESK: '前台',
+  COACH: '教练',
+  FINANCE: '财务',
+};
+
+const getRoleDisplayName = (role?: { code?: string; name?: string } | null) => {
+  if (!role) {
+    return '未分配角色';
+  }
+
+  return roleCodeLabel[role.code as AdminRoleCode] || role.name || role.code || '未分配角色';
+};
+
 const formatDateTime = (value?: string) => {
   if (!value) {
     return '-';
@@ -72,7 +90,7 @@ const formatDateTime = (value?: string) => {
   }
 };
 
-const getAdminRoleLabel = (admin: AdminRecord) => admin.role?.name || admin.roleId || '未分配角色';
+const getAdminRoleLabel = (admin: AdminRecord) => getRoleDisplayName(admin.role) || admin.roleId || '未分配角色';
 
 const buildUpdatePayload = (values: AdminFormValues): Partial<AdminPayload> => ({
   email: values.email.trim(),
@@ -91,7 +109,8 @@ export default function AdminsPage() {
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [searchDraft, setSearchDraft] = useState('');
-  const [searchValue, setSearchValue] = useState('');
+  const debouncedSearchValue = useDebouncedValue(searchDraft, 350);
+  const searchValue = debouncedSearchValue.trim();
   const [editingAdmin, setEditingAdmin] = useState<AdminRecord | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [resetPasswordAdmin, setResetPasswordAdmin] = useState<AdminRecord | null>(null);
@@ -102,7 +121,7 @@ export default function AdminsPage() {
 
   const roleOptions = useMemo(() => roles.map((role) => ({
     value: role.id,
-    label: `${role.name} · ${role.code}`,
+    label: `${getRoleDisplayName(role)} · ${role.code}`,
   })), [roles]);
 
   const loadData = useCallback(async () => {
@@ -313,10 +332,6 @@ export default function AdminsPage() {
     }
   };
 
-  const applySearch = () => {
-    setSearchValue(searchDraft.trim());
-  };
-
   if (loading && admins.length === 0) {
     return (
       <div className={`${pageCls.page} ${pageCls.workPage}`}>
@@ -371,9 +386,7 @@ export default function AdminsPage() {
                   placeholder="搜索姓名、邮箱、手机号或角色"
                   value={searchDraft}
                   onChange={(event) => setSearchDraft(event.target.value)}
-                  onPressEnter={applySearch}
                 />
-                <Button className={pageCls.toolbarGhostAction} icon={<SearchOutlined />} onClick={applySearch}>查询</Button>
               </div>
             </div>
 

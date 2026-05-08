@@ -1,3 +1,11 @@
+import {
+  ADMIN_ACCESS_TOKEN_KEY,
+  ADMIN_REFRESH_TOKEN_KEY,
+  clearAdminSession,
+  hasAdminSessionTimedOut,
+  touchAdminSession,
+} from '@/utils/session';
+
 const API_BASE_URL = process.env.API_BASE_URL || '/api';
 
 interface RequestOptions extends RequestInit {
@@ -34,6 +42,8 @@ const serializeBody = (body: unknown) => {
 
   return JSON.stringify(body);
 };
+
+const PUBLIC_AUTH_ENDPOINTS = new Set(['/auth/login', '/auth/2fa/verify-login']);
 
 export interface ApiSuccessEnvelope<T> {
   data: T;
@@ -72,30 +82,34 @@ const extractApiErrorMessage = async (response: Response) => {
 
 const getToken = () => {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('pilates_access_token');
+  return localStorage.getItem(ADMIN_ACCESS_TOKEN_KEY);
 };
 
 const getRefreshToken = () => {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('pilates_refresh_token');
+  return localStorage.getItem(ADMIN_REFRESH_TOKEN_KEY);
 };
 
 const storeTokens = (accessToken: string, refreshToken: string) => {
   if (typeof window === 'undefined') return;
-  localStorage.setItem('pilates_access_token', accessToken);
-  localStorage.setItem('pilates_refresh_token', refreshToken);
+  localStorage.setItem(ADMIN_ACCESS_TOKEN_KEY, accessToken);
+  localStorage.setItem(ADMIN_REFRESH_TOKEN_KEY, refreshToken);
+  touchAdminSession();
 };
 
 const clearTokens = () => {
   if (typeof window === 'undefined') return;
-  localStorage.removeItem('pilates_access_token');
-  localStorage.removeItem('pilates_refresh_token');
+  clearAdminSession();
 };
 
-const redirectToLogin = () => {
+const redirectToLogin = (reason?: 'timeout' | 'unauthorized') => {
   if (typeof window === 'undefined') return;
   const next = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-  window.location.href = `/login?next=${encodeURIComponent(next || '/')}`;
+  const params = new URLSearchParams({ next: next || '/' });
+  if (reason) {
+    params.set('reason', reason);
+  }
+  window.location.href = `/login?${params.toString()}`;
 };
 
 let refreshingPromise: Promise<boolean> | null = null;
@@ -151,10 +165,31 @@ const buildUrl = (endpoint: string, params?: Record<string, string | number | bo
   return url.pathname + url.search;
 };
 
+const isPublicAuthEndpoint = (endpoint: string) => PUBLIC_AUTH_ENDPOINTS.has(endpoint);
+
+const createUnauthorizedError = async (response: Response, endpoint: string) => {
+  const apiErrorMessage = await extractApiErrorMessage(response);
+
+  if (isPublicAuthEndpoint(endpoint)) {
+    return new ApiError('AUTH_FAILED', apiErrorMessage || '登录失败，请检查账号或密码');
+  }
+
+  return new ApiError('UNAUTHORIZED', apiErrorMessage || '登录状态已失效，请重新登录');
+};
+
+const assertSessionIsActive = () => {
+  if (hasAdminSessionTimedOut()) {
+    clearTokens();
+    redirectToLogin('timeout');
+    throw new ApiError('SESSION_TIMEOUT', '会话已超时，请重新登录');
+  }
+};
+
 export const request = async <T>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> => {
+  assertSessionIsActive();
   const token = getToken();
   const { params, responseType = 'json', ...fetchOptions } = options;
 
@@ -176,7 +211,7 @@ export const request = async <T>(
       headers,
     });
 
-    if (response.status === 401 && endpoint !== '/auth/refresh') {
+    if (response.status === 401 && endpoint !== '/auth/refresh' && !isPublicAuthEndpoint(endpoint)) {
       const refreshed = await refreshAccessToken();
       if (refreshed) {
         const retryToken = getToken();
@@ -197,7 +232,7 @@ export const request = async <T>(
 
     if (!response.ok) {
       if (response.status === 401) {
-        throw new ApiError('UNAUTHORIZED', '登录状态已失效，请重新登录');
+        throw await createUnauthorizedError(response, endpoint);
       }
       const apiErrorMessage = await extractApiErrorMessage(response);
       throw new ApiError('HTTP_ERROR', apiErrorMessage || `请求失败（${response.status}）`);
@@ -218,7 +253,7 @@ export const request = async <T>(
     if (error instanceof ApiError) {
       if (error.code === 'UNAUTHORIZED') {
         clearTokens();
-        redirectToLogin();
+        redirectToLogin('unauthorized');
       }
       throw error;
     }
@@ -231,6 +266,7 @@ export const requestWithMeta = async <T>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<ApiSuccessEnvelope<T>> => {
+  assertSessionIsActive();
   const token = getToken();
   const { params, responseType = 'json', ...fetchOptions } = options;
 
@@ -251,7 +287,7 @@ export const requestWithMeta = async <T>(
       headers,
     });
 
-    if (response.status === 401 && endpoint !== '/auth/refresh') {
+    if (response.status === 401 && endpoint !== '/auth/refresh' && !isPublicAuthEndpoint(endpoint)) {
       const refreshed = await refreshAccessToken();
       if (refreshed) {
         const retryToken = getToken();
@@ -272,7 +308,7 @@ export const requestWithMeta = async <T>(
 
     if (!response.ok) {
       if (response.status === 401) {
-        throw new ApiError('UNAUTHORIZED', '登录状态已失效，请重新登录');
+        throw await createUnauthorizedError(response, endpoint);
       }
       const apiErrorMessage = await extractApiErrorMessage(response);
       throw new ApiError('HTTP_ERROR', apiErrorMessage || `请求失败（${response.status}）`);
@@ -296,7 +332,7 @@ export const requestWithMeta = async <T>(
     if (error instanceof ApiError) {
       if (error.code === 'UNAUTHORIZED') {
         clearTokens();
-        redirectToLogin();
+        redirectToLogin('unauthorized');
       }
       throw error;
     }

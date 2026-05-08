@@ -31,6 +31,29 @@ const roleCodeLabel: Record<RoleCode, string> = {
   FINANCE: '财务',
 };
 
+const roleDescriptionLabel: Record<RoleCode, string> = {
+  OWNER: '拥有系统全部权限',
+  FRONTDESK: '负责会员管理与预约处理',
+  COACH: '管理课程时段与签到记录',
+  FINANCE: '查看交易记录与经营报表',
+};
+
+const getRoleDisplayName = (role: Pick<Role, 'code' | 'name'> | null | undefined) => {
+  if (!role) {
+    return '未分配角色';
+  }
+
+  return roleCodeLabel[role.code as RoleCode] || role.name || role.code;
+};
+
+const getRoleDescription = (role: Pick<Role, 'code' | 'description'> | null | undefined) => {
+  if (!role) {
+    return '暂无角色说明';
+  }
+
+  return roleDescriptionLabel[role.code as RoleCode] || role.description || '暂无角色说明';
+};
+
 // 模块名中文映射
 const moduleNameMap: Record<string, string> = {
   // 小写
@@ -266,7 +289,8 @@ export default function RolesPage() {
           <div className={`${roleCss.roleGrid} ${pageCls.workSection}`}>
             {roles.map((item) => {
               const roleTone = (['mint', 'violet', 'orange', 'pink'] as const)[item.code === 'OWNER' ? 0 : item.code === 'FRONTDESK' ? 1 : item.code === 'COACH' ? 2 : 3];
-              const initials = item.name.slice(0, 1);
+              const roleName = getRoleDisplayName(item);
+              const initials = roleName.slice(0, 1);
               const roleStatus = item.permissions.length === 0 ? '待配置' : (item._count?.admins || 0) === 0 ? '未分配' : '正常';
               return (
                 <div key={item.id} className={roleCss.roleCard}>
@@ -276,10 +300,10 @@ export default function RolesPage() {
                     </div>
                     <div className={roleCss.roleInfo}>
                       <div className={roleCss.roleNameRow}>
-                        <h3 className={roleCss.roleName}>{item.name}</h3>
+                        <h3 className={roleCss.roleName}>{roleName}</h3>
                         <StatusTag status={roleStatus} />
                       </div>
-                      <div className={roleCss.roleSub}>{item.description || '暂无角色说明'}</div>
+                      <div className={roleCss.roleSub}>{getRoleDescription(item)}</div>
                     </div>
                   </div>
 
@@ -329,7 +353,7 @@ export default function RolesPage() {
         rootClassName={pageCls.responsiveDetailDrawer}
         open={editingPermissionRole !== null}
         width={ROLE_PERMISSION_DRAWER_WIDTH}
-        title={editingPermissionRole ? `编辑权限 · ${editingPermissionRole.name}` : '编辑权限'}
+        title={editingPermissionRole ? `编辑权限 · ${getRoleDisplayName(editingPermissionRole)}` : '编辑权限'}
         onClose={closePermissionEditor}
         extra={(
           <ActionButton icon={<SaveOutlined />} onClick={savePermissions} disabled={saving || !canManageRoles}>
@@ -397,7 +421,7 @@ export default function RolesPage() {
         rootClassName={pageCls.responsiveDetailDrawer}
         open={detailRole !== null}
         width={NARROW_DETAIL_DRAWER_WIDTH}
-        title={detailRole?.name || '角色详情'}
+        title={detailRole ? getRoleDisplayName(detailRole) : '角色详情'}
         onClose={() => setDetailRole(null)}
       >
         {detailRole ? (
@@ -405,8 +429,8 @@ export default function RolesPage() {
             <div className={widgetCls.detailOverviewPanel}>
               <div className={widgetCls.detailOverviewSummary}>
                 <div className={widgetCls.detailInsightLabel}>角色摘要</div>
-                <div className={widgetCls.detailOverviewLead}>{detailRole.name}</div>
-                <div className={widgetCls.detailOverviewText}>{detailRole.description || '暂无角色说明，可在角色设置中补充职责范围。'}</div>
+                <div className={widgetCls.detailOverviewLead}>{getRoleDisplayName(detailRole)}</div>
+                <div className={widgetCls.detailOverviewText}>{getRoleDescription(detailRole)}</div>
               </div>
               <div className={`${widgetCls.detailOverviewStatGrid} ${roleCss.roleDetailStatGrid}`}>
                 <div className={`${widgetCls.detailOverviewStatCard} ${widgetCls.detailOverviewStatMint}`}>

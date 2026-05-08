@@ -15,6 +15,7 @@ vi.mock('@/services/settings', () => ({
     getNotifications: vi.fn().mockResolvedValue([
       { key: 'BOOKING_CREATED', label: '预约创建提醒', enabled: true },
     ]),
+    getMiniPageImages: vi.fn().mockResolvedValue([]),
     initialize: vi.fn(),
     updateStudio: vi.fn(),
     updateNotification: vi.fn(),

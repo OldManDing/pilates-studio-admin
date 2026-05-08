@@ -132,7 +132,7 @@ describe('AuthService', () => {
     expect(result).toEqual({
       requiresTwoFactor: true,
       mfaToken: 'mfa-token',
-      message: 'Two-factor verification required',
+      message: '请输入两步验证码以完成登录',
     });
     expect(prisma.refreshToken.create).not.toHaveBeenCalled();
   });
@@ -170,6 +170,17 @@ describe('AuthService', () => {
     await expect(service.login({ email: 'owner@pilates.com', password: INVALID_LOGIN_SECRET })).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
+  });
+
+  it('passes the login password to bcrypt without changing letter case', async () => {
+    prisma.adminUser.findUnique.mockResolvedValue(createAdmin());
+    mockedCompare.mockResolvedValue(false as never);
+
+    await expect(service.login({ email: 'owner@pilates.com', password: 'admin123!' })).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+
+    expect(mockedCompare).toHaveBeenCalledWith('admin123!', 'hashed-password');
   });
 
   it('rejects login challenge verification when the code is invalid', async () => {

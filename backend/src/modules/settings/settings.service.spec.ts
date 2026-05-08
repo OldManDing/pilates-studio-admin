@@ -38,6 +38,10 @@ describe('SettingsService', () => {
         findMany: jest.fn(),
         upsert: jest.fn(),
       },
+      miniPageImage: {
+        findMany: jest.fn(),
+        upsert: jest.fn(),
+      },
       adminUser: { findMany: jest.fn(), upsert: jest.fn() },
       $transaction: jest.fn(),
     };
@@ -68,6 +72,51 @@ describe('SettingsService', () => {
 
     expect(prisma.studioSetting.update).toHaveBeenCalledWith({ where: { id: 'studio-1' }, data: { studioName: '愈己CareMe工作室' } });
     expect(result.id).toBe('studio-1');
+  });
+
+  it('returns mini-program page image defaults with saved overrides', async () => {
+    prisma.miniPageImage.findMany.mockResolvedValue([
+      { pageKey: 'courses', imageUrl: 'data:image/png;base64,courses', updatedAt: new Date('2026-05-08T08:00:00.000Z') },
+    ]);
+
+    const result = await service.getMiniPageImages();
+    const coursesImage = result.find((item) => item.pageKey === 'courses');
+    const profileImage = result.find((item) => item.pageKey === 'profile');
+
+    expect(result.length).toBeGreaterThan(0);
+    expect(coursesImage).toMatchObject({
+      label: '预约',
+      imageUrl: 'data:image/png;base64,courses',
+      isDefault: false,
+    });
+    expect(profileImage).toMatchObject({
+      label: '我的',
+      imageUrl: '',
+      isDefault: true,
+    });
+  });
+
+  it('updates a mini-program page image', async () => {
+    const updatedAt = new Date('2026-05-08T09:00:00.000Z');
+    prisma.miniPageImage.upsert.mockResolvedValue({ pageKey: 'profile', imageUrl: 'data:image/png;base64,profile', updatedAt });
+
+    const result = await service.updateMiniPageImage('profile', { imageUrl: ' data:image/png;base64,profile ' });
+
+    expect(prisma.miniPageImage.upsert).toHaveBeenCalledWith({
+      where: { pageKey: 'profile' },
+      update: { imageUrl: 'data:image/png;base64,profile' },
+      create: { pageKey: 'profile', imageUrl: 'data:image/png;base64,profile' },
+    });
+    expect(result).toMatchObject({
+      pageKey: 'profile',
+      imageUrl: 'data:image/png;base64,profile',
+      isDefault: false,
+      updatedAt: updatedAt.toISOString(),
+    });
+  });
+
+  it('rejects unknown mini-program page image keys', async () => {
+    await expect(service.updateMiniPageImage('unknown', { imageUrl: '' })).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('throws when updating a missing notification setting', async () => {
