@@ -75,12 +75,25 @@ const DEFAULT_COURSE_TYPE_OPTIONS = [
 ];
 
 const courseTypeLabelMap: Record<string, string> = {
+  PILATES: '普拉提',
   MAT: '垫上普拉提',
+  MAT_PILATES: '垫上普拉提',
+  PILATES_MAT: '垫上普拉提',
   REFORMER: '核心床普拉提',
+  REFORMER_PILATES: '核心床普拉提',
+  PILATES_REFORMER: '核心床普拉提',
   CADILLAC: '凯迪拉克床',
+  CADILLAC_BED: '凯迪拉克床',
   CHAIR: '普拉提椅',
+  PILATES_CHAIR: '普拉提椅',
   BARREL: '梯桶训练',
+  LADDER_BARREL: '梯桶训练',
+  BARREL_TRAINING: '梯桶训练',
   PRIVATE: '私教课程',
+  PRIVATE_CLASS: '私教课程',
+  PRIVATE_COURSE: '私教课程',
+  PRIVATE_PILATES: '私教课程',
+  ONE_ON_ONE: '私教课程',
   YOGA: '瑜伽',
   FLOW: '流动训练',
   STRETCH: '拉伸修复',
@@ -94,7 +107,12 @@ const getCourseTypeLabel = (type?: string) => {
     return '-';
   }
 
-  return courseTypeLabelMap[normalizedType] || courseTypeLabelMap[normalizedType.toUpperCase()] || normalizedType;
+  const normalizedKey = normalizedType
+    .toUpperCase()
+    .replace(/[-/\s]+/g, '_')
+    .replace(/_+/g, '_');
+
+  return courseTypeLabelMap[normalizedType] || courseTypeLabelMap[normalizedKey] || normalizedType;
 };
 
 export default function CoursesPage() {
