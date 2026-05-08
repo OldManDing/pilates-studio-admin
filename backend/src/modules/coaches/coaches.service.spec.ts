@@ -60,6 +60,7 @@ describe('CoachesService', () => {
       name: '李静',
       phone: '13800000000',
       email: 'coach@example.com',
+      avatarUrl: 'data:image/png;base64,coach',
       specialties: ['Reformer'],
       certificates: ['BASI'],
     });
@@ -68,6 +69,7 @@ describe('CoachesService', () => {
       expect.objectContaining({
         data: expect.objectContaining({
           coachCode: expect.stringMatching(/^C[A-Z0-9]+$/),
+          avatarUrl: 'data:image/png;base64,coach',
           status: CoachStatus.ACTIVE,
           specialties: { create: [{ value: 'Reformer' }] },
           certificates: { create: [{ value: 'BASI' }] },

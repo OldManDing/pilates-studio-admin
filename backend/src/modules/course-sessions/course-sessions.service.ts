@@ -54,7 +54,7 @@ export class CourseSessionsService {
           select: { id: true, name: true, type: true, level: true, durationMinutes: true },
         },
         coach: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, avatarUrl: true },
         },
         _count: {
           select: {
@@ -134,7 +134,7 @@ export class CourseSessionsService {
       include: {
         course: true,
         coach: {
-          select: { id: true, name: true, bio: true },
+          select: { id: true, name: true, avatarUrl: true, bio: true },
         },
         _count: {
           select: {
@@ -210,7 +210,7 @@ export class CourseSessionsService {
           select: { id: true, name: true, type: true, level: true, durationMinutes: true },
         },
         coach: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, avatarUrl: true },
         },
         _count: {
           select: {
@@ -295,7 +295,7 @@ export class CourseSessionsService {
       where,
       include: {
         coach: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, avatarUrl: true },
         },
         _count: {
           select: {

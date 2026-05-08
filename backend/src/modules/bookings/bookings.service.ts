@@ -204,7 +204,7 @@ export class BookingsService {
           session: {
             include: {
               course: { select: { id: true, name: true } },
-              coach: { select: { id: true, name: true } },
+              coach: { select: { id: true, name: true, avatarUrl: true } },
             },
           },
           attendance: true,
@@ -528,7 +528,7 @@ export class BookingsService {
           session: {
             include: {
               course: { select: { id: true, name: true, type: true, level: true } },
-              coach: { select: { id: true, name: true } },
+              coach: { select: { id: true, name: true, avatarUrl: true } },
             },
           },
         },
@@ -591,7 +591,7 @@ export class BookingsService {
           session: {
             include: {
               course: { select: { id: true, name: true, type: true, level: true, durationMinutes: true } },
-              coach: { select: { id: true, name: true } },
+              coach: { select: { id: true, name: true, avatarUrl: true } },
             },
           },
           attendance: true,
@@ -738,7 +738,7 @@ export class BookingsService {
           session: {
             include: {
               course: { select: { id: true, name: true, type: true, level: true } },
-              coach: { select: { id: true, name: true } },
+              coach: { select: { id: true, name: true, avatarUrl: true } },
             },
           },
           attendance: true,

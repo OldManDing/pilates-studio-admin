@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
         coachCode: 'C000001',
         name: '李静',
         phone: '13800000000',
+        avatarUrl: 'data:image/png;base64,coach',
         status: 'ACTIVE',
         experience: '5 年普拉提教学经验',
         rating: 4.8,
@@ -81,6 +82,13 @@ describe('CoachesPage smoke test', () => {
       expect(screen.getByRole('heading', { name: '教练管理' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /新增教练/ })).toBeInTheDocument();
       expect(screen.getByText('李静')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /新增教练/ }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /上传教练照片/ })).toBeInTheDocument();
+      expect(screen.getByText('支持 JPG、PNG、WebP 等图片，大小不超过 5MB。')).toBeInTheDocument();
     });
   });
 

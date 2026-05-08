@@ -16,6 +16,7 @@ export type CoachProfileOverviewCardProps = {
   specialtiesText: string;
   summaryText: string;
   tone: AccentTone;
+  avatarUrl?: string;
 };
 
 export default function CoachProfileOverviewCard({
@@ -29,12 +30,13 @@ export default function CoachProfileOverviewCard({
   specialtiesText,
   summaryText,
   tone,
+  avatarUrl,
 }: CoachProfileOverviewCardProps) {
   return (
     <section className={`${widgetCls.detailOverviewPanel} ${styles.coachProfileOverviewCard}`}>
       <div className={styles.coachProfileTop}>
         <div className={styles.coachProfileIdentity}>
-          <MemberAvatar name={name} tone={tone} />
+          <MemberAvatar name={name} tone={tone} imageUrl={avatarUrl} />
           <div>
             <div className={styles.coachProfileBadges}>
               <span className={styles.coachProfileEyebrow}>教练档案</span>

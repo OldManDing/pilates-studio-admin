@@ -99,6 +99,59 @@
   align-items: stretch;
 }
 
+.coachAvatarUpload {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  background: rgba(248, 250, 251, 0.84);
+  border: 1px solid var(--border-soft);
+}
+
+.coachAvatarInput {
+  display: none;
+}
+
+.coachAvatarPreview,
+.coachAvatarPlaceholder {
+  width: 112px;
+  height: 112px;
+  border-radius: 24px;
+  border: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+
+.coachAvatarPreview {
+  object-fit: cover;
+  background: rgba(248, 250, 251, 0.9);
+}
+
+.coachAvatarPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-bold);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.coachAvatarActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+
+.coachAvatarHint {
+  width: 100%;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  line-height: 1.5;
+}
+
 .coachProfileOverviewCard {
   gap: 18px;
 }
@@ -194,6 +247,11 @@
 
 @media (max-width: 768px) {
   .coachProfileTop {
+    flex-direction: column;
+  }
+
+  .coachAvatarUpload {
+    align-items: flex-start;
     flex-direction: column;
   }
 

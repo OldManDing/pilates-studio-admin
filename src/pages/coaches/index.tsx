@@ -1,6 +1,6 @@
-import { CalendarOutlined, DeleteOutlined, EditOutlined, FilterOutlined, HeartOutlined, PlusOutlined, SearchOutlined, StarOutlined, TeamOutlined } from '@ant-design/icons';
+import { CalendarOutlined, DeleteOutlined, EditOutlined, FilterOutlined, HeartOutlined, PlusOutlined, SearchOutlined, StarOutlined, TeamOutlined, UploadOutlined } from '@ant-design/icons';
 import { Button, Col, Descriptions, Drawer, Form, Input, Modal, Pagination, Popconfirm, Row, Select, Spin, message } from 'antd';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
 import FilterModalFooter from '@/components/FilterModalFooter';
@@ -18,6 +18,7 @@ import { hasRequiredPermissions } from '@/utils/menu';
 import { getToneFromName } from '@/utils/tone';
 import { useDebouncedValue } from '@/utils/useDebouncedValue';
 import { CoachProfileOverviewCard, CoachProfileStats, CoachRecordCard, type CoachProfileStatItem } from './components';
+import styles from './index.module.css';
 
 const { TextArea } = Input;
 
@@ -34,6 +35,7 @@ type CoachFormValues = {
   experience?: string;
   phone: string;
   email?: string;
+  avatarUrl?: string;
   bio?: string;
   specialtiesText: string;
   certificatesText: string;
@@ -44,8 +46,30 @@ type CoachFilterDraft = {
 };
 
 const coachStatusOptions: CoachStatus[] = ['ACTIVE', 'ON_LEAVE', 'INACTIVE'];
+const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
 
 const parseListText = (value: string) => value.split(/\n|,|，/).map((item) => item.trim()).filter(Boolean);
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('图片读取失败'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function validateImageFile(file: File) {
+  if (!file.type.startsWith('image/')) {
+    return '仅支持上传图片文件';
+  }
+
+  if (file.size > MAX_IMAGE_FILE_SIZE) {
+    return '图片文件过大，请上传 5MB 以内图片';
+  }
+
+  return '';
+}
 
 const formatCoachRating = (rating?: number) => (typeof rating === 'number' ? rating.toFixed(1) : '-');
 
@@ -91,6 +115,7 @@ export default function CoachesPage() {
   const [detailCoach, setDetailCoach] = useState<Coach | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSavingCoach, setIsSavingCoach] = useState(false);
+  const coachAvatarInputRef = useRef<HTMLInputElement | null>(null);
   const [deletingCoachId, setDeletingCoachId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
@@ -181,6 +206,7 @@ export default function CoachesPage() {
       status: 'ACTIVE',
       phone: '',
       email: '',
+      avatarUrl: '',
       experience: '',
       bio: '',
       specialtiesText: '',
@@ -201,6 +227,7 @@ export default function CoachesPage() {
       status: coach.status,
       phone: coach.phone,
       email: coach.email,
+      avatarUrl: coach.avatarUrl || '',
       experience: coach.experience,
       bio: coach.bio,
       specialtiesText: coach.specialties?.map(s => s.value).join('\n') || '',
@@ -213,6 +240,38 @@ export default function CoachesPage() {
     setIsFormOpen(false);
     setEditingCoach(null);
     form.resetFields();
+  };
+
+  const handleSelectCoachAvatar = () => {
+    if (!canWriteCoaches) {
+      messageApi.warning('当前账号没有教练写入权限');
+      return;
+    }
+
+    coachAvatarInputRef.current?.click();
+  };
+
+  const handleCoachAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      const validationMessage = validateImageFile(file);
+      if (validationMessage) {
+        messageApi.warning(validationMessage);
+        return;
+      }
+
+      const avatarUrl = await readFileAsDataUrl(file);
+      form.setFieldValue('avatarUrl', avatarUrl);
+      messageApi.success('教练照片已载入，保存后生效');
+    } catch (err) {
+      messageApi.error(getErrorMessage(err, '教练照片读取失败'));
+    } finally {
+      event.target.value = '';
+    }
   };
 
   const handleSaveCoach = async () => {
@@ -229,6 +288,7 @@ export default function CoachesPage() {
         status: values.status,
         phone: values.phone,
         email: values.email,
+        avatarUrl: values.avatarUrl,
         experience: values.experience,
         bio: values.bio,
         specialties: parseListText(values.specialtiesText),
@@ -415,6 +475,7 @@ export default function CoachesPage() {
                       ratingText={formatCoachRating(coach.rating)}
                       specialtiesText={getDisplayListText(coach.specialties, '待补充擅长方向', 2)}
                       tone={getToneFromName(coach.name)}
+                      avatarUrl={coach.avatarUrl}
                       onEdit={canWriteCoaches ? () => openEditModal(coach) : undefined}
                       onViewDetail={() => setDetailCoach(coach)}
                     />
@@ -486,6 +547,45 @@ export default function CoachesPage() {
       >
         <Form form={form} className={pageCls.crudModalForm} layout="vertical">
           <Row gutter={18}>
+            <Col span={24}>
+              <Form.Item name="avatarUrl" noStyle>
+                <Input type="hidden" />
+              </Form.Item>
+              <Form.Item label="教练照片">
+                <div className={styles.coachAvatarUpload}>
+                  <input
+                    ref={coachAvatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    className={styles.coachAvatarInput}
+                    onChange={handleCoachAvatarChange}
+                  />
+                  <Form.Item noStyle shouldUpdate>
+                    {() => {
+                      const avatarUrl = form.getFieldValue('avatarUrl');
+                      return avatarUrl ? (
+                        <img src={avatarUrl} alt="教练照片预览" className={styles.coachAvatarPreview} />
+                      ) : (
+                        <div className={styles.coachAvatarPlaceholder}>暂无照片</div>
+                      );
+                    }}
+                  </Form.Item>
+                  <div className={styles.coachAvatarActions}>
+                    <Button icon={<UploadOutlined />} onClick={handleSelectCoachAvatar} disabled={!canWriteCoaches}>
+                      上传教练照片
+                    </Button>
+                    <Form.Item noStyle shouldUpdate>
+                      {() => form.getFieldValue('avatarUrl') ? (
+                        <Button onClick={() => form.setFieldValue('avatarUrl', '')} disabled={!canWriteCoaches}>
+                          移除照片
+                        </Button>
+                      ) : null}
+                    </Form.Item>
+                    <div className={styles.coachAvatarHint}>支持 JPG、PNG、WebP 等图片，大小不超过 5MB。</div>
+                  </div>
+                </div>
+              </Form.Item>
+            </Col>
             <Col xs={24} md={12}>
               <Form.Item name="name" label="教练姓名" rules={[{ required: true, message: '请输入教练姓名' }]}>
                 <Input className={pageCls.settingsInput} />
@@ -577,6 +677,7 @@ export default function CoachesPage() {
               specialtiesText={getDisplayListText(detailCoach.specialties, '待补充擅长方向', 3)}
               summaryText={getCoachSummaryText(detailCoach)}
               tone={getToneFromName(detailCoach.name)}
+              avatarUrl={detailCoach.avatarUrl}
             />
 
             <CoachProfileStats items={detailCoachStatItems} />

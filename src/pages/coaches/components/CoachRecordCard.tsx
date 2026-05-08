@@ -15,6 +15,7 @@ export type CoachRecordCardProps = {
   ratingText: string;
   specialtiesText: string;
   tone: AccentTone;
+  avatarUrl?: string;
   onEdit?: () => void;
   onViewDetail: () => void;
 };
@@ -27,6 +28,7 @@ export default function CoachRecordCard({
   ratingText,
   specialtiesText,
   tone,
+  avatarUrl,
   onEdit,
   onViewDetail,
 }: CoachRecordCardProps) {
@@ -34,7 +36,7 @@ export default function CoachRecordCard({
     <article className={`${widgetCls.recordItem} ${widgetCls.workRecordItem} ${pageCls.surface} ${styles.coachRecordCard}`}>
       <div className={styles.coachRecordMain}>
         <div className={widgetCls.recordMeta}>
-          <MemberAvatar name={name} tone={tone} />
+          <MemberAvatar name={name} tone={tone} imageUrl={avatarUrl} />
           <div className={styles.coachRecordHead}>
             <div className={styles.coachRecordTitleRow}>
               <span className={widgetCls.recordTitle}>{name}</span>

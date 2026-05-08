@@ -344,7 +344,7 @@ export class CoachesService {
           select: { id: true, name: true, type: true, level: true, durationMinutes: true },
         },
         coach: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, avatarUrl: true },
         },
         bookings: {
           where: { status: { not: 'CANCELLED' } },
