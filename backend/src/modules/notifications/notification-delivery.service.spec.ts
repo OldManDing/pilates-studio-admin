@@ -48,14 +48,77 @@ describe('NotificationDeliveryService', () => {
       title: '预约确认',
       content: '您已成功预约 Morning Flow',
       miniUser: { openId: 'openid-1' },
-      payload: { page: 'pages/bookings/index' },
+      payload: {
+        page: 'pages/my-bookings/index',
+        courseName: 'Morning Flow',
+        startsAt: '2026-05-10T10:30:00',
+        studioName: 'CareMe练习记录',
+        bookingCode: 'B00000001',
+        remark: '请按预约时间到店上课',
+      },
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    const subscribeMessageRequest = fetchMock.mock.calls[1][1] as RequestInit;
+    expect(JSON.parse(String(subscribeMessageRequest.body))).toEqual(
+      expect.objectContaining({
+        touser: 'openid-1',
+        template_id: 'template-1',
+        page: 'pages/my-bookings/index',
+        data: {
+          thing1: { value: 'Morning Flow' },
+          time2: { value: '2026-05-10 10:30' },
+          thing3: { value: 'CareMe练习记录' },
+          character_string4: { value: 'B00000001' },
+          thing5: { value: '请按预约时间到店上课' },
+        },
+      }),
+    );
     expect(prisma.notification.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: NotificationStatus.SENT }) }),
     );
     expect(result).toEqual({ id: 'notification-1', status: NotificationStatus.SENT });
+  });
+
+  it('uses configured WeChat template field maps when they are present', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch' as any)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: 'token' }) } as Response)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ errcode: 0 }) } as Response);
+    configService.get.mockImplementation((key: string) => {
+      if (key === 'wechat.appId') return 'appid';
+      if (key === 'wechat.secret') return 'secret';
+      if (key === 'notifications.templateIds') return { bookingConfirmation: 'template-1' };
+      if (key === 'notifications.templateFields') {
+        return {
+          bookingConfirmation: {
+            thing6: 'courseName',
+            time7: 'startsAt',
+            phrase8: 'literal:成功',
+          },
+        };
+      }
+      return '';
+    });
+
+    await service.deliver({
+      id: 'notification-1',
+      channel: NotificationChannel.MINI_PROGRAM,
+      type: 'BOOKING_CONFIRMATION',
+      title: '预约确认',
+      content: '您已成功预约 Morning Flow',
+      miniUser: { openId: 'openid-1' },
+      payload: {
+        courseName: 'Morning Flow',
+        startsAt: '2026-05-10T10:30:00',
+      },
+    });
+
+    const subscribeMessageRequest = fetchMock.mock.calls[1][1] as RequestInit;
+    expect(JSON.parse(String(subscribeMessageRequest.body)).data).toEqual({
+      thing6: { value: 'Morning Flow' },
+      time7: { value: '2026-05-10 10:30' },
+      phrase8: { value: '成功' },
+    });
   });
 
   it('reuses cached WeChat access token across deliveries', async () => {

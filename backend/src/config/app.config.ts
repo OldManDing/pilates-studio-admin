@@ -1,3 +1,37 @@
+function parseTemplateFieldMap(value?: string) {
+  const trimmedValue = value?.trim();
+  if (!trimmedValue) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(trimmedValue) as unknown;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return Object.entries(parsed as Record<string, unknown>).reduce<Record<string, string>>((result, [key, source]) => {
+        if (key && typeof source === 'string' && source.trim()) {
+          result[key] = source.trim();
+        }
+
+        return result;
+      }, {});
+    }
+  } catch {
+    // Fall through to the compact "field:source,field:source" format.
+  }
+
+  return trimmedValue.split(/[;,]/).reduce<Record<string, string>>((result, item) => {
+    const [field, ...sourceParts] = item.split(':');
+    const fieldKey = field?.trim();
+    const source = sourceParts.join(':').trim();
+
+    if (fieldKey && source) {
+      result[fieldKey] = source;
+    }
+
+    return result;
+  }, {});
+}
+
 export default () => ({
   app: {
     name: process.env.APP_NAME ?? 'careme-studio-backend',
@@ -23,6 +57,13 @@ export default () => ({
       bookingReminder: process.env.WECHAT_TEMPLATE_ID_BOOKING_REMINDER ?? '',
       attendanceCheckedIn: process.env.WECHAT_TEMPLATE_ID_ATTENDANCE_CHECKED_IN ?? '',
       membershipExpiry: process.env.WECHAT_TEMPLATE_ID_MEMBERSHIP_EXPIRY ?? '',
+    },
+    templateFields: {
+      bookingConfirmation: parseTemplateFieldMap(process.env.WECHAT_TEMPLATE_FIELDS_BOOKING_CONFIRMATION),
+      bookingCancelled: parseTemplateFieldMap(process.env.WECHAT_TEMPLATE_FIELDS_BOOKING_CANCELLED),
+      bookingReminder: parseTemplateFieldMap(process.env.WECHAT_TEMPLATE_FIELDS_BOOKING_REMINDER),
+      attendanceCheckedIn: parseTemplateFieldMap(process.env.WECHAT_TEMPLATE_FIELDS_ATTENDANCE_CHECKED_IN),
+      membershipExpiry: parseTemplateFieldMap(process.env.WECHAT_TEMPLATE_FIELDS_MEMBERSHIP_EXPIRY),
     },
   },
   wechat: {

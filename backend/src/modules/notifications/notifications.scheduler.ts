@@ -67,9 +67,12 @@ export class NotificationsScheduler {
         miniUserId: member.miniUserId ?? undefined,
         payload: {
           memberId: member.id,
+          memberName: member.name,
           planId: member.planId,
           planName: member.plan.name,
           expiryDate: expiryDate.toISOString(),
+          remark: '如需继续使用会员权益，请及时联系门店续费',
+          page: 'pages/membership/index',
         },
       });
 
@@ -144,6 +147,8 @@ export class NotificationsScheduler {
           sessionId: booking.sessionId,
           courseName: booking.session.course.name,
           startsAt: booking.session.startsAt.toISOString(),
+          studioName: 'CareMe练习记录',
+          remark: '课程即将开始，请预留到店时间',
           page: 'pages/my-bookings/index',
         },
       });

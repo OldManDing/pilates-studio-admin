@@ -4,6 +4,68 @@ import nodemailer from 'nodemailer';
 import { NotificationChannel, NotificationStatus } from '../../common/enums/domain.enums';
 import { PrismaService } from '../prisma/prisma.service';
 
+type NotificationTemplateKey =
+  | 'bookingConfirmation'
+  | 'bookingCancelled'
+  | 'bookingReminder'
+  | 'attendanceCheckedIn'
+  | 'membershipExpiry';
+
+type TemplateFieldMap = Record<string, string>;
+type WeChatTemplateData = Record<string, { value: string }>;
+
+interface MiniProgramDeliveryNotification {
+  id: string;
+  type?: string;
+  title?: string;
+  content?: string;
+  payload?: Record<string, unknown> | null;
+  miniUser?: { openId?: string | null } | null;
+}
+
+const TEMPLATE_CONFIG_KEY_BY_TYPE: Record<string, NotificationTemplateKey> = {
+  BOOKING_CONFIRMATION: 'bookingConfirmation',
+  BOOKING_CANCELLED: 'bookingCancelled',
+  BOOKING_REMINDER: 'bookingReminder',
+  ATTENDANCE_CHECKED_IN: 'attendanceCheckedIn',
+  MEMBERSHIP_EXPIRY: 'membershipExpiry',
+};
+
+const DEFAULT_TEMPLATE_FIELD_MAPS: Record<NotificationTemplateKey, TemplateFieldMap> = {
+  bookingConfirmation: {
+    thing1: 'courseName',
+    time2: 'startsAt',
+    thing3: 'studioName',
+    character_string4: 'bookingCode',
+    thing5: 'remark',
+  },
+  bookingCancelled: {
+    thing1: 'courseName',
+    time2: 'cancelledAt',
+    thing3: 'bookingCode',
+    thing4: 'remark',
+  },
+  bookingReminder: {
+    thing1: 'courseName',
+    time2: 'startsAt',
+    thing3: 'studioName',
+    thing4: 'coachName',
+    thing5: 'remark',
+  },
+  attendanceCheckedIn: {
+    thing1: 'courseName',
+    time2: 'checkedInAt',
+    thing3: 'memberName',
+    thing4: 'remark',
+  },
+  membershipExpiry: {
+    thing1: 'planName',
+    date2: 'expiryDate',
+    thing3: 'memberName',
+    thing4: 'remark',
+  },
+};
+
 @Injectable()
 export class NotificationDeliveryService {
   private cachedAccessToken: string | null = null;
@@ -85,14 +147,7 @@ export class NotificationDeliveryService {
     }
   }
 
-  private async deliverMiniProgram(notification: {
-    id: string;
-    type?: string;
-    title?: string;
-    content?: string;
-    payload?: Record<string, unknown> | null;
-    miniUser?: { openId?: string | null } | null;
-  }) {
+  private async deliverMiniProgram(notification: MiniProgramDeliveryNotification) {
     const appId = this.configService.get<string>('wechat.appId');
     const secret = this.configService.get<string>('wechat.secret');
     const openId = notification.miniUser?.openId;
@@ -118,11 +173,7 @@ export class NotificationDeliveryService {
             touser: openId,
             template_id: templateId,
             page: (notification.payload?.page as string | undefined) ?? 'pages/index/index',
-            data: {
-              thing1: { value: (notification.title ?? '').slice(0, 20) },
-              thing2: { value: (notification.content ?? '').slice(0, 20) },
-              thing3: { value: String(notification.type ?? '').slice(0, 20) },
-            },
+            data: this.buildWeChatTemplateData(notification),
           }),
         });
 
@@ -149,20 +200,178 @@ export class NotificationDeliveryService {
 
   private resolveTemplateId(type?: string) {
     const templates = this.configService.get<Record<string, string>>('notifications.templateIds') ?? {};
-    switch (type) {
-      case 'BOOKING_CONFIRMATION':
-        return templates.bookingConfirmation;
-      case 'BOOKING_CANCELLED':
-        return templates.bookingCancelled;
-      case 'BOOKING_REMINDER':
-        return templates.bookingReminder;
-      case 'ATTENDANCE_CHECKED_IN':
-        return templates.attendanceCheckedIn;
-      case 'MEMBERSHIP_EXPIRY':
-        return templates.membershipExpiry;
-      default:
-        return '';
+    const templateConfigKey = this.resolveTemplateConfigKey(type);
+    return templateConfigKey ? templates[templateConfigKey] : '';
+  }
+
+  private buildWeChatTemplateData(notification: MiniProgramDeliveryNotification): WeChatTemplateData {
+    const payload = this.asPlainRecord(notification.payload);
+    const explicitTemplateData = this.getExplicitTemplateData(payload);
+    if (explicitTemplateData) {
+      return explicitTemplateData;
     }
+
+    const templateConfigKey = this.resolveTemplateConfigKey(notification.type);
+    const fieldMap = this.resolveTemplateFieldMap(templateConfigKey);
+
+    return Object.entries(fieldMap).reduce<WeChatTemplateData>((data, [fieldKey, source]) => {
+      const resolvedValue = this.resolveTemplateSourceValue(notification, payload, source);
+      data[fieldKey] = {
+        value: this.formatTemplateFieldValue(
+          fieldKey,
+          this.hasTemplateFieldValue(resolvedValue) ? resolvedValue : this.getTemplateFieldFallback(fieldKey, notification),
+        ),
+      };
+
+      return data;
+    }, {});
+  }
+
+  private resolveTemplateConfigKey(type?: string): NotificationTemplateKey | null {
+    if (!type) {
+      return null;
+    }
+
+    return TEMPLATE_CONFIG_KEY_BY_TYPE[type] ?? null;
+  }
+
+  private resolveTemplateFieldMap(templateConfigKey: NotificationTemplateKey | null): TemplateFieldMap {
+    const configuredFieldMaps = this.configService.get<Record<string, TemplateFieldMap>>('notifications.templateFields') ?? {};
+    const configuredFieldMap = templateConfigKey ? configuredFieldMaps[templateConfigKey] : null;
+
+    if (configuredFieldMap && Object.keys(configuredFieldMap).length > 0) {
+      return configuredFieldMap;
+    }
+
+    return templateConfigKey ? DEFAULT_TEMPLATE_FIELD_MAPS[templateConfigKey] : {
+      thing1: 'title',
+      thing2: 'content',
+      thing3: 'type',
+    };
+  }
+
+  private getExplicitTemplateData(payload: Record<string, unknown> | null): WeChatTemplateData | null {
+    const templateData = this.asPlainRecord(payload?.templateData) ?? this.asPlainRecord(payload?.wechatTemplateData);
+    if (!templateData || Object.keys(templateData).length === 0) {
+      return null;
+    }
+
+    return Object.entries(templateData).reduce<WeChatTemplateData>((result, [fieldKey, rawValue]) => {
+      const valueRecord = this.asPlainRecord(rawValue);
+      const value = valueRecord && typeof valueRecord.value !== 'undefined'
+        ? valueRecord.value
+        : rawValue;
+
+      result[fieldKey] = { value: this.formatTemplateFieldValue(fieldKey, value) };
+      return result;
+    }, {});
+  }
+
+  private resolveTemplateSourceValue(
+    notification: MiniProgramDeliveryNotification,
+    payload: Record<string, unknown> | null,
+    source: string,
+  ): unknown {
+    if (source.startsWith('literal:')) {
+      return source.slice('literal:'.length);
+    }
+
+    if (source === 'now') {
+      return new Date();
+    }
+
+    const notificationRecord = notification as unknown as Record<string, unknown>;
+    return this.getValueByPath(notificationRecord, source) ?? this.getValueByPath(payload, source);
+  }
+
+  private getValueByPath(source: Record<string, unknown> | null, path: string): unknown {
+    if (!source) {
+      return undefined;
+    }
+
+    return path.split('.').reduce<unknown>((current, segment) => {
+      const currentRecord = this.asPlainRecord(current);
+      return currentRecord ? currentRecord[segment] : undefined;
+    }, source);
+  }
+
+  private getTemplateFieldFallback(fieldKey: string, notification: MiniProgramDeliveryNotification) {
+    if (/^(date|time)\d*$/i.test(fieldKey)) {
+      return new Date();
+    }
+
+    if (/^character_string\d*$/i.test(fieldKey)) {
+      return notification.id;
+    }
+
+    return notification.title || notification.content || notification.type || '通知';
+  }
+
+  private formatTemplateFieldValue(fieldKey: string, rawValue: unknown) {
+    if (/^date\d*$/i.test(fieldKey)) {
+      return this.formatDate(rawValue);
+    }
+
+    if (/^time\d*$/i.test(fieldKey)) {
+      return this.formatDateTime(rawValue);
+    }
+
+    const normalizedValue = this.normalizeTemplateText(rawValue);
+    const maxLength = this.getTemplateFieldMaxLength(fieldKey);
+    return normalizedValue.slice(0, maxLength);
+  }
+
+  private hasTemplateFieldValue(value: unknown) {
+    return value !== undefined && value !== null && String(value).trim() !== '';
+  }
+
+  private formatDateTime(rawValue: unknown) {
+    const date = this.toDate(rawValue);
+    return `${date.getFullYear()}-${this.pad(date.getMonth() + 1)}-${this.pad(date.getDate())} ${this.pad(date.getHours())}:${this.pad(date.getMinutes())}`;
+  }
+
+  private formatDate(rawValue: unknown) {
+    const date = this.toDate(rawValue);
+    return `${date.getFullYear()}-${this.pad(date.getMonth() + 1)}-${this.pad(date.getDate())}`;
+  }
+
+  private toDate(rawValue: unknown) {
+    if (rawValue instanceof Date && !Number.isNaN(rawValue.getTime())) {
+      return rawValue;
+    }
+
+    const date = new Date(this.normalizeTemplateText(rawValue));
+    return Number.isNaN(date.getTime()) ? new Date() : date;
+  }
+
+  private normalizeTemplateText(rawValue: unknown) {
+    if (rawValue instanceof Date) {
+      return rawValue.toISOString();
+    }
+
+    return String(rawValue ?? '').replace(/\s+/g, ' ').trim() || '-';
+  }
+
+  private getTemplateFieldMaxLength(fieldKey: string) {
+    if (/^phrase\d*$/i.test(fieldKey)) return 5;
+    if (/^name\d*$/i.test(fieldKey)) return 10;
+    if (/^thing\d*$/i.test(fieldKey)) return 20;
+    if (/^phone_number\d*$/i.test(fieldKey)) return 17;
+    if (/^character_string\d*$/i.test(fieldKey)) return 32;
+    if (/^(number|amount)\d*$/i.test(fieldKey)) return 32;
+    return 20;
+  }
+
+  private pad(value: number) {
+    return String(value).padStart(2, '0');
+  }
+
+  private asPlainRecord(value: unknown): Record<string, unknown> | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return null;
+    }
+
+    return value as Record<string, unknown>;
   }
 
   private async fetchWeChatAccessToken(appId: string, secret: string) {

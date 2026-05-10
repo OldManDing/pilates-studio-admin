@@ -93,6 +93,11 @@ export class AttendanceService {
           attendanceId: updatedAttendance.id,
           bookingId: booking.id,
           sessionId: booking.sessionId,
+          memberName: booking.member.name,
+          courseName: updatedAttendance.session?.course?.name,
+          checkedInAt: updatedAttendance.checkedInAt,
+          remark: '签到已记录，训练记录稍后同步',
+          page: 'pages/training-records/index',
         },
       });
 
@@ -128,6 +133,11 @@ export class AttendanceService {
         attendanceId: attendance.id,
         bookingId: booking.id,
         sessionId: booking.sessionId,
+        memberName: booking.member.name,
+        courseName: attendance.session?.course?.name,
+        checkedInAt: attendance.checkedInAt,
+        remark: '签到已记录，训练记录稍后同步',
+        page: 'pages/training-records/index',
       },
     });
 

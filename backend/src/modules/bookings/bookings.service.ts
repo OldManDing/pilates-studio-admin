@@ -160,8 +160,15 @@ export class BookingsService {
       miniUserId: result.member?.miniUserId ?? undefined,
       payload: {
         bookingId: result.id,
+        bookingCode: result.bookingCode,
         sessionId: dto.sessionId,
         courseName: result.session.course.name,
+        startsAt: result.session.startsAt,
+        endsAt: result.session.endsAt,
+        coachName: result.session.coach?.name,
+        studioName: 'CareMe练习记录',
+        remark: '请按预约时间到店上课',
+        page: 'pages/my-bookings/index',
       },
     });
 
@@ -411,7 +418,12 @@ export class BookingsService {
         data: { status: dto.status },
         include: {
           member: true,
-          session: true,
+          session: {
+            include: {
+              course: true,
+              coach: true,
+            },
+          },
         },
       });
 
@@ -457,6 +469,14 @@ export class BookingsService {
           bookingId: result.id,
           sessionId: result.sessionId,
           bookingCode: result.bookingCode,
+          courseName: result.session?.course?.name,
+          startsAt: result.session?.startsAt,
+          endsAt: result.session?.endsAt,
+          coachName: result.session?.coach?.name,
+          cancelledAt: new Date(),
+          studioName: 'CareMe练习记录',
+          remark: '预约已取消，可在小程序重新选择课程',
+          page: 'pages/my-bookings/index',
         },
       });
     }
