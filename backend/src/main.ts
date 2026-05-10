@@ -8,7 +8,7 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
-const REQUEST_BODY_LIMIT = '8mb';
+const REQUEST_BODY_LIMIT = '20mb';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
