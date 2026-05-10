@@ -32,6 +32,16 @@ function parseTemplateFieldMap(value?: string) {
   }, {});
 }
 
+function resolveWeChatMiniProgramState(value?: string, nodeEnv = process.env.NODE_ENV) {
+  const state = (value || (nodeEnv === 'production' ? 'formal' : 'trial')).trim();
+
+  if (state === 'developer' || state === 'trial' || state === 'formal') {
+    return state;
+  }
+
+  return nodeEnv === 'production' ? 'formal' : 'trial';
+}
+
 export default () => ({
   app: {
     name: process.env.APP_NAME ?? 'careme-studio-backend',
@@ -69,6 +79,7 @@ export default () => ({
   wechat: {
     appId: process.env.WECHAT_APPID ?? '',
     secret: process.env.WECHAT_SECRET ?? '',
+    miniprogramState: resolveWeChatMiniProgramState(process.env.WECHAT_MINIPROGRAM_STATE),
   },
   wechatPay: {
     enabled: process.env.WECHAT_PAY_ENABLED === 'true',

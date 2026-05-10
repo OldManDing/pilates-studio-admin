@@ -150,6 +150,7 @@ export class NotificationDeliveryService {
   private async deliverMiniProgram(notification: MiniProgramDeliveryNotification) {
     const appId = this.configService.get<string>('wechat.appId');
     const secret = this.configService.get<string>('wechat.secret');
+    const miniprogramState = this.configService.get<string>('wechat.miniprogramState') ?? 'formal';
     const openId = notification.miniUser?.openId;
     const templateId = this.resolveTemplateId(notification.type);
 
@@ -173,6 +174,7 @@ export class NotificationDeliveryService {
             touser: openId,
             template_id: templateId,
             page: (notification.payload?.page as string | undefined) ?? 'pages/index/index',
+            miniprogram_state: miniprogramState,
             data: this.buildWeChatTemplateData(notification),
           }),
         });

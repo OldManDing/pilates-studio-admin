@@ -37,6 +37,7 @@ describe('NotificationDeliveryService', () => {
     configService.get.mockImplementation((key: string) => {
       if (key === 'wechat.appId') return 'appid';
       if (key === 'wechat.secret') return 'secret';
+      if (key === 'wechat.miniprogramState') return 'trial';
       if (key === 'notifications.templateIds') return { bookingConfirmation: 'template-1' };
       return '';
     });
@@ -65,6 +66,7 @@ describe('NotificationDeliveryService', () => {
         touser: 'openid-1',
         template_id: 'template-1',
         page: 'pages/my-bookings/index',
+        miniprogram_state: 'trial',
         data: {
           thing1: { value: 'Morning Flow' },
           time2: { value: '2026-05-10 10:30' },
@@ -87,6 +89,7 @@ describe('NotificationDeliveryService', () => {
     configService.get.mockImplementation((key: string) => {
       if (key === 'wechat.appId') return 'appid';
       if (key === 'wechat.secret') return 'secret';
+      if (key === 'wechat.miniprogramState') return 'trial';
       if (key === 'notifications.templateIds') return { bookingConfirmation: 'template-1' };
       if (key === 'notifications.templateFields') {
         return {
