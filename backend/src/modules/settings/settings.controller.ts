@@ -35,8 +35,10 @@ export class SettingsController {
   @Get('mini-page-images')
   @SkipAuth()
   @ApiOperation({ summary: 'Get mini-program page image settings' })
-  async getMiniPageImages() {
-    return this.settingsService.getMiniPageImages();
+  async getMiniPageImages(@Query('compact') compact?: string) {
+    return this.settingsService.getMiniPageImages({
+      compact: compact === 'true' || compact === '1',
+    });
   }
 
   @Put('mini-page-images/:pageKey')

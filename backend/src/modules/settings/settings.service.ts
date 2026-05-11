@@ -5,6 +5,13 @@ import { UpdateNotificationDto } from './dto/update-notification.dto';
 import { UpdateMiniPageImageDto } from './dto/update-mini-page-image.dto';
 import { BookingStatus, CoachStatus, MembershipPlanCategory, NotificationChannel, TransactionKind, TransactionStatus, MemberStatus } from '../../common/enums/domain.enums';
 
+const COMPACT_INLINE_IMAGE_MAX_LENGTH = 120 * 1024;
+const INLINE_IMAGE_DATA_URL_PATTERN = /^data:image\/[a-z0-9.+-]+;base64,/i;
+
+interface MiniPageImagePayloadOptions {
+  compact?: boolean;
+}
+
 @Injectable()
 export class SettingsService {
   constructor(private prisma: PrismaService) {}
@@ -41,8 +48,17 @@ export class SettingsService {
     setting: { pageKey: string; label: string; path: string; defaultImageUrl: string },
     imageUrl?: string | null,
     updatedAt?: Date,
+    options: MiniPageImagePayloadOptions = {},
   ) {
-    const normalizedImageUrl = imageUrl?.trim() || '';
+    let normalizedImageUrl = imageUrl?.trim() || '';
+    const isOversizedInlineImage =
+      options.compact &&
+      INLINE_IMAGE_DATA_URL_PATTERN.test(normalizedImageUrl) &&
+      normalizedImageUrl.length > COMPACT_INLINE_IMAGE_MAX_LENGTH;
+
+    if (isOversizedInlineImage) {
+      normalizedImageUrl = '';
+    }
 
     return {
       ...setting,
@@ -84,7 +100,7 @@ export class SettingsService {
     });
   }
 
-  async getMiniPageImages() {
+  async getMiniPageImages(options: MiniPageImagePayloadOptions = {}) {
     const settings = await this.prisma.miniPageImage.findMany({
       where: {
         pageKey: {
@@ -96,7 +112,7 @@ export class SettingsService {
 
     return this.defaultMiniPageImages.map((defaultSetting) => {
       const savedSetting = settingsMap.get(defaultSetting.pageKey);
-      return this.buildMiniPageImagePayload(defaultSetting, savedSetting?.imageUrl, savedSetting?.updatedAt);
+      return this.buildMiniPageImagePayload(defaultSetting, savedSetting?.imageUrl, savedSetting?.updatedAt, options);
     });
   }
 

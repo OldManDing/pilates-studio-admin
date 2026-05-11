@@ -96,6 +96,27 @@ describe('SettingsService', () => {
     });
   });
 
+  it('omits oversized inline page images in compact mini-program payloads', async () => {
+    const oversizedInlineImage = `data:image/jpeg;base64,${'a'.repeat(130 * 1024)}`;
+    const remoteImageUrl = 'https://cdn.example.com/courses.jpg';
+    const smallInlineImage = 'data:image/png;base64,profile';
+
+    prisma.miniPageImage.findMany.mockResolvedValue([
+      { pageKey: 'home', imageUrl: oversizedInlineImage, updatedAt: new Date('2026-05-08T08:00:00.000Z') },
+      { pageKey: 'courses', imageUrl: remoteImageUrl, updatedAt: new Date('2026-05-08T08:00:00.000Z') },
+      { pageKey: 'profile', imageUrl: smallInlineImage, updatedAt: new Date('2026-05-08T08:00:00.000Z') },
+    ]);
+
+    const result = await service.getMiniPageImages({ compact: true });
+    const homeImage = result.find((item) => item.pageKey === 'home');
+    const coursesImage = result.find((item) => item.pageKey === 'courses');
+    const profileImage = result.find((item) => item.pageKey === 'profile');
+
+    expect(homeImage).toMatchObject({ imageUrl: '', isDefault: true });
+    expect(coursesImage).toMatchObject({ imageUrl: remoteImageUrl, isDefault: false });
+    expect(profileImage).toMatchObject({ imageUrl: smallInlineImage, isDefault: false });
+  });
+
   it('updates a mini-program page image', async () => {
     const updatedAt = new Date('2026-05-08T09:00:00.000Z');
     prisma.miniPageImage.upsert.mockResolvedValue({ pageKey: 'profile', imageUrl: 'data:image/png;base64,profile', updatedAt });
