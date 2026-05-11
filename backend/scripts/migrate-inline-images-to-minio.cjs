@@ -1,13 +1,11 @@
-import { existsSync, readFileSync } from 'fs';
-import { resolve } from 'path';
-import { ConfigService } from '@nestjs/config';
-import { PrismaClient } from '@prisma/client';
-import { ImageUploadPurpose, UploadedImageFile, UploadsService } from '../src/modules/uploads/uploads.service';
+const { existsSync, readFileSync } = require('fs');
+const { resolve } = require('path');
+const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 const INLINE_IMAGE_DATA_URL_PATTERN = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i;
 
-function loadEnvFile(fileName: string) {
+function loadEnvFile(fileName) {
   const envPath = resolve(process.cwd(), fileName);
   if (!existsSync(envPath)) {
     return;
@@ -34,8 +32,16 @@ function loadEnvFile(fileName: string) {
     });
 }
 
+function loadUploadsService() {
+  try {
+    return require('../dist/src/modules/uploads/uploads.service').UploadsService;
+  } catch (error) {
+    throw new Error(`Cannot load compiled UploadsService. Run npm run build before this migration. ${error.message}`);
+  }
+}
+
 function createConfigService() {
-  const values: Record<string, string | number | boolean> = {
+  const values = {
     'image.maxOutputBytes': Number(process.env.IMAGE_MAX_OUTPUT_BYTES ?? 500 * 1024),
     'image.maxUploadBytes': Number(process.env.IMAGE_UPLOAD_MAX_BYTES ?? 10 * 1024 * 1024),
     'image.minio.endpoint': (process.env.MINIO_ENDPOINT ?? '').replace(/^https?:\/\//, '').replace(/\/+$/, ''),
@@ -46,14 +52,15 @@ function createConfigService() {
     'image.minio.bucket': process.env.MINIO_BUCKET ?? '',
     'image.minio.region': process.env.MINIO_REGION ?? 'us-east-1',
     'image.minio.publicBaseUrl': process.env.MINIO_PUBLIC_BASE_URL ?? '',
+    'image.minio.setPublicRead': process.env.MINIO_SET_PUBLIC_READ !== 'false',
   };
 
   return {
-    get: (key: string) => values[key],
-  } as unknown as ConfigService;
+    get: (key) => values[key],
+  };
 }
 
-function parseInlineImage(dataUrl: string, originalname: string): UploadedImageFile | null {
+function parseInlineImage(dataUrl, originalname) {
   const match = INLINE_IMAGE_DATA_URL_PATTERN.exec(dataUrl.trim());
   if (!match) {
     return null;
@@ -69,12 +76,7 @@ function parseInlineImage(dataUrl: string, originalname: string): UploadedImageF
   };
 }
 
-async function uploadInlineImage(
-  uploadsService: UploadsService,
-  dataUrl: string | null | undefined,
-  purpose: ImageUploadPurpose,
-  originalname: string,
-) {
+async function uploadInlineImage(uploadsService, dataUrl, purpose, originalname) {
   if (!dataUrl?.trim().startsWith('data:image/')) {
     return null;
   }
@@ -88,12 +90,35 @@ async function uploadInlineImage(
   return uploaded.url;
 }
 
-async function migrateMiniPageImages(uploadsService: UploadsService) {
+function shouldSkipImageError(error) {
+  return error?.status === 400;
+}
+
+async function tryUploadInlineImage(uploadsService, dataUrl, purpose, originalname, recordLabel) {
+  try {
+    return await uploadInlineImage(uploadsService, dataUrl, purpose, originalname);
+  } catch (error) {
+    if (shouldSkipImageError(error)) {
+      console.warn(`Skipped ${recordLabel}: ${error.message}`);
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+async function migrateMiniPageImages(uploadsService) {
   const records = await prisma.miniPageImage.findMany();
   let migrated = 0;
 
   for (const record of records) {
-    const url = await uploadInlineImage(uploadsService, record.imageUrl, 'miniPageHero', `mini-page-${record.pageKey}`);
+    const url = await tryUploadInlineImage(
+      uploadsService,
+      record.imageUrl,
+      'miniPageHero',
+      `mini-page-${record.pageKey}`,
+      `miniPageImage.${record.pageKey}`,
+    );
     if (!url) {
       continue;
     }
@@ -109,12 +134,18 @@ async function migrateMiniPageImages(uploadsService: UploadsService) {
   return migrated;
 }
 
-async function migrateStudioImages(uploadsService: UploadsService) {
+async function migrateStudioImages(uploadsService) {
   const records = await prisma.studioSetting.findMany();
   let migrated = 0;
 
   for (const record of records) {
-    const url = await uploadInlineImage(uploadsService, record.imageUrl, 'studio', `studio-${record.id}`);
+    const url = await tryUploadInlineImage(
+      uploadsService,
+      record.imageUrl,
+      'studio',
+      `studio-${record.id}`,
+      `studioSetting.${record.id}`,
+    );
     if (!url) {
       continue;
     }
@@ -130,12 +161,18 @@ async function migrateStudioImages(uploadsService: UploadsService) {
   return migrated;
 }
 
-async function migrateCourseImages(uploadsService: UploadsService) {
+async function migrateCourseImages(uploadsService) {
   const records = await prisma.course.findMany();
   let migrated = 0;
 
   for (const record of records) {
-    const url = await uploadInlineImage(uploadsService, record.coverImageUrl, 'courseCover', `course-${record.id}`);
+    const url = await tryUploadInlineImage(
+      uploadsService,
+      record.coverImageUrl,
+      'courseCover',
+      `course-${record.id}`,
+      `course.${record.id}`,
+    );
     if (!url) {
       continue;
     }
@@ -151,12 +188,18 @@ async function migrateCourseImages(uploadsService: UploadsService) {
   return migrated;
 }
 
-async function migrateCoachImages(uploadsService: UploadsService) {
+async function migrateCoachImages(uploadsService) {
   const records = await prisma.coach.findMany();
   let migrated = 0;
 
   for (const record of records) {
-    const url = await uploadInlineImage(uploadsService, record.avatarUrl, 'coachAvatar', `coach-${record.id}`);
+    const url = await tryUploadInlineImage(
+      uploadsService,
+      record.avatarUrl,
+      'coachAvatar',
+      `coach-${record.id}`,
+      `coach.${record.id}`,
+    );
     if (!url) {
       continue;
     }
@@ -176,6 +219,7 @@ async function main() {
   loadEnvFile('local-config');
   loadEnvFile('.env');
 
+  const UploadsService = loadUploadsService();
   const uploadsService = new UploadsService(createConfigService());
   const result = {
     miniPageImages: await migrateMiniPageImages(uploadsService),

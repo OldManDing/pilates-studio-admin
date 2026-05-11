@@ -18,7 +18,8 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "seed": "ts-node prisma/seed.ts",
-    "migrate:inline-images-to-minio": "ts-node scripts/migrate-inline-images-to-minio.ts"
+    "migrate:inline-images-to-minio": "node scripts/migrate-inline-images-to-minio.cjs",
+    "verify:image-upload": "node scripts/verify-image-upload.cjs"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

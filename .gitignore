@@ -6,6 +6,8 @@ src/.umi-production/
 .temp/
 coverage/
 backend/coverage/
+backend/logs/
+backend/*.log
 .sisyphus/
 .sisyphus-*.log
 .env

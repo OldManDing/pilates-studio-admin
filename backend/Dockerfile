@@ -40,6 +40,7 @@ RUN adduser -S nestjs -u 1001
 # Copy package files
 COPY package*.json ./
 COPY prisma ./prisma/
+COPY scripts ./scripts/
 
 # Install production dependencies only
 RUN npm ci --only=production
