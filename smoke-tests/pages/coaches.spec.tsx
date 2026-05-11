@@ -88,7 +88,7 @@ describe('CoachesPage smoke test', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /上传教练照片/ })).toBeInTheDocument();
-      expect(screen.getByText('支持 JPG、PNG、WebP 等图片，大小不超过 5MB。')).toBeInTheDocument();
+      expect(screen.getByText('支持 JPG、PNG、WebP 等图片，大小不超过 10MB。')).toBeInTheDocument();
     });
   });
 

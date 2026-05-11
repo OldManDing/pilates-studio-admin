@@ -9,6 +9,7 @@ export * from './miniUsers';
 export * from './transactions';
 export * from './reports';
 export * from './settings';
+export * from './uploads';
 export * from './membershipPlans';
 export * from './roles';
 export * from './notifications';

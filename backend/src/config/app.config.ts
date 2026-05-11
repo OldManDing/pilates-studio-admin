@@ -101,4 +101,19 @@ export default () => ({
   analytics: {
     monthlyRevenueGoalCents: Number(process.env.ANALYTICS_MONTHLY_REVENUE_GOAL_CENTS ?? 5000000),
   },
+  image: {
+    maxOutputBytes: Number(process.env.IMAGE_MAX_OUTPUT_BYTES ?? 500 * 1024),
+    maxUploadBytes: Number(process.env.IMAGE_UPLOAD_MAX_BYTES ?? 10 * 1024 * 1024),
+    minio: {
+      endpoint: (process.env.MINIO_ENDPOINT ?? '').replace(/^https?:\/\//, '').replace(/\/+$/, ''),
+      port: Number(process.env.MINIO_PORT ?? 9000),
+      useSSL: process.env.MINIO_USE_SSL === 'true',
+      accessKey: process.env.MINIO_ACCESS_KEY ?? '',
+      secretKey: process.env.MINIO_SECRET_KEY ?? '',
+      bucket: process.env.MINIO_BUCKET ?? '',
+      region: process.env.MINIO_REGION ?? 'us-east-1',
+      publicBaseUrl: process.env.MINIO_PUBLIC_BASE_URL ?? '',
+      setPublicRead: process.env.MINIO_SET_PUBLIC_READ !== 'false',
+    },
+  },
 });

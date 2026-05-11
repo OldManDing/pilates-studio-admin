@@ -30,6 +30,7 @@ import { RolesModule } from './modules/roles/roles.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { SupportModule } from './modules/support/support.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 
 @Module({
   imports: [
@@ -66,7 +67,8 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
     ReportsModule,
     SettingsModule,
     SupportModule,
-    AnalyticsModule
+    AnalyticsModule,
+    UploadsModule
   ],
   providers: [
     {

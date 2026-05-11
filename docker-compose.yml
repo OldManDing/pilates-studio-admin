@@ -8,6 +8,7 @@
 #
 # Services:
 #   - mysql:     Database
+#   - minio:     Image object storage
 #   - backend:   NestJS API server
 #   - admin:     Nginx serving admin frontend (optional, build first)
 #
@@ -32,6 +33,26 @@ services:
       retries: 5
     networks:
       - pilates-network
+
+  minio:
+    image: ${MINIO_IMAGE:-minio/minio:RELEASE.2025-09-07T16-13-09Z}
+    container_name: pilates-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "127.0.0.1:${MINIO_PORT:-9000}:9000"
+    networks:
+      - pilates-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
@@ -84,6 +105,17 @@ services:
       NOTIFICATION_EXPIRY_REMINDER_DAYS: ${NOTIFICATION_EXPIRY_REMINDER_DAYS:-3}
       NOTIFICATION_BOOKING_REMINDER_MINUTES: ${NOTIFICATION_BOOKING_REMINDER_MINUTES:-60}
       NOTIFICATION_PROCESSING_BATCH_SIZE: ${NOTIFICATION_PROCESSING_BATCH_SIZE:-50}
+      IMAGE_MAX_OUTPUT_BYTES: ${IMAGE_MAX_OUTPUT_BYTES:-512000}
+      IMAGE_UPLOAD_MAX_BYTES: ${IMAGE_UPLOAD_MAX_BYTES:-10485760}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
+      MINIO_BUCKET: ${MINIO_BUCKET:-pilates-images}
+      MINIO_REGION: ${MINIO_REGION:-us-east-1}
+      MINIO_SET_PUBLIC_READ: ${MINIO_SET_PUBLIC_READ:-true}
+      MINIO_PUBLIC_BASE_URL: ${MINIO_PUBLIC_BASE_URL:?MINIO_PUBLIC_BASE_URL is required}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@pilates.com}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
       SEED_MINI_OPEN_ID: ${SEED_MINI_OPEN_ID:-}
@@ -91,6 +123,8 @@ services:
       - "3000:3000"
     depends_on:
       mysql:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     volumes:
       - backend_logs:/app/logs
@@ -119,6 +153,7 @@ services:
 
 volumes:
   mysql_data:
+  minio_data:
   backend_logs:
 
 networks:

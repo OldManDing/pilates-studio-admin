@@ -1,4 +1,6 @@
 import { api } from '@/utils/request';
+import { uploadsApi } from './uploads';
+export type { ImageUploadPurpose, ImageUploadResult } from './uploads';
 
 export interface StudioSetting {
   id?: string;
@@ -60,6 +62,8 @@ export const settingsApi = {
 
   updateMiniPageImage: (pageKey: string, data: { imageUrl?: string }) =>
     api.put<MiniPageImageSetting>(`/settings/mini-page-images/${pageKey}`, data),
+
+  uploadImage: uploadsApi.uploadImage,
 
   getNotifications: () =>
     api.get<NotificationSetting[]>('/settings/notifications'),

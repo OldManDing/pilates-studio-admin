@@ -13,6 +13,7 @@ import widgetCls from '@/styles/widgets.module.css';
 import { coachStatusLabels, type CoachStatus } from '@/types';
 import { authApi } from '@/services/auth';
 import { coachesApi, type Coach } from '@/services/coaches';
+import { uploadsApi } from '@/services/uploads';
 import { getErrorMessage } from '@/utils/errors';
 import { hasRequiredPermissions } from '@/utils/menu';
 import { getToneFromName } from '@/utils/tone';
@@ -46,18 +47,9 @@ type CoachFilterDraft = {
 };
 
 const coachStatusOptions: CoachStatus[] = ['ACTIVE', 'ON_LEAVE', 'INACTIVE'];
-const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_IMAGE_FILE_SIZE = 10 * 1024 * 1024;
 
 const parseListText = (value: string) => value.split(/\n|,|，/).map((item) => item.trim()).filter(Boolean);
-
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(new Error('图片读取失败'));
-    reader.readAsDataURL(file);
-  });
-}
 
 function validateImageFile(file: File) {
   if (!file.type.startsWith('image/')) {
@@ -65,7 +57,7 @@ function validateImageFile(file: File) {
   }
 
   if (file.size > MAX_IMAGE_FILE_SIZE) {
-    return '图片文件过大，请上传 5MB 以内图片';
+    return '图片文件过大，请上传 10MB 以内图片';
   }
 
   return '';
@@ -115,6 +107,7 @@ export default function CoachesPage() {
   const [detailCoach, setDetailCoach] = useState<Coach | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSavingCoach, setIsSavingCoach] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [deletingCoachId, setDeletingCoachId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
@@ -249,11 +242,14 @@ export default function CoachesPage() {
         return Upload.LIST_IGNORE;
       }
 
-      const avatarUrl = await readFileAsDataUrl(file);
-      form.setFieldValue('avatarUrl', avatarUrl);
-      messageApi.success('教练照片已载入，保存后生效');
+      setIsUploadingAvatar(true);
+      const uploaded = await uploadsApi.uploadImage(file, 'coachAvatar');
+      form.setFieldValue('avatarUrl', uploaded.url);
+      messageApi.success(`教练照片已压缩上传（${Math.ceil(uploaded.size / 1024)}KB），保存后生效`);
     } catch (err) {
-      messageApi.error(getErrorMessage(err, '教练照片读取失败'));
+      messageApi.error(getErrorMessage(err, '教练照片上传失败'));
+    } finally {
+      setIsUploadingAvatar(false);
     }
 
     return Upload.LIST_IGNORE;
@@ -552,11 +548,11 @@ export default function CoachesPage() {
                     <Upload
                       accept="image/*"
                       beforeUpload={handleCoachAvatarUpload}
-                      disabled={!canWriteCoaches}
+                      disabled={!canWriteCoaches || isUploadingAvatar}
                       maxCount={1}
                       showUploadList={false}
                     >
-                      <Button icon={<UploadOutlined />} disabled={!canWriteCoaches}>
+                      <Button icon={<UploadOutlined />} disabled={!canWriteCoaches || isUploadingAvatar} loading={isUploadingAvatar}>
                         上传教练照片
                       </Button>
                     </Upload>
@@ -567,7 +563,7 @@ export default function CoachesPage() {
                         </Button>
                       ) : null}
                     </Form.Item>
-                    <div className={styles.coachAvatarHint}>支持 JPG、PNG、WebP 等图片，大小不超过 5MB。</div>
+                    <div className={styles.coachAvatarHint}>支持 JPG、PNG、WebP 等图片，大小不超过 10MB。</div>
                   </div>
                 </div>
               </Form.Item>

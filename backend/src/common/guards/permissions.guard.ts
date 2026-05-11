@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PERMISSION_KEY } from '../constants/permissions.constant';
+import { ANY_PERMISSION_KEY, PERMISSION_KEY } from '../constants/permissions.constant';
 import { ALLOW_MINI_USER_KEY } from '../decorators/allow-mini-user.decorator';
 
 @Injectable()
@@ -17,8 +17,12 @@ export class PermissionsGuard implements CanActivate {
       PERMISSION_KEY,
       [context.getHandler(), context.getClass()],
     );
+    const requiredAnyPermissions = this.reflector.getAllAndOverride<string[]>(
+      ANY_PERMISSION_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
-    if (!requiredPermissions) {
+    if (!requiredPermissions && !requiredAnyPermissions) {
       return true;
     }
 
@@ -48,7 +52,7 @@ export class PermissionsGuard implements CanActivate {
 
     const userPermissions = user.role?.permissions || [];
 
-    const hasPermission = requiredPermissions.every((permission) => {
+    const hasPermission = (permission: string) => {
       // Support wildcards like READ:* or MANAGE:MEMBERS
       const [action, module] = permission.split(':');
       return userPermissions.some((userPerm: string) => {
@@ -58,11 +62,22 @@ export class PermissionsGuard implements CanActivate {
           (userModule === '*' || userModule === module)
         );
       });
-    });
+    };
 
-    if (!hasPermission) {
+    const hasAllRequiredPermissions = requiredPermissions
+      ? requiredPermissions.every(hasPermission)
+      : true;
+    const hasAnyRequiredPermission = requiredAnyPermissions
+      ? requiredAnyPermissions.some(hasPermission)
+      : true;
+
+    if (!hasAllRequiredPermissions || !hasAnyRequiredPermission) {
+      const requiredPermissionText = [
+        ...(requiredPermissions ?? []),
+        ...(requiredAnyPermissions ? [`any(${requiredAnyPermissions.join(', ')})`] : []),
+      ];
       throw new ForbiddenException(
-        `Required permissions: ${requiredPermissions.join(', ')}`,
+        `Required permissions: ${requiredPermissionText.join(', ')}`,
       );
     }
 

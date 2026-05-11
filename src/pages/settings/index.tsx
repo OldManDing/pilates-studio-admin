@@ -34,16 +34,7 @@ interface StoreInfoValues {
   hours?: [dayjs.Dayjs, dayjs.Dayjs];
 }
 
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(new Error('图片读取失败'));
-    reader.readAsDataURL(file);
-  });
-}
-
-const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_IMAGE_FILE_SIZE = 10 * 1024 * 1024;
 
 function validateImageFile(file: File) {
   if (!file.type.startsWith('image/')) {
@@ -51,7 +42,7 @@ function validateImageFile(file: File) {
   }
 
   if (file.size > MAX_IMAGE_FILE_SIZE) {
-    return '图片文件过大，请上传 5MB 以内图片';
+    return '图片文件过大，请上传 10MB 以内图片';
   }
 
   return '';
@@ -313,6 +304,7 @@ export default function SettingsPage() {
   const [notificationSavedAt, setNotificationSavedAt] = useState('');
   const [miniPageImageSavedAt, setMiniPageImageSavedAt] = useState('');
   const [isSavingStoreInfo, setIsSavingStoreInfo] = useState(false);
+  const [isUploadingStoreImage, setIsUploadingStoreImage] = useState(false);
   const [savingMiniPageImageKey, setSavingMiniPageImageKey] = useState<string | null>(null);
   const [initializingNotifications, setInitializingNotifications] = useState(false);
   const [togglingNotificationKey, setTogglingNotificationKey] = useState<string | null>(null);
@@ -634,12 +626,14 @@ export default function SettingsPage() {
         return;
       }
 
-      const imageUrl = await readFileAsDataUrl(file);
-      storeForm.setFieldValue('imageUrl', imageUrl);
-      message.success('店面图片已载入，保存后生效');
+      setIsUploadingStoreImage(true);
+      const uploaded = await settingsApi.uploadImage(file, 'studio');
+      storeForm.setFieldValue('imageUrl', uploaded.url);
+      message.success(`店面图片已压缩上传（${Math.ceil(uploaded.size / 1024)}KB），保存后生效`);
     } catch (err) {
-      message.error(getErrorMessage(err, '店面图片读取失败'));
+      message.error(getErrorMessage(err, '店面图片上传失败'));
     } finally {
+      setIsUploadingStoreImage(false);
       event.target.value = '';
     }
   };
@@ -667,11 +661,11 @@ export default function SettingsPage() {
       }
 
       setSavingMiniPageImageKey(pageKey);
-      const imageUrl = await readFileAsDataUrl(file);
-      const updated = await settingsApi.updateMiniPageImage(pageKey, { imageUrl });
+      const uploaded = await settingsApi.uploadImage(file, 'miniPageHero');
+      const updated = await settingsApi.updateMiniPageImage(pageKey, { imageUrl: uploaded.url });
       setMiniPageImages((current) => current.map((item) => (item.pageKey === pageKey ? updated : item)));
       setMiniPageImageSavedAt(todayText());
-      message.success(`${updated.label}头图已保存`);
+      message.success(`${updated.label}头图已压缩上传（${Math.ceil(uploaded.size / 1024)}KB）`);
     } catch (err) {
       message.error(getErrorMessage(err, '小程序页面图片保存失败'));
     } finally {
@@ -964,7 +958,7 @@ export default function SettingsPage() {
                           style={{ display: 'none' }}
                           onChange={handleStoreImageChange}
                         />
-                        <Button onClick={handleSelectStoreImage} disabled={!canManageSettings}>上传店面图片</Button>
+                        <Button onClick={handleSelectStoreImage} disabled={!canManageSettings || isUploadingStoreImage} loading={isUploadingStoreImage}>上传店面图片</Button>
                         <Form.Item noStyle shouldUpdate>
                           {() => {
                             const imageUrl = storeForm.getFieldValue('imageUrl');

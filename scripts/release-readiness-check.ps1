@@ -220,6 +220,18 @@ if ($backendEnv.Count -gt 0) {
     Test-SecretValue -Value (Get-ConfigValue -Values $backendEnv -Key "JWT_ACCESS_SECRET") -Name "JWT_ACCESS_SECRET"
     Test-SecretValue -Value (Get-ConfigValue -Values $backendEnv -Key "JWT_REFRESH_SECRET") -Name "JWT_REFRESH_SECRET"
 
+    $minioAccessKey = Assert-RequiredValue -Values $backendEnv -Key "MINIO_ACCESS_KEY" -Context "Image storage"
+    $minioSecretKey = Assert-RequiredValue -Values $backendEnv -Key "MINIO_SECRET_KEY" -Context "Image storage"
+    Assert-RequiredValue -Values $backendEnv -Key "MINIO_BUCKET" -Context "Image storage" | Out-Null
+    $minioPublicBaseUrl = Assert-RequiredValue -Values $backendEnv -Key "MINIO_PUBLIC_BASE_URL" -Context "Image storage"
+    Test-PlaceholderValue -Value $minioAccessKey -Name "MINIO_ACCESS_KEY" -Required
+    Test-PlaceholderValue -Value $minioSecretKey -Name "MINIO_SECRET_KEY" -Required
+    Test-SecretValue -Value $minioSecretKey -Name "MINIO_SECRET_KEY"
+    if ($minioPublicBaseUrl -notmatch "^https://") {
+        Add-Failure "MINIO_PUBLIC_BASE_URL must be an HTTPS URL reachable by the mini program."
+    }
+    Test-PlaceholderValue -Value $minioPublicBaseUrl -Name "MINIO_PUBLIC_BASE_URL" -Required
+
     $corsOrigins = Assert-RequiredValue -Values $backendEnv -Key "CORS_ORIGINS" -Context "Backend"
     if ($corsOrigins -match "\*" -or $corsOrigins -match "localhost|127\.0\.0\.1") {
         Add-Failure "CORS_ORIGINS must use only production HTTPS origins."

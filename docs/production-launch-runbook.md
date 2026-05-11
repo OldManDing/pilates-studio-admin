@@ -53,6 +53,7 @@ npm.cmd run release:check -- -MiniRoot F:\pilates-studio-mini -BackendEnvPath .e
 4. 执行迁移：
    ```bash
    docker-compose exec backend npx prisma migrate deploy
+   docker-compose exec backend npm run migrate:inline-images-to-minio
    ```
 5. 首次上线才执行种子数据，并立即修改或轮换初始管理员密码：
    ```bash

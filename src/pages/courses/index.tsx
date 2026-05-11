@@ -9,6 +9,7 @@ import { COURSE_DETAIL_DRAWER_WIDTH, CRUD_MODAL_WIDTH } from '@/styles/dimension
 import pageCls from '@/styles/page.module.css';
 import { coursesApi, type Course } from '@/services/courses';
 import { coachesApi, type Coach } from '@/services/coaches';
+import { uploadsApi } from '@/services/uploads';
 import { authApi } from '@/services/auth';
 import { getErrorMessage } from '@/utils/errors';
 import { hasRequiredPermissions } from '@/utils/menu';
@@ -38,16 +39,7 @@ type CourseFormValues = {
   isActive: boolean;
 };
 
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(new Error('图片读取失败'));
-    reader.readAsDataURL(file);
-  });
-}
-
-const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_IMAGE_FILE_SIZE = 10 * 1024 * 1024;
 
 function validateImageFile(file: File) {
   if (!file.type.startsWith('image/')) {
@@ -55,7 +47,7 @@ function validateImageFile(file: File) {
   }
 
   if (file.size > MAX_IMAGE_FILE_SIZE) {
-    return '图片文件过大，请上传 5MB 以内图片';
+    return '图片文件过大，请上传 10MB 以内图片';
   }
 
   return '';
@@ -130,6 +122,7 @@ export default function CoursesPage() {
   const [detailCourse, setDetailCourse] = useState<Course | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingCourseImage, setIsUploadingCourseImage] = useState(false);
   const courseImageInputRef = useRef<HTMLInputElement | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
@@ -361,12 +354,14 @@ export default function CoursesPage() {
         return;
       }
 
-      const imageUrl = await readFileAsDataUrl(file);
-      form.setFieldValue('coverImageUrl', imageUrl);
-      messageApi.success('课程图片已载入，保存后生效');
+      setIsUploadingCourseImage(true);
+      const uploaded = await uploadsApi.uploadImage(file, 'courseCover');
+      form.setFieldValue('coverImageUrl', uploaded.url);
+      messageApi.success(`课程图片已压缩上传（${Math.ceil(uploaded.size / 1024)}KB），保存后生效`);
     } catch (err) {
-      messageApi.error(getErrorMessage(err, '课程图片读取失败'));
+      messageApi.error(getErrorMessage(err, '课程图片上传失败'));
     } finally {
+      setIsUploadingCourseImage(false);
       event.target.value = '';
     }
   };
@@ -630,7 +625,7 @@ export default function CoursesPage() {
                     style={{ display: 'none' }}
                     onChange={handleCourseImageChange}
                   />
-                  <Button onClick={handleSelectCourseImage} disabled={!canWriteCourses}>上传课程图片</Button>
+                  <Button onClick={handleSelectCourseImage} disabled={!canWriteCourses || isUploadingCourseImage} loading={isUploadingCourseImage}>上传课程图片</Button>
                   <Form.Item noStyle shouldUpdate>
                     {() => {
                       const imageUrl = form.getFieldValue('coverImageUrl');
