@@ -14,12 +14,13 @@ export type TodayCourseItem = {
   statusText?: string;
   queueHintText?: string;
   actionText?: string;
+  actionPath?: string;
 };
 
 export type TodayCoursePanelProps = {
   items: TodayCourseItem[];
   anomalyCount?: number;
-  onViewDetail?: (id: string) => void;
+  onViewDetail?: (id: string, actionPath?: string) => void;
 };
 
 const isAnomalyStatus = (statusText?: string) => statusText === '未到场' || statusText === '已取消';
@@ -49,7 +50,7 @@ export default function TodayCoursePanel({
                 key={item.id}
                 type="button"
                 className={`${widgetCls.recordItem} ${widgetCls.dashboardCourseItem} ${styles.itemButtonReset} ${styles.todayItem} ${isAnomaly ? styles.todayItemAnomaly : ''}`}
-                onClick={() => onViewDetail?.(item.id)}
+                onClick={() => onViewDetail?.(item.id, item.actionPath)}
                 disabled={!hasDetailAction}
                 aria-disabled={!hasDetailAction}
               >

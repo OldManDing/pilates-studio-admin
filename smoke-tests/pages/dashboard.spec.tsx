@@ -1,7 +1,8 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { App } from 'antd';
 import { MemoryRouter } from 'react-router-dom';
 import DashboardPage from '@/pages/dashboard';
+import { TodayCoursePanel } from '@/pages/dashboard/components';
 
 vi.mock('@/services/reports', () => ({
   reportsApi: {
@@ -85,5 +86,38 @@ describe('DashboardPage smoke test', () => {
       expect(screen.getByText('活跃率')).toBeInTheDocument();
       expect(screen.getByText('近期排程')).toBeInTheDocument();
     });
+  });
+
+  it('routes confirmed execution tasks to attendance check-in instead of booking management', () => {
+    const onViewDetail = vi.fn();
+
+    render(
+      <App>
+        <TodayCoursePanel
+          items={[
+            {
+              id: 'booking-1',
+              title: 'Morning Flow',
+              timeText: '10:00 - 10:50',
+              participantText: '会员 林若溪',
+              coachName: '李静',
+              locationText: '小程序预约',
+              statusText: '已确认',
+              queueHintText: '跟进签到与到课执行',
+              actionText: '去签到核销',
+              actionPath: '/attendance',
+            },
+          ]}
+          onViewDetail={onViewDetail}
+        />
+      </App>,
+    );
+
+    const actionButton = screen.getByText('去签到核销').closest('button');
+    expect(actionButton).not.toBeNull();
+
+    fireEvent.click(actionButton!);
+
+    expect(onViewDetail).toHaveBeenCalledWith('booking-1', '/attendance');
   });
 });

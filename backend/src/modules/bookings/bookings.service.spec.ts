@@ -112,17 +112,17 @@ describe('BookingsService', () => {
   });
 
   describe('date range filtering', () => {
-    it('includes full day when "to" is a date-only string', async () => {
-      await service.findAll({ page: 1, pageSize: 10, to: '2025-01-01' });
+    it('uses the full China business day when date-only filters are provided', async () => {
+      await service.findAll({ page: 1, pageSize: 10, from: '2025-01-01', to: '2025-01-01' });
 
       const whereArg = prisma.booking.findMany.mock.calls[0][0].where;
+      const fromDate: Date = whereArg.session.startsAt.gte;
       const toDate: Date = whereArg.session.startsAt.lte;
 
+      expect(fromDate).toBeInstanceOf(Date);
       expect(toDate).toBeInstanceOf(Date);
-      expect(toDate.getHours()).toBe(23);
-      expect(toDate.getMinutes()).toBe(59);
-      expect(toDate.getSeconds()).toBe(59);
-      expect(toDate.getMilliseconds()).toBe(999);
+      expect(fromDate.toISOString()).toBe('2024-12-31T16:00:00.000Z');
+      expect(toDate.toISOString()).toBe('2025-01-01T15:59:59.999Z');
     });
 
     it('throws BadRequestException for invalid date strings', async () => {

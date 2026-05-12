@@ -70,6 +70,48 @@ describe('CourseSessionsService', () => {
     expect(result.sessionCode).toBe('SES000001');
   });
 
+  it('inherits the course default coach when creating a session without a session coach override', async () => {
+    prisma.course.findUnique.mockResolvedValue({ id: 'course-1', capacity: 8, coachId: 'coach-default' });
+    prisma.courseSession.findFirst.mockResolvedValue(null);
+    prisma.courseSession.create.mockResolvedValue(
+      createSession({
+        coachId: null,
+        coach: null,
+        course: { id: 'course-1', name: 'Morning Flow', capacity: 8, coach: { id: 'coach-default', name: '王老师' } },
+      }),
+    );
+
+    await service.create({
+      courseId: 'course-1',
+      startsAt: '2026-04-10T08:00:00.000Z',
+      endsAt: '2026-04-10T08:50:00.000Z',
+    });
+
+    expect(prisma.coach.findUnique).not.toHaveBeenCalled();
+    expect(prisma.courseSession.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          courseId: 'course-1',
+          coachId: undefined,
+        }),
+      }),
+    );
+  });
+
+  it('allows creating a session without a coach when the course has no default coach', async () => {
+    prisma.course.findUnique.mockResolvedValue({ id: 'course-1', capacity: 8, coachId: null });
+    prisma.courseSession.create.mockResolvedValue(createSession({ coachId: null, coach: null }));
+
+    await service.create({
+      courseId: 'course-1',
+      startsAt: '2026-04-10T08:00:00.000Z',
+      endsAt: '2026-04-10T08:50:00.000Z',
+    });
+
+    expect(prisma.coach.findUnique).not.toHaveBeenCalled();
+    expect(prisma.courseSession.findFirst).not.toHaveBeenCalled();
+  });
+
   it('returns paginated upcoming sessions', async () => {
     prisma.courseSession.findMany.mockResolvedValue([createSession()]);
     prisma.courseSession.count.mockResolvedValue(1);
@@ -117,6 +159,7 @@ describe('CourseSessionsService', () => {
 
   it('updates session timing and capacity when inputs are valid', async () => {
     prisma.courseSession.findUnique.mockResolvedValue(createSession({ bookedCount: 2, _count: { bookings: 2 } }));
+    prisma.course.findUnique.mockResolvedValue({ id: 'course-1', coachId: 'coach-1' });
     prisma.courseSession.findFirst.mockResolvedValue(null);
     prisma.courseSession.update.mockResolvedValue(
       createSession({ capacity: 10, startsAt: new Date('2026-04-10T09:00:00.000Z') }),
@@ -130,6 +173,31 @@ describe('CourseSessionsService', () => {
 
     expect(prisma.courseSession.update).toHaveBeenCalled();
     expect(result.capacity).toBe(10);
+  });
+
+  it('clears a session coach override back to course default inheritance', async () => {
+    prisma.courseSession.findUnique.mockResolvedValue(createSession({ coachId: 'coach-override' }));
+    prisma.course.findUnique.mockResolvedValue({ id: 'course-1', coachId: 'coach-default' });
+    prisma.courseSession.findFirst.mockResolvedValue(null);
+    prisma.courseSession.update.mockResolvedValue(
+      createSession({
+        coachId: null,
+        coach: null,
+        course: { id: 'course-1', name: 'Morning Flow', capacity: 8, coach: { id: 'coach-default', name: '王老师' } },
+      }),
+    );
+
+    await service.update('session-1', { coachId: null });
+
+    expect(prisma.course.findUnique).toHaveBeenCalledWith({
+      where: { id: 'course-1' },
+      select: { id: true, coachId: true },
+    });
+    expect(prisma.courseSession.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ coachId: null }),
+      }),
+    );
   });
 
   it('prevents deleting sessions that still have bookings', async () => {

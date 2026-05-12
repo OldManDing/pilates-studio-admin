@@ -14,6 +14,7 @@ import { reportsApi } from '@/services/reports';
 import { transactionsApi, type Transaction } from '@/services/transactions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
+import { formatLocalDateParam } from '@/utils/date';
 import { getErrorMessage } from '@/utils/errors';
 import { formatCurrency, formatPercent } from '@/utils/format';
 import { useIsMobile } from '@/utils/useResponsive';
@@ -62,8 +63,9 @@ export default function DashboardFinanceTrendPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const from = new Date(new Date().getFullYear(), new Date().getMonth() - 6, 1).toISOString().split('T')[0];
-        const to = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const from = formatLocalDateParam(new Date(now.getFullYear(), now.getMonth() - 6, 1));
+        const to = formatLocalDateParam(now);
 
         const [summary, report, txList] = await Promise.all([
           transactionsApi.getSummary(),

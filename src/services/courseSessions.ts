@@ -5,7 +5,7 @@ export interface CourseSession {
   id: string;
   sessionCode: string;
   courseId: string;
-  coachId: string;
+  coachId?: string | null;
   startsAt: string;
   endsAt: string;
   capacity: number;
@@ -23,6 +23,7 @@ export interface CourseSession {
     id: string;
     name: string;
   };
+  coachSource?: 'SESSION' | 'COURSE_DEFAULT' | 'UNASSIGNED';
   _count?: {
     bookings: number;
   };
@@ -30,7 +31,7 @@ export interface CourseSession {
 
 export interface CreateCourseSessionData {
   courseId: string;
-  coachId: string;
+  coachId?: string | null;
   startsAt: string;
   endsAt: string;
   capacity?: number;

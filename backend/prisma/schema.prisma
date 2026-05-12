@@ -252,8 +252,8 @@ model CourseSession {
   sessionCode String       @unique
   courseId    String
   course      Course       @relation(fields: [courseId], references: [id])
-  coachId     String
-  coach       Coach        @relation(fields: [coachId], references: [id])
+  coachId     String?
+  coach       Coach?       @relation(fields: [coachId], references: [id])
   startsAt    DateTime
   endsAt      DateTime
   capacity    Int

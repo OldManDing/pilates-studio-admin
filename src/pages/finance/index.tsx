@@ -28,6 +28,7 @@ import widgetCls from '@/styles/widgets.module.css';
 import { membersApi, type Member } from '@/services/members';
 import { transactionsApi, type Transaction } from '@/services/transactions';
 import type { AccentTone, TransactionStatus, TransactionKind } from '@/types';
+import { formatLocalDateParam } from '@/utils/date';
 import { getErrorMessage } from '@/utils/errors';
 import { formatCurrency, getToneColor } from '@/utils/format';
 import { hasRequiredPermissions } from '@/utils/menu';
@@ -154,8 +155,8 @@ export default function FinancePage() {
 
   const fetchAllTransactions = useCallback(async (params: { kind?: string; status?: TransactionStatus } = {}) => {
     const now = new Date();
-    const defaultFrom = new Date(now.getFullYear(), now.getMonth() - 12, now.getDate()).toISOString().split('T')[0];
-    const defaultTo = now.toISOString().split('T')[0];
+    const defaultFrom = formatLocalDateParam(new Date(now.getFullYear(), now.getMonth() - 12, now.getDate()));
+    const defaultTo = formatLocalDateParam(now);
     const firstPage = await transactionsApi.getAll({
       page: 1,
       pageSize: TRANSACTION_PAGE_SIZE,
@@ -183,8 +184,8 @@ export default function FinancePage() {
   const getWorkbenchQueryParams = useCallback(() => {
     const now = new Date();
     return {
-      from: new Date(now.getFullYear(), now.getMonth() - 12, now.getDate()).toISOString().split('T')[0],
-      to: now.toISOString().split('T')[0],
+      from: formatLocalDateParam(new Date(now.getFullYear(), now.getMonth() - 12, now.getDate())),
+      to: formatLocalDateParam(now),
       status: statusFilter === '全部' ? undefined : statusFilter as TransactionStatus,
       kind: kindFilter === '全部' ? undefined : kindFilter,
     };

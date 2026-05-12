@@ -7,10 +7,10 @@ export class UpdateCourseSessionDto {
   @IsString()
   courseId?: string;
 
-  @ApiPropertyOptional({ description: 'Coach ID' })
+  @ApiPropertyOptional({ description: 'Session coach override. Send null to use the course default coach.' })
   @IsOptional()
   @IsString()
-  coachId?: string;
+  coachId?: string | null;
 
   @ApiPropertyOptional({ description: 'Session start time (ISO 8601)', example: '2025-04-10T09:00:00Z' })
   @IsOptional()

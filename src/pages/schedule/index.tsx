@@ -36,7 +36,7 @@ import styles from './index.module.css';
 
 type SessionFormValues = {
   courseId: string;
-  coachId: string;
+  coachId?: string | null;
   startsAt: Dayjs;
   endsAt: Dayjs;
   capacity?: number;
@@ -47,6 +47,15 @@ type SessionFormValues = {
 const formatDateTime = (value?: string) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm') : '-');
 const formatTime = (value?: string) => (value ? dayjs(value).format('HH:mm') : '-');
 const getBookedCount = (session: CourseSession) => session.bookedCount ?? session._count?.bookings ?? 0;
+const getSessionCoachLabel = (session: CourseSession) => {
+  if (!session.coach?.name) {
+    return '待安排';
+  }
+
+  return session.coachSource === 'COURSE_DEFAULT'
+    ? `${session.coach.name}（课程默认）`
+    : session.coach.name;
+};
 
 export default function SchedulePage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -168,7 +177,7 @@ export default function SchedulePage() {
     setEditingSession(session);
     form.setFieldsValue({
       courseId: session.courseId,
-      coachId: session.coachId,
+      coachId: session.coachId || undefined,
       startsAt: dayjs(session.startsAt),
       endsAt: dayjs(session.endsAt),
       capacity: session.capacity,
@@ -195,7 +204,7 @@ export default function SchedulePage() {
       setSaving(true);
       const payload = {
         courseId: values.courseId,
-        coachId: values.coachId,
+        coachId: values.coachId || (editingSession ? null : undefined),
         startsAt: values.startsAt.toISOString(),
         endsAt: values.endsAt.toISOString(),
         capacity: values.capacity,
@@ -358,7 +367,7 @@ export default function SchedulePage() {
                           <div className={styles.sessionMetaGrid}>
                             <div className={styles.metaCard}>
                               <span className={styles.metaLabel}>教练</span>
-                              <span className={styles.metaValue}>{session.coach?.name || '-'}</span>
+                              <span className={styles.metaValue}>{getSessionCoachLabel(session)}</span>
                             </div>
                             <div className={styles.metaCard}>
                               <span className={styles.metaLabel}>地点</span>
@@ -465,10 +474,11 @@ export default function SchedulePage() {
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="coachId" label="教练" rules={[{ required: true, message: '请选择教练' }]}>
+              <Form.Item name="coachId" label="教练" extra="不选则使用课程管理中绑定的默认教练。">
                 <Select
+                  allowClear
                   className={pageCls.settingsInput}
-                  placeholder="选择教练"
+                  placeholder="选择教练（可选）"
                   options={coaches.map((coach) => ({ label: coach.name, value: coach.id }))}
                 />
               </Form.Item>

@@ -6,7 +6,7 @@ import { QueryBookingsDto } from './dto/query-bookings.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { BookingSource, BookingStatus, MemberStatus, MembershipPlanCategory, TransactionKind, TransactionStatus } from '../../common/enums/domain.enums';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
-import { buildDateRange } from '../../common/utils/date-range';
+import { buildDateRange, getBusinessDateParam } from '../../common/utils/date-range';
 import { NotificationsService } from '../notifications/notifications.service';
 
 type BookableMember = {
@@ -90,7 +90,9 @@ export class BookingsService {
       const session = await tx.courseSession.findUnique({
         where: { id: dto.sessionId },
         include: {
-          course: true,
+          course: {
+            include: { coach: true },
+          },
         },
       });
 
@@ -138,7 +140,9 @@ export class BookingsService {
           member: true,
           session: {
             include: {
-              course: true,
+              course: {
+                include: { coach: true },
+              },
               coach: true,
             },
           },
@@ -153,6 +157,8 @@ export class BookingsService {
       return booking;
     });
 
+    const bookingWithEffectiveCoach = this.withEffectiveSessionCoach(result);
+
     await this.notificationsService.createFromSetting('booking_confirmation', {
       type: 'BOOKING_CONFIRMATION',
       content: `您已成功预约 ${result.session.course.name}`,
@@ -165,14 +171,14 @@ export class BookingsService {
         courseName: result.session.course.name,
         startsAt: result.session.startsAt,
         endsAt: result.session.endsAt,
-        coachName: result.session.coach?.name,
+        coachName: bookingWithEffectiveCoach.session.coach?.name,
         studioName: 'CareMe练习记录',
         remark: '请按预约时间到店上课',
         page: 'pages/my-bookings/index',
       },
     });
 
-    return result;
+    return bookingWithEffectiveCoach;
   }
 
   async findAll(query: QueryBookingsDto): Promise<PaginatedResponse<any>> {
@@ -210,7 +216,13 @@ export class BookingsService {
           },
           session: {
             include: {
-              course: { select: { id: true, name: true } },
+              course: {
+                select: {
+                  id: true,
+                  name: true,
+                  coach: { select: { id: true, name: true, avatarUrl: true } },
+                },
+              },
               coach: { select: { id: true, name: true, avatarUrl: true } },
             },
           },
@@ -222,7 +234,7 @@ export class BookingsService {
     ]);
 
     return {
-      data,
+      data: data.map((booking) => this.withEffectiveSessionCoach(booking)),
       meta: {
         page,
         pageSize,
@@ -283,13 +295,12 @@ export class BookingsService {
         { member: { name: { contains: keyword } } },
         { session: { course: { name: { contains: keyword } } } },
         { session: { coach: { name: { contains: keyword } } } },
+        { session: { course: { coach: { name: { contains: keyword } } } } },
       ];
     }
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const tomorrowStart = new Date(todayStart);
-    tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+    const todayDate = getBusinessDateParam();
+    const todayRange = buildDateRange(todayDate, todayDate, 'bookings.today') as { gte: Date; lte: Date };
 
     const [weekTotal, pendingCount, confirmedCount, completedCount, cancelledCount, noShowCount, todayCount] = await Promise.all([
       this.prisma.booking.count({ where }),
@@ -305,8 +316,8 @@ export class BookingsService {
             {
               session: {
                 startsAt: {
-                  gte: todayStart,
-                  lt: tomorrowStart,
+                  gte: todayRange.gte,
+                  lte: todayRange.lte,
                 },
               },
             },
@@ -351,7 +362,9 @@ export class BookingsService {
         },
         session: {
           include: {
-            course: true,
+            course: {
+              include: { coach: true },
+            },
             coach: true,
           },
         },
@@ -367,7 +380,7 @@ export class BookingsService {
       throw new ForbiddenException('Cannot access another member booking');
     }
 
-    return booking;
+    return this.withEffectiveSessionCoach(booking);
   }
 
   async updateStatus(id: string, dto: UpdateBookingStatusDto) {
@@ -420,7 +433,9 @@ export class BookingsService {
           member: true,
           session: {
             include: {
-              course: true,
+              course: {
+                include: { coach: true },
+              },
               coach: true,
             },
           },
@@ -458,21 +473,23 @@ export class BookingsService {
       return updated;
     });
 
+    const bookingWithEffectiveCoach = this.withEffectiveSessionCoach(result);
+
     if (dto.status === BookingStatus.CANCELLED) {
       await this.notificationsService.createFromSetting('booking_cancelled', {
         type: 'BOOKING_CANCELLED',
         title: '预约已取消',
-        content: `您的预约 ${result.bookingCode} 已取消。`,
-        memberId: result.memberId,
-        miniUserId: result.member?.miniUserId ?? undefined,
+        content: `您的预约 ${bookingWithEffectiveCoach.bookingCode} 已取消。`,
+        memberId: bookingWithEffectiveCoach.memberId,
+        miniUserId: bookingWithEffectiveCoach.member?.miniUserId ?? undefined,
         payload: {
-          bookingId: result.id,
-          sessionId: result.sessionId,
-          bookingCode: result.bookingCode,
-          courseName: result.session?.course?.name,
-          startsAt: result.session?.startsAt,
-          endsAt: result.session?.endsAt,
-          coachName: result.session?.coach?.name,
+          bookingId: bookingWithEffectiveCoach.id,
+          sessionId: bookingWithEffectiveCoach.sessionId,
+          bookingCode: bookingWithEffectiveCoach.bookingCode,
+          courseName: bookingWithEffectiveCoach.session?.course?.name,
+          startsAt: bookingWithEffectiveCoach.session?.startsAt,
+          endsAt: bookingWithEffectiveCoach.session?.endsAt,
+          coachName: bookingWithEffectiveCoach.session?.coach?.name,
           cancelledAt: new Date(),
           studioName: 'CareMe练习记录',
           remark: '预约已取消，可在小程序重新选择课程',
@@ -481,7 +498,7 @@ export class BookingsService {
       });
     }
 
-    return result;
+    return bookingWithEffectiveCoach;
   }
 
   async remove(id: string) {
@@ -547,7 +564,15 @@ export class BookingsService {
           },
           session: {
             include: {
-              course: { select: { id: true, name: true, type: true, level: true } },
+              course: {
+                select: {
+                  id: true,
+                  name: true,
+                  type: true,
+                  level: true,
+                  coach: { select: { id: true, name: true, avatarUrl: true } },
+                },
+              },
               coach: { select: { id: true, name: true, avatarUrl: true } },
             },
           },
@@ -558,7 +583,7 @@ export class BookingsService {
     ]);
 
     return {
-      data,
+      data: data.map((booking) => this.withEffectiveSessionCoach(booking)),
       meta: {
         page,
         pageSize,
@@ -610,7 +635,16 @@ export class BookingsService {
           },
           session: {
             include: {
-              course: { select: { id: true, name: true, type: true, level: true, durationMinutes: true } },
+              course: {
+                select: {
+                  id: true,
+                  name: true,
+                  type: true,
+                  level: true,
+                  durationMinutes: true,
+                  coach: { select: { id: true, name: true, avatarUrl: true } },
+                },
+              },
               coach: { select: { id: true, name: true, avatarUrl: true } },
             },
           },
@@ -627,6 +661,9 @@ export class BookingsService {
               startsAt: true,
               endsAt: true,
               coachId: true,
+              course: {
+                select: { coachId: true },
+              },
             },
           },
         },
@@ -640,7 +677,11 @@ export class BookingsService {
 
       return sum + duration;
     }, 0);
-    const coachIds = new Set(summaryBookings.map((booking) => booking.session?.coachId).filter(Boolean));
+    const coachIds = new Set(
+      summaryBookings
+        .map((booking) => booking.session?.coachId ?? booking.session?.course?.coachId)
+        .filter(Boolean),
+    );
 
     return {
       summary: {
@@ -649,7 +690,7 @@ export class BookingsService {
         totalHours: Math.round(totalMinutes / 60),
         coachCount: coachIds.size,
       },
-      records,
+      records: records.map((booking) => this.withEffectiveSessionCoach(booking)),
       meta: {
         page,
         pageSize,
@@ -674,6 +715,20 @@ export class BookingsService {
     }
 
     return this.updateStatus(id, { status: BookingStatus.CANCELLED });
+  }
+
+  private withEffectiveSessionCoach<T extends { session?: any | null }>(booking: T): T {
+    if (!booking.session) {
+      return booking;
+    }
+
+    return {
+      ...booking,
+      session: {
+        ...booking.session,
+        coach: booking.session.coach ?? booking.session.course?.coach ?? null,
+      },
+    } as T;
   }
 
   private async runSerializableTransaction<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>) {

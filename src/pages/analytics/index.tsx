@@ -9,6 +9,7 @@ import SectionCard from '@/components/SectionCard';
 import StatCard from '@/components/StatCard';
 import pageCls from '@/styles/page.module.css';
 import { analyticsApi } from '@/services/analytics';
+import { formatLocalDateParam } from '@/utils/date';
 import { getErrorMessage } from '@/utils/errors';
 import { axisTick, chartGrid } from '@/utils/chartTheme';
 import { useIsMobile } from '@/utils/useResponsive';
@@ -59,8 +60,8 @@ export default function AnalyticsPage() {
       try {
         setLoading(true);
         const dayCount = rangeKey === '7d' ? 7 : rangeKey === '90d' ? 90 : 30;
-        const from = new Date(Date.now() - dayCount * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-        const to = new Date().toISOString().split('T')[0];
+        const from = formatLocalDateParam(new Date(Date.now() - dayCount * 24 * 60 * 60 * 1000));
+        const to = formatLocalDateParam(new Date());
 
         const [overview, bookingDistributionData, retentionTrend] = await Promise.all([
           analyticsApi.getDashboardOverview(from, to),

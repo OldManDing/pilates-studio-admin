@@ -17,23 +17,29 @@ export class CourseSessionsService {
   async create(dto: CreateCourseSessionDto) {
     const startsAt = new Date(dto.startsAt);
     const endsAt = new Date(dto.endsAt);
+    const requestedCoachId = this.normalizeOptionalCoachId(dto.coachId);
 
     this.validateTimeRange(startsAt, endsAt);
 
-    const [course, coach] = await Promise.all([
-      this.prisma.course.findUnique({ where: { id: dto.courseId } }),
-      this.prisma.coach.findUnique({ where: { id: dto.coachId } }),
-    ]);
+    const course = await this.prisma.course.findUnique({
+      where: { id: dto.courseId },
+      select: { id: true, capacity: true, coachId: true },
+    });
 
     if (!course) {
       throw new NotFoundException('Course not found');
     }
 
-    if (!coach) {
-      throw new NotFoundException('Coach not found');
+    if (typeof requestedCoachId === 'string') {
+      const coach = await this.prisma.coach.findUnique({ where: { id: requestedCoachId } });
+
+      if (!coach) {
+        throw new NotFoundException('Coach not found');
+      }
     }
 
-    await this.ensureSessionConflictFree(dto.coachId, startsAt, endsAt);
+    const effectiveCoachId = requestedCoachId ?? course.coachId ?? null;
+    await this.ensureSessionConflictFree(effectiveCoachId, startsAt, endsAt);
 
     const sessionCode = await this.generateSessionCode();
 
@@ -41,7 +47,7 @@ export class CourseSessionsService {
       data: {
         sessionCode,
         courseId: dto.courseId,
-        coachId: dto.coachId,
+        coachId: requestedCoachId,
         startsAt,
         endsAt,
         capacity: dto.capacity ?? course.capacity,
@@ -51,7 +57,16 @@ export class CourseSessionsService {
       },
       include: {
         course: {
-          select: { id: true, name: true, type: true, level: true, durationMinutes: true },
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            level: true,
+            durationMinutes: true,
+            coach: {
+              select: { id: true, name: true, avatarUrl: true, bio: true },
+            },
+          },
         },
         coach: {
           select: { id: true, name: true, avatarUrl: true },
@@ -76,7 +91,7 @@ export class CourseSessionsService {
 
     const where: any = {
       ...(query.courseId ? { courseId: query.courseId } : {}),
-      ...(query.coachId ? { coachId: query.coachId } : {}),
+      ...(query.coachId ? { OR: this.buildEffectiveCoachWhere(query.coachId) } : {}),
       ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
     };
 
@@ -99,7 +114,19 @@ export class CourseSessionsService {
         take: pageSize,
         include: {
           course: {
-            select: { id: true, name: true, description: true, type: true, level: true, durationMinutes: true, coverImageUrl: true, isActive: true },
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              type: true,
+              level: true,
+              durationMinutes: true,
+              coverImageUrl: true,
+              isActive: true,
+              coach: {
+                select: { id: true, name: true, avatarUrl: true, bio: true },
+              },
+            },
           },
           coach: {
             select: { id: true, name: true, avatarUrl: true },
@@ -132,7 +159,13 @@ export class CourseSessionsService {
     const session = await this.prisma.courseSession.findUnique({
       where: { id },
       include: {
-        course: true,
+        course: {
+          include: {
+            coach: {
+              select: { id: true, name: true, avatarUrl: true, bio: true },
+            },
+          },
+        },
         coach: {
           select: { id: true, name: true, avatarUrl: true, bio: true },
         },
@@ -169,7 +202,9 @@ export class CourseSessionsService {
 
     const startsAt = dto.startsAt ? new Date(dto.startsAt) : existing.startsAt;
     const endsAt = dto.endsAt ? new Date(dto.endsAt) : existing.endsAt;
-    const coachId = dto.coachId ?? existing.coachId;
+    const requestedCoachId = this.normalizeOptionalCoachId(dto.coachId);
+    const targetCourseId = dto.courseId ?? existing.courseId;
+    let storedCoachId = existing.coachId;
     const capacity = dto.capacity ?? existing.capacity;
 
     this.validateTimeRange(startsAt, endsAt);
@@ -178,27 +213,33 @@ export class CourseSessionsService {
       throw new BadRequestException('Capacity cannot be lower than current booked count');
     }
 
-    if (dto.courseId) {
-      const course = await this.prisma.course.findUnique({ where: { id: dto.courseId } });
-      if (!course) {
-        throw new NotFoundException('Course not found');
-      }
+    const course = await this.prisma.course.findUnique({
+      where: { id: targetCourseId },
+      select: { id: true, coachId: true },
+    });
+    if (!course) {
+      throw new NotFoundException('Course not found');
     }
 
-    if (dto.coachId) {
-      const coach = await this.prisma.coach.findUnique({ where: { id: dto.coachId } });
+    if (requestedCoachId !== undefined) {
+      storedCoachId = requestedCoachId;
+    }
+
+    if (typeof storedCoachId === 'string' && (storedCoachId !== existing.coachId || requestedCoachId !== undefined)) {
+      const coach = await this.prisma.coach.findUnique({ where: { id: storedCoachId } });
       if (!coach) {
         throw new NotFoundException('Coach not found');
       }
     }
 
-    await this.ensureSessionConflictFree(coachId, startsAt, endsAt, id);
+    const effectiveCoachId = storedCoachId ?? course.coachId ?? null;
+    await this.ensureSessionConflictFree(effectiveCoachId, startsAt, endsAt, id);
 
     return this.prisma.courseSession.update({
       where: { id },
       data: {
         ...(dto.courseId ? { courseId: dto.courseId } : {}),
-        ...(dto.coachId ? { coachId: dto.coachId } : {}),
+        ...(requestedCoachId !== undefined ? { coachId: storedCoachId } : {}),
         ...(dto.startsAt ? { startsAt } : {}),
         ...(dto.endsAt ? { endsAt } : {}),
         ...(dto.capacity !== undefined ? { capacity: dto.capacity } : {}),
@@ -207,7 +248,16 @@ export class CourseSessionsService {
       },
       include: {
         course: {
-          select: { id: true, name: true, type: true, level: true, durationMinutes: true },
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            level: true,
+            durationMinutes: true,
+            coach: {
+              select: { id: true, name: true, avatarUrl: true, bio: true },
+            },
+          },
         },
         coach: {
           select: { id: true, name: true, avatarUrl: true },
@@ -294,6 +344,14 @@ export class CourseSessionsService {
     const sessions = await this.prisma.courseSession.findMany({
       where,
       include: {
+        course: {
+          select: {
+            id: true,
+            coach: {
+              select: { id: true, name: true, avatarUrl: true, bio: true },
+            },
+          },
+        },
         coach: {
           select: { id: true, name: true, avatarUrl: true },
         },
@@ -311,13 +369,21 @@ export class CourseSessionsService {
     };
   }
 
-  private withActiveBookedCount<T extends { bookedCount: number; _count?: { bookings: number } }>(
+  private withActiveBookedCount<T extends {
+    bookedCount: number;
+    coach?: unknown | null;
+    course?: { coach?: unknown | null } | null;
+    _count?: { bookings: number };
+  }>(
     session: T,
   ) {
     const { _count, ...sessionData } = session;
+    const effectiveCoach = sessionData.coach ?? sessionData.course?.coach ?? null;
 
     return {
       ...sessionData,
+      coach: effectiveCoach,
+      coachSource: sessionData.coach ? 'SESSION' : effectiveCoach ? 'COURSE_DEFAULT' : 'UNASSIGNED',
       bookedCount: _count?.bookings ?? session.bookedCount,
     };
   }
@@ -332,15 +398,32 @@ export class CourseSessionsService {
     }
   }
 
+  private normalizeOptionalCoachId(coachId?: string | null) {
+    if (coachId === undefined) {
+      return undefined;
+    }
+
+    if (coachId === null) {
+      return null;
+    }
+
+    const trimmedCoachId = coachId.trim();
+    return trimmedCoachId || null;
+  }
+
   private async ensureSessionConflictFree(
-    coachId: string,
+    coachId: string | null,
     startsAt: Date,
     endsAt: Date,
     excludeId?: string,
   ) {
+    if (!coachId) {
+      return;
+    }
+
     const conflict = await this.prisma.courseSession.findFirst({
       where: {
-        coachId,
+        OR: this.buildEffectiveCoachWhere(coachId),
         ...(excludeId ? { id: { not: excludeId } } : {}),
         startsAt: { lt: endsAt },
         endsAt: { gt: startsAt },
@@ -351,6 +434,16 @@ export class CourseSessionsService {
     if (conflict) {
       throw new ConflictException('Coach already has another session during this time range');
     }
+  }
+
+  private buildEffectiveCoachWhere(coachId: string) {
+    return [
+      { coachId },
+      {
+        coachId: null,
+        course: { coachId },
+      },
+    ];
   }
 
   private async generateSessionCode(): Promise<string> {

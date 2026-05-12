@@ -11,6 +11,7 @@ import { coursesApi, type Course } from '@/services/courses';
 import { coachesApi, type Coach } from '@/services/coaches';
 import { reportsApi } from '@/services/reports';
 import { transactionsApi } from '@/services/transactions';
+import { formatLocalDateParam } from '@/utils/date';
 import { getErrorMessage } from '@/utils/errors';
 import {
   TodayCoursePanel,
@@ -35,6 +36,7 @@ type TodayCourseViewModel = {
   statusText?: string;
   queueHintText?: string;
   actionText?: string;
+  actionPath?: string;
 };
 
 type UpcomingBookingViewModel = {
@@ -113,11 +115,16 @@ const deriveExecutionHintText = (status: string) => {
 
 const deriveExecutionActionText = (status: string) => {
   if (status === 'PENDING') return '立即确认';
-  if (status === 'CONFIRMED') return '准备签到';
+  if (status === 'CONFIRMED') return '去签到核销';
   if (status === 'NO_SHOW') return '发起回访';
   if (status === 'COMPLETED') return '查看复盘';
   if (status === 'CANCELLED') return '检查补位';
   return '进入预约管理';
+};
+
+const deriveExecutionActionPath = (status: string) => {
+  if (status === 'CONFIRMED') return '/attendance';
+  return '/bookings';
 };
 
 const deriveScheduleHintText = (status: string) => {
@@ -195,6 +202,7 @@ const mapTodayCourses = (bookings: Booking[], _courses: Course[]): TodayCourseVi
       statusText: bookingStatusToLabel(item.status),
       queueHintText: deriveExecutionHintText(item.status),
       actionText: deriveExecutionActionText(item.status),
+      actionPath: deriveExecutionActionPath(item.status),
     }));
   }
 
@@ -270,8 +278,8 @@ export default function DashboardPage() {
 
         const loadAllBookings = async () => {
           const now = new Date();
-          const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1).toISOString().split('T')[0];
-          const to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 30).toISOString().split('T')[0];
+          const from = formatLocalDateParam(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+          const to = formatLocalDateParam(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 30));
           const pageSize = 100;
           const firstPage = await bookingsApi.getAll({ page: 1, pageSize, from, to });
           const allBookings = [...firstPage.data];
@@ -588,7 +596,7 @@ export default function DashboardPage() {
               <TodayCoursePanel
                 items={todayCourses}
                 anomalyCount={metricAvailability.bookings ? noShowBookingCount + cancelledBookingCount : 0}
-                onViewDetail={() => go('/bookings')}
+                onViewDetail={(_, actionPath) => go(actionPath ?? '/bookings')}
               />
               <UpcomingBookingsPanel
                 items={upcomingBookings}

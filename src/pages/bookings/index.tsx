@@ -17,6 +17,7 @@ import { authApi } from '@/services/auth';
 import { type Member } from '@/services/members';
 import { courseSessionsApi, type CourseSession } from '@/services/courseSessions';
 import { getErrorMessage } from '@/utils/errors';
+import { formatLocalDateParam } from '@/utils/date';
 import { hasRequiredPermissions } from '@/utils/menu';
 import { getToneFromName } from '@/utils/tone';
 import { useDebouncedValue } from '@/utils/useDebouncedValue';
@@ -236,8 +237,8 @@ export default function BookingsPage() {
       endDate.setDate(endDate.getDate() + 6);
     }
 
-    const from = startDate.toISOString().split('T')[0];
-    const to = endDate.toISOString().split('T')[0];
+    const from = formatLocalDateParam(startDate);
+    const to = formatLocalDateParam(endDate);
     const queryParams = {
       from,
       to,

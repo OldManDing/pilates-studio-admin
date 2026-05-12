@@ -153,13 +153,19 @@ export class CoachesService {
         where: {
           memberId: member.id,
           session: {
-            coachId: { in: coachIds },
+            OR: [
+              { coachId: { in: coachIds } },
+              {
+                coachId: null,
+                course: { coachId: { in: coachIds } },
+              },
+            ],
           },
         },
         include: {
           session: {
             include: {
-              course: { select: { id: true, name: true, type: true } },
+              course: { select: { id: true, name: true, type: true, coachId: true } },
             },
           },
         },
@@ -167,7 +173,7 @@ export class CoachesService {
       });
 
       bookings.forEach((booking) => {
-        const coachId = booking.session?.coachId;
+        const coachId = booking.session?.coachId ?? booking.session?.course?.coachId;
         if (!coachId || !summaries.has(coachId)) {
           return;
         }
@@ -296,19 +302,17 @@ export class CoachesService {
 
     const [totalSessions, completedSessions, totalBookings] = await Promise.all([
       this.prisma.courseSession.count({
-        where: { coachId: id },
+        where: this.buildEffectiveCoachSessionWhere(id),
       }),
       this.prisma.courseSession.count({
         where: {
-          coachId: id,
+          ...this.buildEffectiveCoachSessionWhere(id),
           endsAt: { lt: new Date() },
         },
       }),
       this.prisma.booking.count({
         where: {
-          session: {
-            coachId: id,
-          },
+          session: this.buildEffectiveCoachSessionWhere(id),
         },
       }),
     ]);
@@ -330,7 +334,7 @@ export class CoachesService {
   async getSchedule(id: string, query: { from?: string; to?: string }) {
     await this.findOne(id);
 
-    const where: any = { coachId: id };
+    const where: any = this.buildEffectiveCoachSessionWhere(id);
     if (query.from || query.to) {
       where.startsAt = {};
       if (query.from) where.startsAt.gte = new Date(query.from);
@@ -341,7 +345,14 @@ export class CoachesService {
       where,
       include: {
         course: {
-          select: { id: true, name: true, type: true, level: true, durationMinutes: true },
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            level: true,
+            durationMinutes: true,
+            coach: { select: { id: true, name: true, avatarUrl: true } },
+          },
         },
         coach: {
           select: { id: true, name: true, avatarUrl: true },
@@ -357,9 +368,22 @@ export class CoachesService {
     return {
       sessions: sessions.map((session) => ({
         ...session,
+        coach: session.coach ?? session.course?.coach ?? null,
         bookedCount: session.bookings.length,
         bookings: undefined,
       })),
+    };
+  }
+
+  private buildEffectiveCoachSessionWhere(coachId: string) {
+    return {
+      OR: [
+        { coachId },
+        {
+          coachId: null,
+          course: { coachId },
+        },
+      ],
     };
   }
 

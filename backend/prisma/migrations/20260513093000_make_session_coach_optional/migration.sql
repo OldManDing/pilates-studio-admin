@@ -1,0 +1,1 @@
+ALTER TABLE `CourseSession` MODIFY `coachId` VARCHAR(191) NULL;

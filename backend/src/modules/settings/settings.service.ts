@@ -609,7 +609,7 @@ export class SettingsService {
     });
 
     data.sessions?.forEach((session: any, index: number) => {
-      this.ensureRequired(session, ['id', 'sessionCode', 'courseId', 'coachId', 'startsAt', 'endsAt', 'capacity', 'bookedCount'], `sessions[${index}]`);
+      this.ensureRequired(session, ['id', 'sessionCode', 'courseId', 'startsAt', 'endsAt', 'capacity', 'bookedCount'], `sessions[${index}]`);
       this.ensureNumber(session.capacity, `sessions[${index}].capacity`);
       this.ensureNumber(session.bookedCount, `sessions[${index}].bookedCount`);
     });
