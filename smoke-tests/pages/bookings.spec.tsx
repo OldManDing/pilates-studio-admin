@@ -123,6 +123,8 @@ describe('BookingsPage smoke test', () => {
 
     expect(screen.getByText('林若溪')).toBeInTheDocument();
     expect(screen.getByText('Morning Flow')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /签到/ })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /查看详情/ })).toHaveLength(1);
     expect(screen.queryByText('预约时间')).not.toBeInTheDocument();
     expect(screen.queryByText('预约来源')).not.toBeInTheDocument();
     expect(screen.queryByText('预约于')).not.toBeInTheDocument();

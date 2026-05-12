@@ -45,7 +45,21 @@ type BookingFilterDraft = {
 };
 
 const bookingStatusOptions: BookingStatus[] = ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
+const bookingEditableStatusOptions: BookingStatus[] = ['PENDING', 'CONFIRMED', 'CANCELLED'];
 const bookingPeriods: BookingPeriod[] = ['今天', '明天', '本周'];
+
+const getBookingFormStatusOptions = (currentStatus?: BookingStatus) => {
+  const options = [...bookingEditableStatusOptions];
+  if (currentStatus && !options.includes(currentStatus)) {
+    options.push(currentStatus);
+  }
+
+  return options.map((item) => ({
+    label: bookingStatusLabels[item],
+    value: item,
+    disabled: item === 'COMPLETED' || item === 'NO_SHOW',
+  }));
+};
 
 const formatDateTime = (dateStr: string) => {
   try {
@@ -119,7 +133,6 @@ const getBookingPeriodMeta = (period: BookingPeriod) => {
 
 const getStatusActionLabel = (status: BookingStatus) => {
   if (status === 'PENDING') return '确认';
-  if (status === 'CONFIRMED') return '签到';
   if (status === 'COMPLETED') return '查看详情';
   if (status === 'CANCELLED') return '查看详情';
   if (status === 'NO_SHOW') return '查看详情';
@@ -128,11 +141,10 @@ const getStatusActionLabel = (status: BookingStatus) => {
 
 const getNextBookingStatus = (status: BookingStatus): BookingStatus => {
   if (status === 'PENDING') return 'CONFIRMED';
-  if (status === 'CONFIRMED') return 'COMPLETED';
   return status;
 };
 
-const canAdvanceBookingStatus = (status: BookingStatus) => status === 'PENDING' || status === 'CONFIRMED';
+const canAdvanceBookingStatus = (status: BookingStatus) => status === 'PENDING';
 
 export default function BookingsPage() {
   const [messageApi, contextHolder] = message.useMessage();
@@ -653,7 +665,7 @@ export default function BookingsPage() {
             ) : null}
             <Col xs={24} md={12}>
               <Form.Item name="status" label="预约状态" rules={[{ required: true, message: '请选择预约状态' }]}>
-                <Select className={pageCls.settingsInput} options={bookingStatusOptions.map((item) => ({ label: bookingStatusLabels[item], value: item }))} />
+                <Select className={pageCls.settingsInput} options={getBookingFormStatusOptions(editingBooking?.status)} />
               </Form.Item>
             </Col>
             {editingBooking ? (

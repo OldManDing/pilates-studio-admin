@@ -66,7 +66,7 @@ export const menuItems: MenuItem[] = [
   { key: '/mini-users', label: '小程序用户', icon: <TeamOutlined />, description: '微信身份、绑定关系与账号状态', group: 'operations', requiredPermissions: ['READ:MINI_USERS'] },
   { key: '/courses', label: '课程管理', icon: <CalendarOutlined />, description: '课程设置与排期', group: 'operations', requiredPermissions: ['READ:COURSES'] },
   { key: '/schedule', label: '排课管理', icon: <CalendarOutlined />, description: '课节日历、容量与上下架', group: 'operations', requiredPermissions: ['READ:COURSES'] },
-  { key: '/bookings', label: '预约管理', icon: <FundProjectionScreenOutlined />, description: '预约确认与签到', group: 'operations', requiredPermissions: ['READ:BOOKINGS'] },
+  { key: '/bookings', label: '预约管理', icon: <FundProjectionScreenOutlined />, description: '预约确认与异常跟进', group: 'operations', requiredPermissions: ['READ:BOOKINGS'] },
   { key: '/attendance', label: '签到核销', icon: <CheckCircleOutlined />, description: '上课名单、到课与课后完成', group: 'operations', requiredPermissions: ['READ:ATTENDANCE'] },
   { key: '/coaches', label: '教练管理', icon: <TeamOutlined />, description: '教练资料、专长与排班', group: 'operations', requiredPermissions: ['READ:COACHES'] },
   { key: '/notifications', label: '通知管理', icon: <SafetyCertificateOutlined />, description: '发送、跟踪与已读状态', group: 'operations', requiredPermissions: ['READ:NOTIFICATIONS'] },
