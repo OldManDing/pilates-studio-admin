@@ -141,18 +141,4 @@ export class BookingsController {
     );
   }
 
-  @Patch(':id/checkin')
-  @RequirePermissions('WRITE:BOOKINGS')
-  @ApiOperation({ summary: 'Check in booking' })
-  @ApiParam({ name: 'id', description: 'Booking ID' })
-  async checkIn(
-    @Param('id') id: string,
-    @CurrentUser('sub') userId?: string,
-    @CurrentUser('principalType') principalType?: string,
-  ) {
-    return this.bookingsService.checkIn(
-      id,
-      principalType === 'MINI_USER' ? userId : undefined,
-    );
-  }
 }

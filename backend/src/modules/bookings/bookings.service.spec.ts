@@ -409,20 +409,17 @@ describe('BookingsService', () => {
       prisma.booking.findUnique.mockResolvedValue(createBooking({ status: BookingStatus.CANCELLED }));
 
       await expect(
-        service.updateStatus('booking-1', { status: BookingStatus.COMPLETED }),
+        service.updateStatus('booking-1', { status: BookingStatus.CONFIRMED }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it('updates non-cancel transitions without changing bookedCount', async () => {
-      prisma.booking.findUnique.mockResolvedValue(createBooking({ status: BookingStatus.CONFIRMED }));
-      prisma.booking.update.mockResolvedValue(createBooking({ status: BookingStatus.COMPLETED }));
-      prisma.member.updateMany.mockResolvedValue({ count: 1 });
-      prisma.attendance.upsert.mockResolvedValue(null);
+    it('rejects completed status updates so attendance remains the only check-in path', async () => {
+      await expect(
+        service.updateStatus('booking-1', { status: BookingStatus.COMPLETED }),
+      ).rejects.toBeInstanceOf(BadRequestException);
 
-      const result = await service.updateStatus('booking-1', { status: BookingStatus.COMPLETED });
-
-      expect(prisma.courseSession.update).not.toHaveBeenCalled();
-      expect(result.status).toBe(BookingStatus.COMPLETED);
+      expect(prisma.booking.findUnique).not.toHaveBeenCalled();
+      expect(prisma.booking.update).not.toHaveBeenCalled();
     });
 
     it('removes non-cancelled bookings and decrements bookedCount', async () => {

@@ -68,10 +68,7 @@ describe('NotificationDeliveryService', () => {
         page: 'pages/my-bookings/index',
         miniprogram_state: 'trial',
         data: {
-          thing1: { value: 'Morning Flow' },
-          time2: { value: '2026-05-10 10:30' },
-          thing3: { value: 'CareMe练习记录' },
-          character_string4: { value: 'B00000001' },
+          thing2: { value: 'Morning Flow' },
           thing5: { value: '请按预约时间到店上课' },
         },
       }),

@@ -39,12 +39,13 @@ describe('AttendanceService', () => {
     };
 
     prisma = {
+      $transaction: jest.fn((operation) => operation(prisma)),
       booking: {
         findUnique: jest.fn(),
         update: jest.fn(),
       },
       member: {
-        update: jest.fn(),
+        updateMany: jest.fn(),
       },
       attendance: {
         findUnique: jest.fn(),
@@ -66,7 +67,7 @@ describe('AttendanceService', () => {
     prisma.booking.findUnique.mockResolvedValue(createBooking());
     prisma.attendance.findUnique.mockResolvedValue(null);
     prisma.attendance.create.mockResolvedValue(createAttendance());
-    prisma.member.update.mockResolvedValue({});
+    prisma.member.updateMany.mockResolvedValue({ count: 1 });
     prisma.booking.update.mockResolvedValue({});
 
     const result = await service.checkIn({ bookingId: 'booking-1', notes: 'Arrived early' } as never);
@@ -77,6 +78,15 @@ describe('AttendanceService', () => {
           status: AttendanceStatus.CHECKED_IN,
           notes: 'Arrived early',
         }),
+      }),
+    );
+    expect(prisma.member.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: 'member-1',
+          remainingCredits: { gt: 0 },
+        }),
+        data: { remainingCredits: { decrement: 1 } },
       }),
     );
     expect(notificationsService.createFromSetting).toHaveBeenCalledWith(
@@ -93,6 +103,16 @@ describe('AttendanceService', () => {
     prisma.booking.findUnique.mockResolvedValue(createBooking({ status: BookingStatus.CANCELLED }));
 
     await expect(service.checkIn({ bookingId: 'booking-1' } as never)).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('rejects duplicate check-in without decrementing credits again', async () => {
+    prisma.booking.findUnique.mockResolvedValue(createBooking({ status: BookingStatus.COMPLETED }));
+    prisma.attendance.findUnique.mockResolvedValue(createAttendance({ status: AttendanceStatus.CHECKED_IN }));
+
+    await expect(service.checkIn({ bookingId: 'booking-1' } as never)).rejects.toBeInstanceOf(ConflictException);
+
+    expect(prisma.member.updateMany).not.toHaveBeenCalled();
+    expect(prisma.booking.update).not.toHaveBeenCalled();
   });
 
   it('completes a checked-in session', async () => {

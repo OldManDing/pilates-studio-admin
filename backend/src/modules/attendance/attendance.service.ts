@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CheckInDto } from './dto/check-in.dto';
 import { SubmitCourseReviewDto } from './dto/submit-course-review.dto';
@@ -15,7 +16,10 @@ export class AttendanceService {
   ) {}
 
   async checkIn(dto: CheckInDto) {
-    const booking = await this.prisma.booking.findUnique({
+    const checkedInAt = new Date();
+
+    const attendance = await this.runSerializableTransaction(async (tx) => {
+      const booking = await tx.booking.findUnique({
       where: { id: dto.bookingId },
       include: {
         member: {
@@ -44,21 +48,36 @@ export class AttendanceService {
         throw new ConflictException('Insufficient remaining credits');
       }
 
-      await this.prisma.member.update({
-        where: { id: booking.memberId },
+      const creditUpdate = await tx.member.updateMany({
+        where: {
+          id: booking.memberId,
+          remainingCredits: { gt: 0 },
+        },
         data: { remainingCredits: { decrement: 1 } },
       });
+
+      if (creditUpdate.count === 0) {
+        throw new ConflictException('Insufficient remaining credits');
+      }
     }
 
     if (booking.status !== BookingStatus.COMPLETED) {
-      await this.prisma.booking.update({
+      await tx.booking.update({
         where: { id: booking.id },
         data: { status: BookingStatus.COMPLETED },
       });
     }
 
-    const existingAttendance = await this.prisma.attendance.findUnique({
+    const existingAttendance = await tx.attendance.findUnique({
       where: { bookingId: dto.bookingId },
+      include: {
+        member: true,
+        session: {
+          include: {
+            course: true,
+          },
+        },
+      },
     });
 
     if (existingAttendance && existingAttendance.status !== AttendanceStatus.PENDING) {
@@ -66,11 +85,11 @@ export class AttendanceService {
     }
 
     if (existingAttendance) {
-      const updatedAttendance = await this.prisma.attendance.update({
+      const updatedAttendance = await tx.attendance.update({
         where: { id: existingAttendance.id },
         data: {
           status: AttendanceStatus.CHECKED_IN,
-          checkedInAt: new Date(),
+          checkedInAt,
           notes: dto.notes,
         },
         include: {
@@ -83,34 +102,16 @@ export class AttendanceService {
         },
       });
 
-      await this.notificationsService.createFromSetting('attendance_checked_in', {
-        type: 'ATTENDANCE_CHECKED_IN',
-        title: '签到成功',
-        content: `会员 ${booking.member.name} 已完成签到。`,
-        memberId: booking.memberId,
-        miniUserId: booking.member?.miniUserId ?? undefined,
-        payload: {
-          attendanceId: updatedAttendance.id,
-          bookingId: booking.id,
-          sessionId: booking.sessionId,
-          memberName: booking.member.name,
-          courseName: updatedAttendance.session?.course?.name,
-          checkedInAt: updatedAttendance.checkedInAt,
-          remark: '签到已记录，训练记录稍后同步',
-          page: 'pages/training-records/index',
-        },
-      });
-
       return updatedAttendance;
     }
 
-    const attendance = await this.prisma.attendance.create({
+    return tx.attendance.create({
       data: {
         bookingId: dto.bookingId,
         memberId: booking.memberId,
         sessionId: booking.sessionId,
         status: AttendanceStatus.CHECKED_IN,
-        checkedInAt: new Date(),
+        checkedInAt,
         notes: dto.notes,
       },
       include: {
@@ -122,18 +123,19 @@ export class AttendanceService {
         },
       },
     });
+    });
 
     await this.notificationsService.createFromSetting('attendance_checked_in', {
       type: 'ATTENDANCE_CHECKED_IN',
       title: '签到成功',
-      content: `会员 ${booking.member.name} 已完成签到。`,
-      memberId: booking.memberId,
-      miniUserId: booking.member?.miniUserId ?? undefined,
+      content: `会员 ${attendance.member.name} 已完成签到。`,
+      memberId: attendance.memberId,
+      miniUserId: attendance.member?.miniUserId ?? undefined,
       payload: {
         attendanceId: attendance.id,
-        bookingId: booking.id,
-        sessionId: booking.sessionId,
-        memberName: booking.member.name,
+        bookingId: attendance.bookingId,
+        sessionId: attendance.sessionId,
+        memberName: attendance.member.name,
         courseName: attendance.session?.course?.name,
         checkedInAt: attendance.checkedInAt,
         remark: '签到已记录，训练记录稍后同步',
@@ -295,5 +297,35 @@ export class AttendanceService {
 
   private shouldConsumeCredit(category?: string) {
     return category === MembershipPlanCategory.TIME_CARD || category === MembershipPlanCategory.PRIVATE_PACKAGE;
+  }
+
+  private async runSerializableTransaction<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>) {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(operation, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        });
+      } catch (error) {
+        if (this.isPrismaErrorCode(error, 'P2034') && attempt < 2) {
+          continue;
+        }
+
+        if (this.isPrismaErrorCode(error, 'P2034')) {
+          throw new ConflictException('Attendance was updated concurrently, please retry');
+        }
+
+        if (this.isPrismaErrorCode(error, 'P2002')) {
+          throw new ConflictException('Attendance already recorded');
+        }
+
+        throw error;
+      }
+    }
+
+    throw new ConflictException('Attendance was updated concurrently, please retry');
+  }
+
+  private isPrismaErrorCode(error: unknown, code: string) {
+    return error instanceof Prisma.PrismaClientKnownRequestError && error.code === code;
   }
 }

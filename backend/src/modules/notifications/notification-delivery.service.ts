@@ -33,10 +33,7 @@ const TEMPLATE_CONFIG_KEY_BY_TYPE: Record<string, NotificationTemplateKey> = {
 
 const DEFAULT_TEMPLATE_FIELD_MAPS: Record<NotificationTemplateKey, TemplateFieldMap> = {
   bookingConfirmation: {
-    thing1: 'courseName',
-    time2: 'startsAt',
-    thing3: 'studioName',
-    character_string4: 'bookingCode',
+    thing2: 'courseName',
     thing5: 'remark',
   },
   bookingCancelled: {
@@ -46,11 +43,8 @@ const DEFAULT_TEMPLATE_FIELD_MAPS: Record<NotificationTemplateKey, TemplateField
     thing4: 'remark',
   },
   bookingReminder: {
-    thing1: 'courseName',
-    time2: 'startsAt',
-    thing3: 'studioName',
-    thing4: 'coachName',
-    thing5: 'remark',
+    thing2: 'courseName',
+    time3: 'startsAt',
   },
   attendanceCheckedIn: {
     thing1: 'courseName',

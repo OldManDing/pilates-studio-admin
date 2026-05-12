@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { QueryBookingsDto } from './dto/query-bookings.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
-import { AttendanceStatus, BookingSource, BookingStatus, MemberStatus, MembershipPlanCategory, TransactionKind, TransactionStatus } from '../../common/enums/domain.enums';
+import { BookingSource, BookingStatus, MemberStatus, MembershipPlanCategory, TransactionKind, TransactionStatus } from '../../common/enums/domain.enums';
 import { PaginationDto, PaginatedResponse } from '../../common/dto/pagination.dto';
 import { buildDateRange } from '../../common/utils/date-range';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -372,7 +372,7 @@ export class BookingsService {
 
   async updateStatus(id: string, dto: UpdateBookingStatusDto) {
     if (dto.status === BookingStatus.COMPLETED) {
-      return this.checkIn(id);
+      throw new BadRequestException('请在签到核销中完成签到和课后完成');
     }
 
     const result = await this.runSerializableTransaction(async (tx) => {
@@ -674,114 +674,6 @@ export class BookingsService {
     }
 
     return this.updateStatus(id, { status: BookingStatus.CANCELLED });
-  }
-
-  async checkIn(id: string, miniUserId?: string) {
-    const checkedInAt = new Date();
-
-    return this.runSerializableTransaction(async (tx) => {
-      const booking = await tx.booking.findUnique({
-        where: { id },
-        include: {
-          member: {
-            select: {
-              id: true,
-              name: true,
-              phone: true,
-              remainingCredits: true,
-              miniUserId: true,
-              status: true,
-              joinedAt: true,
-              plan: {
-                select: {
-                  id: true,
-                  category: true,
-                  durationDays: true,
-                  totalCredits: true,
-                },
-              },
-            },
-          },
-          session: {
-            include: {
-              course: true,
-              coach: true,
-            },
-          },
-          attendance: true,
-        },
-      });
-
-      if (!booking) {
-        throw new NotFoundException('Booking not found');
-      }
-
-      if (miniUserId && booking.member?.miniUserId !== miniUserId) {
-        throw new ForbiddenException('Cannot check in another member booking');
-      }
-
-      if (booking.status === BookingStatus.CANCELLED || booking.status === BookingStatus.NO_SHOW) {
-        throw new BadRequestException('Cannot check in a cancelled or no-show booking');
-      }
-
-      if (booking.status === BookingStatus.COMPLETED) {
-        return booking;
-      }
-
-      if (!booking.member) {
-        throw new NotFoundException('Member not found');
-      }
-
-      await this.assertBookableMember(booking.member, tx);
-
-      if (this.shouldConsumeCredit(booking.member?.plan?.category)) {
-        const creditUpdate = await tx.member.updateMany({
-          where: {
-            id: booking.memberId,
-            remainingCredits: { gt: 0 },
-          },
-          data: {
-            remainingCredits: { decrement: 1 },
-          },
-        });
-
-        if (creditUpdate.count === 0) {
-          throw new BadRequestException('Insufficient remaining credits');
-        }
-      }
-
-      const updatedBooking = await tx.booking.update({
-        where: { id },
-        data: { status: BookingStatus.COMPLETED },
-        include: {
-          member: { select: { id: true, name: true, phone: true } },
-          session: {
-            include: {
-              course: { select: { id: true, name: true, type: true, level: true } },
-              coach: { select: { id: true, name: true, avatarUrl: true } },
-            },
-          },
-          attendance: true,
-        },
-      });
-
-      await tx.attendance.upsert({
-        where: { bookingId: id },
-        create: {
-          bookingId: id,
-          memberId: booking.memberId,
-          sessionId: booking.sessionId,
-          status: AttendanceStatus.CHECKED_IN,
-          checkedInAt,
-        },
-        update: {
-          status: AttendanceStatus.CHECKED_IN,
-          checkedInAt,
-        },
-      });
-
-      return updatedBooking;
-    });
   }
 
   private async runSerializableTransaction<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>) {
