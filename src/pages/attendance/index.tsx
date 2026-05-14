@@ -1,7 +1,8 @@
 import { CheckCircleOutlined, ClockCircleOutlined, ReloadOutlined, StopOutlined } from '@ant-design/icons';
 import { Button, Form, Input, Modal, Pagination, Select, Spin, Tabs, message } from 'antd';
 import dayjs from 'dayjs';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
 import PageHeader from '@/components/PageHeader';
@@ -36,6 +37,7 @@ const formatTime = (value?: string | null) => (value ? dayjs(value).format('HH:m
 
 export default function AttendancePage() {
   const [messageApi, contextHolder] = message.useMessage();
+  const [searchParams] = useSearchParams();
   const [form] = Form.useForm<CheckInFormValues>();
   const [activeTab, setActiveTab] = useState('checkin');
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -49,8 +51,10 @@ export default function AttendancePage() {
   const [updatingRecordId, setUpdatingRecordId] = useState<string | null>(null);
   const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
   const [currentUserRoleCode, setCurrentUserRoleCode] = useState('');
+  const openedQueryBookingIdRef = useRef('');
 
   const canWriteAttendance = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['WRITE:ATTENDANCE']);
+  const queryBookingId = searchParams.get('bookingId')?.trim() || '';
 
   useEffect(() => {
     void authApi.getMe()
@@ -97,6 +101,52 @@ export default function AttendancePage() {
   useEffect(() => {
     void loadData(1);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!queryBookingId || openedQueryBookingIdRef.current === queryBookingId) {
+      return;
+    }
+
+    const openCheckInForBooking = (bookingId: string) => {
+      openedQueryBookingIdRef.current = bookingId;
+      setActiveTab('checkin');
+      form.setFieldsValue({ bookingId, notes: undefined });
+      setIsCheckInOpen(true);
+    };
+
+    const matchedBooking = bookings.find((booking) => booking.id === queryBookingId);
+    if (matchedBooking) {
+      openCheckInForBooking(matchedBooking.id);
+      return;
+    }
+
+    if (loading) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void bookingsApi.getById(queryBookingId)
+      .then((booking) => {
+        if (cancelled) {
+          return;
+        }
+
+        setBookings((current) => (
+          current.some((item) => item.id === booking.id) ? current : [booking, ...current]
+        ));
+        openCheckInForBooking(booking.id);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          messageApi.error(getErrorMessage(err, '加载签到预约失败'));
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookings, form, loading, messageApi, queryBookingId]);
 
   const stats = useMemo(() => {
     const checkedIn = attendanceRecords.filter((item) => item.status === 'CHECKED_IN').length;

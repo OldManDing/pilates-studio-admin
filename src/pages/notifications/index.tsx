@@ -2,15 +2,12 @@ import {
   BellOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  EyeOutlined,
-  MailOutlined,
   PlusOutlined,
   SendOutlined,
 } from '@ant-design/icons';
 import {
   Button,
   Descriptions,
-  Drawer,
   Form,
   Input,
   Modal,
@@ -20,6 +17,7 @@ import {
   message,
 } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
 import PageHeader from '@/components/PageHeader';
@@ -37,7 +35,7 @@ import {
   type NotificationRecord,
   type NotificationStatus,
 } from '@/services/notifications';
-import { CRUD_MODAL_WIDTH, NARROW_DETAIL_DRAWER_WIDTH } from '@/styles/dimensions';
+import { CRUD_MODAL_WIDTH } from '@/styles/dimensions';
 import pageCls from '@/styles/page.module.css';
 import widgetCls from '@/styles/widgets.module.css';
 import { getErrorMessage } from '@/utils/errors';
@@ -49,8 +47,6 @@ type RecipientType = 'member' | 'miniUser' | 'admin';
 const isFeedbackNotification = (notification: NotificationRecord) => notification.type === 'MINI_PROGRAM_FEEDBACK';
 const isAccountDeletionRequest = (notification: NotificationRecord) => notification.type === 'ACCOUNT_DELETION_REQUEST';
 const isMembershipRenewalRequest = (notification: NotificationRecord) => notification.type === 'MEMBERSHIP_RENEWAL_REQUEST';
-const isOperationalRequestNotification = (notification: NotificationRecord) =>
-  isFeedbackNotification(notification) || isAccountDeletionRequest(notification) || isMembershipRenewalRequest(notification);
 
 const getDeletionProcessedAt = (notification: NotificationRecord) => {
   const payload = notification.payload;
@@ -64,19 +60,6 @@ const getDeletionProcessedAt = (notification: NotificationRecord) => {
 
 const isDeletionProcessed = (notification: NotificationRecord) =>
   isAccountDeletionRequest(notification) && Boolean(getDeletionProcessedAt(notification) || notification.readAt);
-
-const canMarkAsRead = (notification: NotificationRecord) =>
-  notification.status === 'SENT' || (isOperationalRequestNotification(notification) && notification.status === 'PENDING' && !isAccountDeletionRequest(notification));
-
-const getMarkAsReadLabel = (notification: NotificationRecord) => {
-  if (isDeletionProcessed(notification)) return '已处理';
-  if (notification.status === 'READ') return isOperationalRequestNotification(notification) ? '已处理' : '已读';
-  if (isAccountDeletionRequest(notification) && notification.status === 'PENDING') return '需停用账号';
-  if (isOperationalRequestNotification(notification)) return '标记已处理';
-  if (notification.status === 'SENT') return '标记已读';
-  if (notification.status === 'PENDING') return '待发送';
-  return '发送失败';
-};
 type FilterStatus = NotificationStatus | 'ALL';
 type FilterChannel = NotificationChannel | 'ALL';
 type FilterType = 'ALL' | 'MINI_PROGRAM_FEEDBACK' | 'MEMBERSHIP_RENEWAL_REQUEST' | 'ACCOUNT_DELETION_REQUEST';
@@ -221,6 +204,16 @@ const typeLabelMap: Record<FilterType, string> = {
   MEMBERSHIP_RENEWAL_REQUEST: '续费申请',
   ACCOUNT_DELETION_REQUEST: '注销申请',
 };
+
+const getInitialTypeFilter = (value: string | null): FilterType => (
+  value && value in typeLabelMap ? value as FilterType : 'ALL'
+);
+
+const getInitialChannelFilter = (value: string | null): FilterChannel => (
+  value === 'INTERNAL' || value === 'MINI_PROGRAM' || value === 'EMAIL' || value === 'SMS'
+    ? value
+    : 'ALL'
+);
 
 const recipientTypeLabelMap: Record<RecipientType, string> = {
   member: '会员',
@@ -375,29 +368,125 @@ const mapAdminToOption = (admin: AdminRecord): RecipientSelectOption => {
   };
 };
 
+const payloadLabelMap: Record<string, string> = {
+  reason: '申请原因',
+  phone: '联系电话',
+  nickname: '微信昵称',
+  memberCode: '会员编号',
+  transactionId: '交易编号',
+  planId: '会籍计划',
+  amountCents: '申请金额',
+  accountDeletionProcessedAt: '处理时间',
+};
+
+const payloadDisplayOrder = [
+  'reason',
+  'phone',
+  'nickname',
+  'memberCode',
+  'amountCents',
+  'planId',
+  'transactionId',
+  'accountDeletionProcessedAt',
+];
+
+function formatPayloadValue(key: string, value: unknown) {
+  if (value === null || value === undefined || value === '') {
+    return '';
+  }
+
+  if (key === 'amountCents' && typeof value === 'number') {
+    return `¥${(value / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  return JSON.stringify(value);
+}
+
+function getNotificationPayloadEntries(notification: NotificationRecord) {
+  const payload = notification.payload;
+
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return [];
+  }
+
+  const entries = Object.entries(payload)
+    .map(([key, value]) => ({
+      key,
+      label: payloadLabelMap[key] || key,
+      value: formatPayloadValue(key, value),
+    }))
+    .filter((entry) => entry.value);
+
+  return entries.sort((left, right) => {
+    const leftRank = payloadDisplayOrder.indexOf(left.key);
+    const rightRank = payloadDisplayOrder.indexOf(right.key);
+    const safeLeftRank = leftRank === -1 ? Number.MAX_SAFE_INTEGER : leftRank;
+    const safeRightRank = rightRank === -1 ? Number.MAX_SAFE_INTEGER : rightRank;
+
+    return safeLeftRank - safeRightRank;
+  });
+}
+
+function getNotificationListDisplay(notification: NotificationRecord, recipient: ReturnType<typeof getRecipientSummary>) {
+  if (isFeedbackNotification(notification)) {
+    return {
+      label: '用户提交反馈',
+      summary: notification.content || `${recipient.label} 从小程序提交了意见反馈。`,
+      actionHint: '建议进入小程序用户页核对身份并跟进',
+    };
+  }
+
+  if (isAccountDeletionRequest(notification)) {
+    const reason = getNotificationPayloadEntries(notification).find((entry) => entry.key === 'reason')?.value;
+    return {
+      label: '账号注销申请',
+      summary: reason ? `用户申请注销账号，原因：${reason}` : '用户申请注销账号，需要核对会员与小程序身份后处理。',
+      actionHint: isDeletionProcessed(notification) ? '注销申请已处理' : '进入小程序用户页处理',
+    };
+  }
+
+  if (isMembershipRenewalRequest(notification)) {
+    const amount = getNotificationPayloadEntries(notification).find((entry) => entry.key === 'amountCents')?.value;
+    return {
+      label: '会员续费申请',
+      summary: amount ? `用户提交续费申请，待确认金额 ${amount} 与会籍计划。` : '用户提交续费申请，待后台确认收款与会籍处理。',
+      actionHint: '进入财务报表处理续费交易',
+    };
+  }
+
+  return {
+    label: channelLabelMap[notification.channel],
+    summary: notification.content || `${notification.title} 的投递记录，当前状态为${getStatusLabel(notification)}。`,
+    actionHint: notification.status === 'FAILED' ? '检查投递失败原因' : '通知记录',
+  };
+}
+
 export default function NotificationsPage() {
   const [messageApi, contextHolder] = message.useMessage();
+  const [searchParams] = useSearchParams();
   const [composerForm] = Form.useForm<ComposerFormValues>();
+  const highlightedNotificationId = searchParams.get('notificationId')?.trim() || '';
+  const queryTypeFilter = getInitialTypeFilter(searchParams.get('type'));
+  const queryChannelFilter = getInitialChannelFilter(searchParams.get('channel'));
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [markingNotificationId, setMarkingNotificationId] = useState<string | null>(null);
-  const [processingDeletionNotificationId, setProcessingDeletionNotificationId] = useState<string | null>(null);
   const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
   const [currentUserRoleCode, setCurrentUserRoleCode] = useState('');
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL');
-  const [channelFilter, setChannelFilter] = useState<FilterChannel>('ALL');
-  const [typeFilter, setTypeFilter] = useState<FilterType>('ALL');
+  const [channelFilter, setChannelFilter] = useState<FilterChannel>(queryChannelFilter);
+  const [typeFilter, setTypeFilter] = useState<FilterType>(queryTypeFilter);
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [detailNotification, setDetailNotification] = useState<NotificationRecord | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
   const [recipientOptions, setRecipientOptions] = useState<Record<RecipientType, RecipientSelectOption[]>>(emptyRecipientOptions);
   const [recipientOptionsLoading, setRecipientOptionsLoading] = useState<Record<RecipientType, boolean>>(emptyRecipientLoadingState);
   const recipientRequestSeqRef = useRef<Record<RecipientType, number>>({ member: 0, miniUser: 0, admin: 0 });
-  const detailRequestSeqRef = useRef(0);
+  const notificationCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const recipientType = Form.useWatch('recipientType', composerForm) || 'member';
   const canWriteNotifications = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['WRITE:NOTIFICATIONS']);
   const canReadAdmins = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['READ:ADMINS']);
@@ -420,8 +509,20 @@ export default function NotificationsPage() {
         total: nextNotifications.length,
         totalPages: nextNotifications.length ? 1 : 0,
       };
+      const currentNotifications = [...nextNotifications];
 
-      setNotifications(nextNotifications);
+      if (highlightedNotificationId && !currentNotifications.some((item) => item.id === highlightedNotificationId)) {
+        const highlightedNotification = await notificationsApi.getById(highlightedNotificationId).catch(() => null);
+        const matchesType = !highlightedNotification || typeFilter === 'ALL' || highlightedNotification.type === typeFilter;
+        const matchesChannel = !highlightedNotification || channelFilter === 'ALL' || highlightedNotification.channel === channelFilter;
+        const matchesStatus = !highlightedNotification || statusFilter === 'ALL' || highlightedNotification.status === statusFilter;
+
+        if (highlightedNotification && matchesType && matchesChannel && matchesStatus) {
+          currentNotifications.unshift(highlightedNotification);
+        }
+      }
+
+      setNotifications(currentNotifications);
       setCurrentPage(nextMeta.page);
       setTotal(nextMeta.total);
     } catch (err) {
@@ -429,11 +530,44 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [channelFilter, currentPage, messageApi, statusFilter, typeFilter]);
+  }, [channelFilter, currentPage, highlightedNotificationId, messageApi, statusFilter, typeFilter]);
 
   useEffect(() => {
     void loadNotifications(currentPage);
   }, [currentPage, loadNotifications]);
+
+  useEffect(() => {
+    if (queryTypeFilter === 'ALL' || queryTypeFilter === typeFilter) {
+      return;
+    }
+
+    setCurrentPage(1);
+    setTypeFilter(queryTypeFilter);
+  }, [queryTypeFilter, typeFilter]);
+
+  useEffect(() => {
+    if (queryChannelFilter === 'ALL' || queryChannelFilter === channelFilter) {
+      return;
+    }
+
+    setCurrentPage(1);
+    setChannelFilter(queryChannelFilter);
+  }, [channelFilter, queryChannelFilter]);
+
+  useEffect(() => {
+    if (!highlightedNotificationId) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      notificationCardRefs.current[highlightedNotificationId]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 120);
+
+    return () => window.clearTimeout(timer);
+  }, [highlightedNotificationId, notifications]);
 
   const loadRecipientOptions = useCallback(async (type: RecipientType, search?: string) => {
     const requestSeq = recipientRequestSeqRef.current[type] + 1;
@@ -614,77 +748,6 @@ export default function NotificationsPage() {
     }
   };
 
-  const openDetailDrawer = async (notification: NotificationRecord) => {
-    const requestSeq = detailRequestSeqRef.current + 1;
-    detailRequestSeqRef.current = requestSeq;
-    setDetailOpen(true);
-    setDetailNotification(notification);
-
-    try {
-      setDetailLoading(true);
-      const detail = await notificationsApi.getById(notification.id);
-      if (detailRequestSeqRef.current !== requestSeq) return;
-      setDetailNotification(detail);
-    } catch (err) {
-      if (detailRequestSeqRef.current !== requestSeq) return;
-      messageApi.error(getErrorMessage(err, '加载通知详情失败'));
-    } finally {
-      if (detailRequestSeqRef.current === requestSeq) {
-        setDetailLoading(false);
-      }
-    }
-  };
-
-  const handleMarkAsRead = async (notification: NotificationRecord) => {
-    if (!canWriteNotifications) {
-      messageApi.error('当前账号没有通知处理权限');
-      return;
-    }
-
-    if (notification.status === 'READ' || isDeletionProcessed(notification)) {
-      return;
-    }
-
-    try {
-      setMarkingNotificationId(notification.id);
-      const updated = await notificationsApi.markAsRead(notification.id);
-      messageApi.success(isFeedbackNotification(notification) ? '反馈已标记为已处理' : '通知已标记为已读');
-
-      if (detailNotification?.id === updated.id) {
-        setDetailNotification(updated);
-      }
-
-      await loadNotifications(currentPage);
-    } catch (err) {
-      messageApi.error(getErrorMessage(err, '标记已读失败'));
-    } finally {
-      setMarkingNotificationId(null);
-    }
-  };
-
-  const handleProcessDeletionRequest = async (notification: NotificationRecord) => {
-    if (!canProcessDeletionRequest) {
-      messageApi.error('当前账号没有处理注销申请的权限');
-      return;
-    }
-
-    try {
-      setProcessingDeletionNotificationId(notification.id);
-      const updated = await notificationsApi.processAccountDeletionRequest(notification.id);
-      messageApi.success('已停用账号并标记申请为已处理');
-
-      if (detailNotification?.id === updated.id) {
-        setDetailNotification(updated);
-      }
-
-      await loadNotifications(currentPage);
-    } catch (err) {
-      messageApi.error(getErrorMessage(err, '处理注销申请失败'));
-    } finally {
-      setProcessingDeletionNotificationId(null);
-    }
-  };
-
   const currentRecipientPlaceholder = recipientType === 'member'
     ? '搜索并选择会员'
     : recipientType === 'miniUser'
@@ -692,7 +755,6 @@ export default function NotificationsPage() {
       : '搜索并选择管理员';
   const currentRecipientOptions = recipientOptions[recipientType];
   const currentRecipientLoading = recipientOptionsLoading[recipientType];
-  const canProcessDeletionRequest = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['WRITE:MEMBERS', 'WRITE:MINI_USERS', 'WRITE:NOTIFICATIONS']);
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -805,9 +867,18 @@ export default function NotificationsPage() {
               <div className={`${widgetCls.recordList} ${pageCls.sectionListStack}`}>
                 {notifications.map((notification) => {
                   const recipient = getRecipientSummary(notification);
+                  const listDisplay = getNotificationListDisplay(notification, recipient);
+                  const payloadEntries = getNotificationPayloadEntries(notification);
+                  const highlighted = highlightedNotificationId === notification.id;
 
                   return (
-                    <div key={notification.id} className={styles.notificationCard}>
+                    <div
+                      key={notification.id}
+                      ref={(node) => {
+                        notificationCardRefs.current[notification.id] = node;
+                      }}
+                      className={`${styles.notificationCard} ${highlighted ? styles.notificationCardHighlighted : ''}`}
+                    >
                       <div className={styles.notificationMain}>
                         <div className={styles.notificationHeader}>
                           <div className={styles.notificationTitleWrap}>
@@ -823,7 +894,22 @@ export default function NotificationsPage() {
                           <span className={styles.timestampPill}>创建于 {formatDateTime(notification.createdAt)}</span>
                         </div>
 
-                        <p className={styles.notificationPreview}>{notification.content}</p>
+                        <div className={styles.notificationBrief}>
+                          <div className={styles.notificationBriefHead}>
+                            <span className={styles.notificationBriefLabel}>{listDisplay.label}</span>
+                            <span className={styles.notificationActionHint}>{listDisplay.actionHint}</span>
+                          </div>
+                          <p className={styles.notificationPreview}>{listDisplay.summary}</p>
+                        </div>
+                        {payloadEntries.length > 0 ? (
+                          <div className={styles.notificationPayloadPills}>
+                            {payloadEntries.map((entry) => (
+                              <span key={entry.key} className={styles.notificationPayloadPill}>
+                                {entry.label}：{entry.value}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
                         {notification.status === 'FAILED' || notification.failureReason ? (
                           <div className={notification.status === 'FAILED' ? styles.failureReason : styles.deliveryNote}>
                             <span>{notification.status === 'FAILED' ? '失败原因' : '发送说明'}：</span>
@@ -838,41 +924,6 @@ export default function NotificationsPage() {
                           <Descriptions.Item label="已发送">{formatDateTime(notification.sentAt)}</Descriptions.Item>
                           <Descriptions.Item label={getCompletionTimeLabel(notification)}>{formatDateTime(getCompletionTimeValue(notification))}</Descriptions.Item>
                         </Descriptions>
-
-                        <div className={styles.notificationActions}>
-                          <Button
-                            size="large"
-                            className={pageCls.cardActionSecondary}
-                            icon={<EyeOutlined />}
-                            onClick={() => openDetailDrawer(notification)}
-                          >
-                            查看详情
-                          </Button>
-                          {canWriteNotifications ? (
-                            <Button
-                              type="primary"
-                              size="large"
-                              className={pageCls.cardActionPrimary}
-                              icon={<CheckCircleOutlined />}
-                              loading={markingNotificationId === notification.id}
-                              disabled={!canMarkAsRead(notification) || (markingNotificationId !== null && markingNotificationId !== notification.id)}
-                              onClick={() => handleMarkAsRead(notification)}
-                            >
-                              {getMarkAsReadLabel(notification)}
-                            </Button>
-                          ) : null}
-                          {isAccountDeletionRequest(notification) && canProcessDeletionRequest ? (
-                            <Button
-                              size="large"
-                              className={pageCls.cardActionSecondary}
-                              loading={processingDeletionNotificationId === notification.id}
-                              disabled={isDeletionProcessed(notification) || (processingDeletionNotificationId !== null && processingDeletionNotificationId !== notification.id)}
-                              onClick={() => handleProcessDeletionRequest(notification)}
-                            >
-                              停用账号
-                            </Button>
-                          ) : null}
-                        </div>
                       </aside>
                     </div>
                   );
@@ -1001,95 +1052,6 @@ export default function NotificationsPage() {
         </Form>
       </Modal>
 
-      <Drawer
-        rootClassName={pageCls.responsiveDetailDrawer}
-        open={detailOpen}
-        width={NARROW_DETAIL_DRAWER_WIDTH}
-        title={detailNotification?.title || '通知详情'}
-        onClose={() => {
-          setDetailOpen(false);
-          setDetailNotification(null);
-        }}
-        extra={detailNotification ? (
-          <div style={{ display: 'flex', gap: 8 }}>
-            {isAccountDeletionRequest(detailNotification) && canProcessDeletionRequest ? (
-              <Button
-                loading={processingDeletionNotificationId === detailNotification.id}
-                disabled={isDeletionProcessed(detailNotification) || (processingDeletionNotificationId !== null && processingDeletionNotificationId !== detailNotification.id)}
-                onClick={() => handleProcessDeletionRequest(detailNotification)}
-              >
-                停用账号
-              </Button>
-            ) : null}
-            {canWriteNotifications ? (
-              <Button
-                type="primary"
-                icon={<MailOutlined />}
-                loading={markingNotificationId === detailNotification.id}
-                disabled={!canMarkAsRead(detailNotification) || (markingNotificationId !== null && markingNotificationId !== detailNotification.id)}
-                onClick={() => handleMarkAsRead(detailNotification)}
-              >
-                {getMarkAsReadLabel(detailNotification)}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-      >
-        {detailLoading && !detailNotification ? (
-          <div className={pageCls.centeredStatePadded}><Spin /></div>
-        ) : detailNotification ? (
-          <div className={styles.drawerStack}>
-            <div className={styles.overviewCard}>
-              <div className={styles.overviewTop}>
-                <div>
-                  <span className={styles.typePill}>{detailNotification.type}</span>
-                  <h2 className={styles.overviewTitle}>{detailNotification.title}</h2>
-                </div>
-                <StatusTag status={getStatusLabel(detailNotification)} />
-              </div>
-
-              <div className={styles.overviewMetaGrid}>
-                <div className={styles.overviewMetaCard}>
-                  <div className={styles.overviewMetaLabel}>发送渠道</div>
-                  <div className={styles.overviewMetaValue}>{channelLabelMap[detailNotification.channel]}</div>
-                </div>
-                <div className={styles.overviewMetaCard}>
-                  <div className={styles.overviewMetaLabel}>接收对象</div>
-                  <div className={styles.overviewMetaValue}>{getRecipientSummary(detailNotification).typeLabel} · {getRecipientSummary(detailNotification).label}</div>
-                </div>
-                <div className={styles.overviewMetaCard}>
-                  <div className={styles.overviewMetaLabel}>创建时间</div>
-                  <div className={styles.overviewMetaValue}>{formatDateTime(detailNotification.createdAt)}</div>
-                </div>
-                <div className={styles.overviewMetaCard}>
-                  <div className={styles.overviewMetaLabel}>{getCompletionTimeLabel(detailNotification)}</div>
-                  <div className={styles.overviewMetaValue}>{formatDateTime(getCompletionTimeValue(detailNotification))}</div>
-                </div>
-              </div>
-            </div>
-
-            <SectionCard title="通知内容">
-              <div className={styles.contentBlock}>
-                <div className={styles.contentLabel}>正文</div>
-                <div className={styles.contentText}>{detailNotification.content}</div>
-              </div>
-            </SectionCard>
-
-            <SectionCard title="投递状态">
-              <Descriptions column={1} size="small" bordered className={pageCls.detailDescriptions}>
-                <Descriptions.Item label="发送时间">{formatDateTime(detailNotification.sentAt)}</Descriptions.Item>
-                <Descriptions.Item label="更新时间">{formatDateTime(detailNotification.updatedAt)}</Descriptions.Item>
-                <Descriptions.Item label="当前状态">{getStatusLabel(detailNotification)}</Descriptions.Item>
-                {(detailNotification.status === 'FAILED' || detailNotification.failureReason) ? (
-                  <Descriptions.Item label={detailNotification.status === 'FAILED' ? '失败原因' : '发送说明'}>
-                    {getDeliveryReasonText(detailNotification)}
-                  </Descriptions.Item>
-                ) : null}
-              </Descriptions>
-            </SectionCard>
-          </div>
-        ) : null}
-      </Drawer>
     </div>
   );
 }

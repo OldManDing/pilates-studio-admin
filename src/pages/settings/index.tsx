@@ -460,7 +460,41 @@ export default function SettingsPage() {
       city: area[1] || values?.city || '',
       district: area[2] || values?.district || '',
       address: values?.address || '',
+      imageUrl: values?.imageUrl || '',
     };
+  };
+
+  const buildStoreSaveState = (values: StoreInfoValues) => {
+    const area = values.area || [];
+    const [province, city, district] = area;
+    const fullAddress = [
+      province,
+      city,
+      district,
+      values.address
+    ].filter(Boolean).join('');
+    const businessHours = dayjsToHoursString(values.hours as [dayjs.Dayjs, dayjs.Dayjs]);
+    const saveData = {
+      studioName: values.studioName,
+      phone: values.phone,
+      email: values.email,
+      businessHours,
+      address: fullAddress,
+      imageUrl: values.imageUrl || '',
+    };
+    const nextInfo: StoreInfoValues = {
+      ...values,
+      businessHours,
+      province,
+      city,
+      district,
+      address: values.address,
+      imageUrl: values.imageUrl || '',
+      area: values.area || [province, city, district].filter(Boolean),
+      hours: values.hours,
+    };
+
+    return { saveData, nextInfo };
   };
 
   const storeChanged = JSON.stringify(normalizeStoreFormValues(watchedStoreInfo)) !== JSON.stringify(normalizeStoreFormValues(savedStoreInfo));
@@ -543,37 +577,9 @@ export default function SettingsPage() {
     try {
       setIsSavingStoreInfo(true);
       const values = await storeForm.validateFields();
-      // 组合完整地址
-      const area = values.area || [];
-      const [province, city, district] = area;
-      const fullAddress = [
-        province,
-        city,
-        district,
-        values.address
-      ].filter(Boolean).join('');
-      
-      const saveData = {
-        studioName: values.studioName,
-        phone: values.phone,
-        email: values.email,
-        businessHours: dayjsToHoursString(values.hours as [dayjs.Dayjs, dayjs.Dayjs]),
-        address: fullAddress,
-        imageUrl: values.imageUrl || '',
-      };
+      const { saveData, nextInfo } = buildStoreSaveState(values);
       
       await settingsApi.updateStudio(saveData);
-      const nextInfo: StoreInfoValues = {
-        ...values,
-        businessHours: saveData.businessHours,
-        province,
-        city,
-        district,
-        address: values.address,
-        imageUrl: values.imageUrl || '',
-        area: values.area || [province, city, district].filter(Boolean),
-        hours: values.hours,
-      };
       setStoreInfo(nextInfo);
       setSavedStoreInfo(nextInfo);
       storeForm.setFieldsValue(nextInfo);
@@ -626,10 +632,21 @@ export default function SettingsPage() {
         return;
       }
 
+      const values = await storeForm.validateFields();
       setIsUploadingStoreImage(true);
       const uploaded = await settingsApi.uploadImage(file, 'studio');
-      storeForm.setFieldValue('imageUrl', uploaded.url);
-      message.success(`店面图片已压缩上传（${Math.ceil(uploaded.size / 1024)}KB），保存后生效`);
+      const nextValues: StoreInfoValues = {
+        ...values,
+        imageUrl: uploaded.url,
+      };
+      const { saveData, nextInfo } = buildStoreSaveState(nextValues);
+
+      await settingsApi.updateStudio(saveData);
+      setStoreInfo(nextInfo);
+      setSavedStoreInfo(nextInfo);
+      storeForm.setFieldsValue(nextInfo);
+      setStoreSavedAt(todayText());
+      message.success(`店面图片已压缩上传并保存（${Math.ceil(uploaded.size / 1024)}KB）`);
     } catch (err) {
       message.error(getErrorMessage(err, '店面图片上传失败'));
     } finally {

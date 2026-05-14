@@ -33,14 +33,14 @@ export default function TodayCoursePanel({
   return (
     <SectionCard
       title="今日执行队列"
-      subtitle="仅展示今日预约任务"
+      subtitle={items.length > 4 ? `今日 ${items.length} 项任务，模块内滚动查看。` : '仅展示今日预约任务'}
     >
       {anomalyCount > 0 ? (
         <div className={styles.todayAlertBar}>异常预约 {anomalyCount} 单，优先处理回访与补位。</div>
       ) : null}
 
       {items.length > 0 ? (
-        <div className={`${widgetCls.recordListDense} ${styles.todayList}`}>
+        <div className={`${widgetCls.recordListDense} ${styles.todayList} ${items.length > 4 ? styles.todayListScrollable : ''}`}>
           {items.map((item) => {
             const isAnomaly = isAnomalyStatus(item.statusText);
             const hasDetailAction = Boolean(onViewDetail);

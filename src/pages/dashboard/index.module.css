@@ -531,6 +531,28 @@
   gap: 10px;
 }
 
+.todayListScrollable {
+  max-height: 424px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(130, 146, 166, 0.22) transparent;
+}
+
+.todayListScrollable::-webkit-scrollbar,
+.upcomingListScrollable::-webkit-scrollbar,
+.notificationPanelList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.todayListScrollable::-webkit-scrollbar-thumb,
+.upcomingListScrollable::-webkit-scrollbar-thumb,
+.notificationPanelList::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(130, 146, 166, 0.22);
+}
+
 .todayItem {
   min-height: 88px;
   padding: 12px 14px;
@@ -756,6 +778,15 @@
   padding: 0 var(--space-2);
 }
 
+.upcomingListScrollable {
+  max-height: 424px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: var(--space-2);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(130, 146, 166, 0.22) transparent;
+}
+
 .upcomingItem {
   display: flex;
   align-items: flex-start;
@@ -872,6 +903,132 @@
   width: 100%;
   border: none;
   text-align: left;
+}
+
+.notificationPanelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+
+.notificationPanelPill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+}
+
+.notificationPanelPillWarn {
+  border: 1px solid color-mix(in srgb, var(--orange) 22%, transparent);
+  background: color-mix(in srgb, var(--orange) 10%, transparent);
+  color: var(--text-orange);
+}
+
+.notificationPanelPillCalm {
+  border: 1px solid color-mix(in srgb, var(--mint) 18%, transparent);
+  background: color-mix(in srgb, var(--mint) 9%, transparent);
+  color: var(--text-mint);
+}
+
+.notificationPanelHint {
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-semibold);
+}
+
+.notificationPanelList {
+  display: grid;
+  gap: 10px;
+  max-height: 430px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(130, 146, 166, 0.22) transparent;
+}
+
+.notificationPanelItem {
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  padding: 13px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--mint) 14%, transparent);
+  background: color-mix(in srgb, var(--mint) 6%, white);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.25s ease-out, transform 0.25s ease-out, border-color 0.25s ease-out, box-shadow 0.25s ease-out;
+}
+
+.notificationPanelItem:hover {
+  background: color-mix(in srgb, var(--mint) 10%, white);
+  border-color: color-mix(in srgb, var(--mint) 24%, transparent);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(38, 57, 84, 0.06);
+}
+
+.notificationPanelItem:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint) 14%, transparent);
+}
+
+.notificationPanelItemUrgent {
+  border-color: color-mix(in srgb, var(--orange) 24%, transparent);
+  background: color-mix(in srgb, var(--orange) 7%, white);
+}
+
+.notificationPanelItemTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.notificationPanelType {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid var(--control-border);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-bold);
+}
+
+.notificationPanelTitle {
+  color: var(--text-heading);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-bold);
+  line-height: 1.35;
+}
+
+.notificationPanelSummary {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.notificationPanelMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: var(--text-tertiary);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-semibold);
 }
 
 @media (min-width: 1024px) and (max-width: 1200px) {

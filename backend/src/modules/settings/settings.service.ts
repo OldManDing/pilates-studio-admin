@@ -10,6 +10,7 @@ const INLINE_IMAGE_DATA_URL_PATTERN = /^data:image\/[a-z0-9.+-]+;base64,/i;
 
 interface MiniPageImagePayloadOptions {
   compact?: boolean;
+  pageKey?: string;
 }
 
 @Injectable()
@@ -43,6 +44,10 @@ export class SettingsService {
     { pageKey: 'privacy', label: '隐私政策', path: '/pages/privacy/index', defaultImageUrl: '/assets/ui/hero-profile.jpg' },
     { pageKey: 'transactions', label: '消费记录', path: '/pages/transactions/index', defaultImageUrl: '/assets/ui/hero-profile.jpg' },
   ] as const;
+
+  private readonly inheritedMiniPageImageKeys: Record<string, string> = {
+    myCoaches: 'coaches',
+  };
 
   private buildMiniPageImagePayload(
     setting: { pageKey: string; label: string; path: string; defaultImageUrl: string },
@@ -101,18 +106,38 @@ export class SettingsService {
   }
 
   async getMiniPageImages(options: MiniPageImagePayloadOptions = {}) {
+    const defaultMiniPageImages = options.pageKey
+      ? this.defaultMiniPageImages.filter((item) => item.pageKey === options.pageKey)
+      : this.defaultMiniPageImages;
+
+    if (options.pageKey && defaultMiniPageImages.length === 0) {
+      throw new NotFoundException('小程序页面图片配置不存在');
+    }
+
+    const requestedPageKeys = defaultMiniPageImages.map((item) => item.pageKey);
+    const inheritedPageKeys = requestedPageKeys
+      .map((pageKey) => this.inheritedMiniPageImageKeys[pageKey])
+      .filter(Boolean);
+    const queryPageKeys = Array.from(new Set([...requestedPageKeys, ...inheritedPageKeys]));
+
     const settings = await this.prisma.miniPageImage.findMany({
       where: {
         pageKey: {
-          in: this.defaultMiniPageImages.map((item) => item.pageKey),
+          in: queryPageKeys,
         },
       },
     });
     const settingsMap = new Map(settings.map((setting) => [setting.pageKey, setting]));
 
-    return this.defaultMiniPageImages.map((defaultSetting) => {
+    return defaultMiniPageImages.map((defaultSetting) => {
       const savedSetting = settingsMap.get(defaultSetting.pageKey);
-      return this.buildMiniPageImagePayload(defaultSetting, savedSetting?.imageUrl, savedSetting?.updatedAt, options);
+      const inheritedSetting = this.inheritedMiniPageImageKeys[defaultSetting.pageKey]
+        ? settingsMap.get(this.inheritedMiniPageImageKeys[defaultSetting.pageKey])
+        : undefined;
+      const imageUrl = savedSetting?.imageUrl?.trim() || inheritedSetting?.imageUrl || '';
+      const updatedAt = savedSetting?.imageUrl?.trim() ? savedSetting.updatedAt : inheritedSetting?.updatedAt;
+
+      return this.buildMiniPageImagePayload(defaultSetting, imageUrl, updatedAt, options);
     });
   }
 

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { App } from 'antd';
 import { MemoryRouter } from 'react-router-dom';
 import MembersPage from '@/pages/members';
@@ -85,6 +85,13 @@ describe('MembersPage smoke test', () => {
       expect(screen.getByRole('heading', { name: '会员管理' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /新增会员/ })).toBeInTheDocument();
       expect(screen.getByText('总会员数')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /新增会员/ }));
+
+    await waitFor(() => {
+      const emailLabel = screen.getByText('邮箱');
+      expect(emailLabel.closest('.ant-form-item-required')).not.toBeNull();
     });
   }, 20000);
 });

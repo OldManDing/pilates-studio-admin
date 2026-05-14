@@ -117,6 +117,57 @@ describe('SettingsService', () => {
     expect(profileImage).toMatchObject({ imageUrl: smallInlineImage, isDefault: false });
   });
 
+  it('returns a single full mini-program page image when pageKey is specified', async () => {
+    const oversizedInlineImage = `data:image/jpeg;base64,${'a'.repeat(130 * 1024)}`;
+    prisma.miniPageImage.findMany.mockResolvedValue([
+      { pageKey: 'coaches', imageUrl: oversizedInlineImage, updatedAt: new Date('2026-05-08T08:00:00.000Z') },
+    ]);
+
+    const result = await service.getMiniPageImages({ pageKey: 'coaches' });
+
+    expect(prisma.miniPageImage.findMany).toHaveBeenCalledWith({
+      where: {
+        pageKey: {
+          in: ['coaches'],
+        },
+      },
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      pageKey: 'coaches',
+      imageUrl: oversizedInlineImage,
+      isDefault: false,
+    });
+  });
+
+  it('lets my coaches page inherit the coach list image when it has no override', async () => {
+    const coachImageUrl = 'https://cdn.example.com/coaches.jpg';
+    prisma.miniPageImage.findMany.mockResolvedValue([
+      { pageKey: 'coaches', imageUrl: coachImageUrl, updatedAt: new Date('2026-05-08T08:00:00.000Z') },
+      { pageKey: 'myCoaches', imageUrl: '', updatedAt: new Date('2026-05-08T09:00:00.000Z') },
+    ]);
+
+    const result = await service.getMiniPageImages({ pageKey: 'myCoaches' });
+
+    expect(prisma.miniPageImage.findMany).toHaveBeenCalledWith({
+      where: {
+        pageKey: {
+          in: ['myCoaches', 'coaches'],
+        },
+      },
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      pageKey: 'myCoaches',
+      imageUrl: coachImageUrl,
+      isDefault: false,
+    });
+  });
+
+  it('rejects unknown mini-program page image keys when querying one page', async () => {
+    await expect(service.getMiniPageImages({ pageKey: 'unknown' })).rejects.toBeInstanceOf(NotFoundException);
+  });
+
   it('updates a mini-program page image', async () => {
     const updatedAt = new Date('2026-05-08T09:00:00.000Z');
     prisma.miniPageImage.upsert.mockResolvedValue({ pageKey: 'profile', imageUrl: 'data:image/png;base64,profile', updatedAt });

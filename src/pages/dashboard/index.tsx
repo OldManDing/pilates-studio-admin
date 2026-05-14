@@ -9,11 +9,14 @@ import pageCls from '@/styles/page.module.css';
 import { bookingsApi, type Booking } from '@/services/bookings';
 import { coursesApi, type Course } from '@/services/courses';
 import { coachesApi, type Coach } from '@/services/coaches';
+import { notificationsApi, type NotificationRecord } from '@/services/notifications';
 import { reportsApi } from '@/services/reports';
 import { transactionsApi } from '@/services/transactions';
 import { formatLocalDateParam } from '@/utils/date';
 import { getErrorMessage } from '@/utils/errors';
 import {
+  DashboardNotificationsPanel,
+  type DashboardNotificationItem,
   TodayCoursePanel,
   UpcomingBookingsPanel,
 } from './components';
@@ -68,6 +71,12 @@ type AnomalyCardViewModel = {
   tone: 'critical' | 'warn';
 };
 
+const dashboardNotificationTypes = new Set([
+  'MINI_PROGRAM_FEEDBACK',
+  'MEMBERSHIP_RENEWAL_REQUEST',
+  'ACCOUNT_DELETION_REQUEST',
+]);
+
 const iconMap = {
   wallet: <WalletOutlined />,
   team: <TeamOutlined />,
@@ -82,6 +91,21 @@ const bookingStatusToLabel = (status: string) => {
   if (status === 'CANCELLED') return '已取消';
   if (status === 'NO_SHOW') return '未到场';
   return '待确认';
+};
+
+const notificationStatusToLabel = (status: string) => {
+  if (status === 'PENDING') return '待处理';
+  if (status === 'SENT') return '已发送';
+  if (status === 'READ') return '已处理';
+  if (status === 'FAILED') return '失败';
+  return '待处理';
+};
+
+const notificationTypeToLabel = (type: string) => {
+  if (type === 'MINI_PROGRAM_FEEDBACK') return '小程序反馈';
+  if (type === 'MEMBERSHIP_RENEWAL_REQUEST') return '续费申请';
+  if (type === 'ACCOUNT_DELETION_REQUEST') return '注销申请';
+  return '后台通知';
 };
 
 const bookingPriorityRank: Record<string, number> = {
@@ -122,9 +146,14 @@ const deriveExecutionActionText = (status: string) => {
   return '进入预约管理';
 };
 
-const deriveExecutionActionPath = (status: string) => {
-  if (status === 'CONFIRMED') return '/attendance';
-  return '/bookings';
+const deriveExecutionActionPath = (status: string, bookingId: string) => {
+  const encodedBookingId = encodeURIComponent(bookingId);
+
+  if (status === 'CONFIRMED') {
+    return `/attendance?bookingId=${encodedBookingId}`;
+  }
+
+  return `/bookings?bookingId=${encodedBookingId}&status=${encodeURIComponent(status)}`;
 };
 
 const deriveScheduleHintText = (status: string) => {
@@ -135,6 +164,114 @@ const deriveScheduleHintText = (status: string) => {
   if (status === 'CANCELLED') return '已取消，留意候补需求';
   return '建议继续在预约管理中确认';
 };
+
+const getNotificationSenderText = (notification: NotificationRecord) => {
+  if (notification.member?.name) {
+    return `会员 ${notification.member.name}`;
+  }
+
+  if (notification.miniUser?.nickname) {
+    return `小程序用户 ${notification.miniUser.nickname}`;
+  }
+
+  if (notification.miniUser?.openId) {
+    return `OpenID ${notification.miniUser.openId.slice(0, 8)}...`;
+  }
+
+  return '用户信息待同步';
+};
+
+const getNotificationSummaryText = (notification: NotificationRecord) => {
+  const payload = notification.payload;
+  const payloadObject = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : null;
+
+  if (notification.type === 'ACCOUNT_DELETION_REQUEST') {
+    const reason = payloadObject && typeof payloadObject.reason === 'string' ? payloadObject.reason.trim() : '';
+    return reason ? `注销原因：${reason}` : '用户提交账号注销申请，需要核对后处理。';
+  }
+
+  if (notification.type === 'MEMBERSHIP_RENEWAL_REQUEST') {
+    const amountCents = payloadObject && typeof payloadObject.amountCents === 'number' ? payloadObject.amountCents : null;
+    return amountCents !== null
+      ? `续费金额 ¥${(amountCents / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}，待确认处理。`
+      : '用户提交会员续费申请，待确认收款与会籍。';
+  }
+
+  if (notification.type === 'MINI_PROGRAM_FEEDBACK') {
+    return notification.content || '用户从小程序提交了意见反馈。';
+  }
+
+  return notification.content || notification.title;
+};
+
+const getDashboardNotificationTargetPath = (notification: NotificationRecord) => {
+  const payload = notification.payload;
+  const payloadObject = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : null;
+  const payloadTransactionId = payloadObject && typeof payloadObject.transactionId === 'string' ? payloadObject.transactionId.trim() : '';
+  const payloadMiniUserId = payloadObject && typeof payloadObject.miniUserId === 'string' ? payloadObject.miniUserId.trim() : '';
+  const payloadMemberId = payloadObject && typeof payloadObject.memberId === 'string' ? payloadObject.memberId.trim() : '';
+  const miniUserId = notification.miniUserId || payloadMiniUserId;
+  const memberId = notification.memberId || payloadMemberId;
+
+  if (notification.type === 'MINI_PROGRAM_FEEDBACK') {
+    return `/notifications?notificationId=${encodeURIComponent(notification.id)}&type=MINI_PROGRAM_FEEDBACK&channel=INTERNAL`;
+  }
+
+  if (notification.type === 'MEMBERSHIP_RENEWAL_REQUEST') {
+    if (payloadTransactionId) {
+      return `/finance?transactionId=${encodeURIComponent(payloadTransactionId)}`;
+    }
+    return '/finance?kind=MEMBERSHIP_RENEWAL&status=PENDING';
+  }
+
+  if (notification.type === 'ACCOUNT_DELETION_REQUEST') {
+    if (miniUserId) {
+      return `/mini-users?miniUserId=${encodeURIComponent(miniUserId)}`;
+    }
+
+    if (memberId) {
+      return `/members?memberId=${encodeURIComponent(memberId)}`;
+    }
+  }
+
+  return '/notifications';
+};
+
+const formatDashboardDateTime = (value?: string | null) => {
+  if (!value) {
+    return '-';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+};
+
+const mapDashboardNotifications = (notifications: NotificationRecord[]): DashboardNotificationItem[] => (
+  notifications
+    .filter((notification) => dashboardNotificationTypes.has(notification.type))
+    .slice(0, 12)
+    .map((notification) => ({
+      id: notification.id,
+      title: notification.title,
+      typeText: notificationTypeToLabel(notification.type),
+      summaryText: getNotificationSummaryText(notification),
+      senderText: getNotificationSenderText(notification),
+      createdAtText: formatDashboardDateTime(notification.createdAt),
+      statusText: notificationStatusToLabel(notification.status),
+      targetPath: getDashboardNotificationTargetPath(notification),
+      urgent: notification.status !== 'READ',
+    }))
+);
 
 const formatTimeRange = (start?: string, end?: string) => {
   if (!start) return '时段信息未同步';
@@ -189,7 +326,7 @@ const mapTodayCourses = (bookings: Booking[], _courses: Course[]): TodayCourseVi
     }
   }
 
-  const executionQueue = Array.from(sessionDedup.values()).slice(0, 4);
+  const executionQueue = Array.from(sessionDedup.values());
 
   if (executionQueue.length > 0) {
     return executionQueue.map((item) => ({
@@ -202,7 +339,7 @@ const mapTodayCourses = (bookings: Booking[], _courses: Course[]): TodayCourseVi
       statusText: bookingStatusToLabel(item.status),
       queueHintText: deriveExecutionHintText(item.status),
       actionText: deriveExecutionActionText(item.status),
-      actionPath: deriveExecutionActionPath(item.status),
+      actionPath: deriveExecutionActionPath(item.status, item.id),
     }));
   }
 
@@ -211,6 +348,7 @@ const mapTodayCourses = (bookings: Booking[], _courses: Course[]): TodayCourseVi
 
 const mapUpcomingBookings = (items: Booking[]): UpcomingBookingViewModel[] => {
   const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const normalized = items
     .map((item) => ({
       item,
@@ -219,8 +357,13 @@ const mapUpcomingBookings = (items: Booking[]): UpcomingBookingViewModel[] => {
     .filter((entry): entry is { item: Booking; startsAt: Date } => entry.startsAt !== null)
     .sort((left, right) => left.startsAt.getTime() - right.startsAt.getTime());
 
-  const nearTerm = normalized.filter((entry) => !isSameCalendarDay(entry.startsAt, now));
-  const source = (nearTerm.length ? nearTerm : normalized).slice(0, 4);
+  const source = normalized
+    .filter((entry) => (
+      entry.startsAt.getTime() >= todayStart
+      && !isSameCalendarDay(entry.startsAt, now)
+      && ['PENDING', 'CONFIRMED'].includes(entry.item.status)
+    ))
+    .slice(0, 12);
 
   return source.map((entry) => ({
     id: entry.item.id,
@@ -258,6 +401,7 @@ export default function DashboardPage() {
   const [courseList, setCourseList] = useState<Course[]>([]);
   const [coachList, setCoachList] = useState<Coach[]>([]);
   const [bookingList, setBookingList] = useState<Booking[]>([]);
+  const [notificationList, setNotificationList] = useState<NotificationRecord[]>([]);
   const [partialFailures, setPartialFailures] = useState<string[]>([]);
 
   const metricAvailability = useMemo(
@@ -267,6 +411,7 @@ export default function DashboardPage() {
       courses: !partialFailures.includes('课程列表'),
       coaches: !partialFailures.includes('教练列表'),
       revenue: !partialFailures.includes('交易汇总'),
+      notifications: !partialFailures.includes('后台通知'),
     }),
     [partialFailures],
   );
@@ -299,12 +444,13 @@ export default function DashboardPage() {
           };
         };
 
-        const [memberReportResult, coursesResult, coachesResult, bookingsResult, txSummaryResult] = await Promise.allSettled([
+        const [memberReportResult, coursesResult, coachesResult, bookingsResult, txSummaryResult, notificationsResult] = await Promise.allSettled([
           reportsApi.getMembers(),
           coursesApi.getPaged({ page: 1, pageSize: 50 }),
           coachesApi.getPaged({ page: 1, pageSize: 50 }),
           loadAllBookings(),
           transactionsApi.getSummary(),
+          notificationsApi.getAll({ page: 1, pageSize: 50 }),
         ]);
 
         const failures: string[] = [];
@@ -328,6 +474,9 @@ export default function DashboardPage() {
           : { totalRevenueCents: 0, pendingAmountCents: 0, refundedAmountCents: 0, todayRevenueCents: 0 };
         if (txSummaryResult.status !== 'fulfilled') failures.push('交易汇总');
 
+        const notificationsData = notificationsResult.status === 'fulfilled' ? notificationsResult.value.data : [];
+        if (notificationsResult.status !== 'fulfilled') failures.push('后台通知');
+
         setPartialFailures(failures);
 
         setStats({
@@ -339,6 +488,7 @@ export default function DashboardPage() {
         setCourseList(coursesData || []);
         setCoachList(coachesData || []);
         setBookingList(bookingsRes.data || []);
+        setNotificationList(notificationsData || []);
       } catch (err) {
         messageApi.error(getErrorMessage(err, '加载仪表盘数据失败，请稍后重试'));
       } finally {
@@ -449,6 +599,11 @@ export default function DashboardPage() {
   );
 
   const upcomingBookings = useMemo(() => mapUpcomingBookings(bookingList), [bookingList]);
+  const dashboardNotifications = useMemo(() => mapDashboardNotifications(notificationList), [notificationList]);
+  const pendingDashboardNotificationCount = useMemo(
+    () => dashboardNotifications.filter((item) => item.urgent).length,
+    [dashboardNotifications],
+  );
 
   const activeMemberRate = stats.totalMembers
     ? `${((stats.activeMembers / stats.totalMembers) * 100).toFixed(1)}%`
@@ -600,9 +755,16 @@ export default function DashboardPage() {
               />
               <UpcomingBookingsPanel
                 items={upcomingBookings}
-                onViewDetail={() => go('/bookings')}
+                onViewDetail={(id) => go(`/bookings?bookingId=${encodeURIComponent(id)}`)}
               />
             </div>
+
+            <DashboardNotificationsPanel
+              items={metricAvailability.notifications ? dashboardNotifications : []}
+              pendingCount={metricAvailability.notifications ? pendingDashboardNotificationCount : 0}
+              onViewAll={() => go('/notifications')}
+              onOpenItem={(item) => go(item.targetPath)}
+            />
           </section>
 
           <SectionCard title="运营诊断" subtitle="聚焦优先级判断所需信号。">

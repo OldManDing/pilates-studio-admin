@@ -1,6 +1,7 @@
 import { CalendarOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Col, Descriptions, Drawer, Form, Modal, Pagination, Popconfirm, Row, Select, Spin, message } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
 import FilterModalFooter from '@/components/FilterModalFooter';
@@ -140,6 +141,27 @@ const getStatusActionLabel = (status: BookingStatus) => {
   return '查看详情';
 };
 
+const getBookingPeriodByDate = (dateStr?: string): BookingPeriod | null => {
+  if (!dateStr) {
+    return null;
+  }
+
+  const targetDate = new Date(dateStr);
+  if (Number.isNaN(targetDate.getTime())) {
+    return null;
+  }
+
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const targetStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+  const diffDays = Math.round((targetStart.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return '今天';
+  if (diffDays === 1) return '明天';
+  if (diffDays >= 0 && diffDays <= 6) return '本周';
+  return null;
+};
+
 const getNextBookingStatus = (status: BookingStatus): BookingStatus => {
   if (status === 'PENDING') return 'CONFIRMED';
   return status;
@@ -149,6 +171,7 @@ const canAdvanceBookingStatus = (status: BookingStatus) => status === 'PENDING';
 
 export default function BookingsPage() {
   const [messageApi, contextHolder] = message.useMessage();
+  const [searchParams] = useSearchParams();
   const [form] = Form.useForm<BookingFormValues>();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -185,6 +208,8 @@ export default function BookingsPage() {
     noShowCount: 0,
   });
   const canWriteBookings = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['WRITE:BOOKINGS']);
+  const queryBookingId = searchParams.get('bookingId')?.trim() || '';
+  const queryStatus = searchParams.get('status')?.trim() || '';
 
   useEffect(() => {
     void authApi.getMe()
@@ -197,6 +222,52 @@ export default function BookingsPage() {
         setCurrentUserRoleCode('');
       });
   }, []);
+
+  useEffect(() => {
+    if (!bookingStatusOptions.includes(queryStatus as BookingStatus)) {
+      return;
+    }
+
+    const nextStatus = queryStatus as BookingStatus;
+    setStatusFilter(nextStatus);
+    setFilterDraft({ status: nextStatus });
+    setCurrentPage(1);
+  }, [queryStatus]);
+
+  useEffect(() => {
+    if (!queryBookingId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const openBookingFromQuery = async () => {
+      try {
+        const booking = await bookingsApi.getById(queryBookingId);
+        if (cancelled) {
+          return;
+        }
+
+        const nextPeriod = getBookingPeriodByDate(booking.session?.startsAt || booking.bookedAt);
+        if (nextPeriod) {
+          setPeriodFilter(nextPeriod);
+        }
+
+        setDetailBooking(booking);
+        setSearchValue(booking.bookingCode || booking.member?.name || '');
+      } catch (err) {
+        if (!cancelled) {
+          messageApi.error(getErrorMessage(err, '加载预约详情失败'));
+        }
+      }
+    };
+
+    void openBookingFromQuery();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [messageApi, queryBookingId]);
 
   const fetchAllMembers = useCallback(async () => {
     const data = await bookingsApi.getMemberOptions();

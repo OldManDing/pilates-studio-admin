@@ -20,6 +20,7 @@ import {
   message,
 } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
 import FilterModalFooter from '@/components/FilterModalFooter';
@@ -148,6 +149,7 @@ const getLinkedMemberLabel = (member?: MiniUserMemberSummary | null) => {
 
 export default function MiniUsersPage() {
   const [messageApi, contextHolder] = message.useMessage();
+  const [searchParams] = useSearchParams();
   const [linkMemberForm] = Form.useForm<LinkMemberFormValues>();
   const [miniUsers, setMiniUsers] = useState<MiniUserRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -174,6 +176,8 @@ export default function MiniUsersPage() {
   const [currentUserPermissions, setCurrentUserPermissions] = useState<string[]>([]);
   const [currentUserRoleCode, setCurrentUserRoleCode] = useState('');
   const canWriteMiniUsers = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['WRITE:MINI_USERS']);
+  const initialMiniUserId = searchParams.get('miniUserId')?.trim() || '';
+  const initialSearch = searchParams.get('search')?.trim() || '';
 
   useEffect(() => {
     void authApi.getMe()
@@ -238,6 +242,26 @@ export default function MiniUsersPage() {
       }
     }
   }, [messageApi]);
+
+  useEffect(() => {
+    if (!initialSearch) {
+      return;
+    }
+
+    setSearchValue(initialSearch);
+    setCurrentPage(1);
+  }, [initialSearch]);
+
+  useEffect(() => {
+    if (!initialMiniUserId) {
+      return;
+    }
+
+    setDetailOpen(true);
+    setDetailRecord(null);
+    setDetailLoadFailed(false);
+    void loadMiniUserDetail(initialMiniUserId);
+  }, [initialMiniUserId, loadMiniUserDetail]);
 
   const loadMemberOptions = useCallback(async (search?: string, currentMemberOverride?: MiniUserMemberSummary | null) => {
     const requestSeq = memberRequestSeqRef.current + 1;

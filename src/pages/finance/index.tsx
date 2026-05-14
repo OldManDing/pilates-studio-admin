@@ -11,6 +11,7 @@ import {
 } from '@ant-design/icons';
 import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Pagination, Row, Select, Spin, message } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import ActionButton from '@/components/ActionButton';
 import { createChartTooltip } from '@/components/ChartTooltip';
@@ -111,6 +112,7 @@ function buildRecentMonthKeys(monthCount: number) {
 export default function FinancePage() {
   const isMobile = useIsMobile();
   const [messageApi, contextHolder] = message.useMessage();
+  const [searchParams] = useSearchParams();
   const [form] = Form.useForm<TransactionFormValues>();
   const [transactionList, setTransactionList] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,6 +142,9 @@ export default function FinancePage() {
   const [workbenchTransactions, setWorkbenchTransactions] = useState<Transaction[]>([]);
   const [workbenchTotal, setWorkbenchTotal] = useState(0);
   const canWriteTransactions = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['WRITE:TRANSACTIONS']);
+  const initialTransactionId = searchParams.get('transactionId')?.trim() || '';
+  const initialKind = searchParams.get('kind')?.trim() || '';
+  const initialStatus = searchParams.get('status')?.trim() || '';
 
   useEffect(() => {
     void authApi.getMe()
@@ -152,6 +157,38 @@ export default function FinancePage() {
         setCurrentUserRoleCode('');
       });
   }, []);
+
+  useEffect(() => {
+    const nextKind = kindMap[initialKind as TransactionKind] ? initialKind : '';
+    const nextStatus = statusMap[initialStatus as TransactionStatus] ? initialStatus : '';
+
+    if (!nextKind && !nextStatus) {
+      return;
+    }
+
+    setKindFilter(nextKind || '全部');
+    setStatusFilter(nextStatus || '全部');
+    setFilterDraft({
+      kind: nextKind || '全部',
+      status: nextStatus || '全部',
+    });
+    setCurrentPage(1);
+  }, [initialKind, initialStatus]);
+
+  useEffect(() => {
+    if (!initialTransactionId) {
+      return;
+    }
+
+    void transactionsApi.getById(initialTransactionId)
+      .then((transaction) => {
+        setDetailTransaction(transaction);
+        setSearchValue(transaction.transactionCode || transaction.member?.name || '');
+      })
+      .catch((err) => {
+        messageApi.error(getErrorMessage(err, '加载续费交易详情失败'));
+      });
+  }, [initialTransactionId, messageApi]);
 
   const fetchAllTransactions = useCallback(async (params: { kind?: string; status?: TransactionStatus } = {}) => {
     const now = new Date();
@@ -270,6 +307,7 @@ export default function FinancePage() {
       if (keyword) {
         const locallyFiltered = allTransactions.filter((item) =>
           (item.member?.name || '').toLowerCase().includes(keyword)
+          || (item.transactionCode || '').toLowerCase().includes(keyword)
           || (kindMap[item.kind] || item.kind).toLowerCase().includes(keyword)
           || String(item.amountCents).includes(keyword)
           || String(item.amountCents / 100).includes(keyword.replace('¥', '').replace(',', ''))
@@ -324,6 +362,7 @@ export default function FinancePage() {
       const matchesKeyword =
         keyword.length === 0 ||
         (item.member?.name || '').toLowerCase().includes(keyword) ||
+        (item.transactionCode || '').toLowerCase().includes(keyword) ||
         (kindMap[item.kind] || item.kind).toLowerCase().includes(keyword) ||
         String(item.amountCents).includes(keyword) ||
         String(item.amountCents / 100).includes(keyword.replace('¥', '').replace(',', '')) ||

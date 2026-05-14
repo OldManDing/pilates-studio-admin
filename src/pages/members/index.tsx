@@ -1,6 +1,7 @@
 import { DeleteOutlined, DownloadOutlined, EditOutlined, FilterOutlined, PlusOutlined, SearchOutlined, TeamOutlined, ThunderboltOutlined, UserAddOutlined, WarningOutlined } from '@ant-design/icons';
 import { Button, Col, Descriptions, Drawer, Form, Input, InputNumber, Modal, Pagination, Popconfirm, Row, Select, Spin, message } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ActionButton from '@/components/ActionButton';
 import EmptyState from '@/components/EmptyState';
 import FilterModalFooter from '@/components/FilterModalFooter';
@@ -71,6 +72,7 @@ const transactionKindLabels: Record<TransactionKind, string> = {
 
 export default function MembersPage() {
   const [messageApi, contextHolder] = message.useMessage();
+  const [searchParams] = useSearchParams();
   const [form] = Form.useForm<MemberFormValues>();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,6 +106,8 @@ export default function MembersPage() {
   const [total, setTotal] = useState(0);
   const canWriteMembers = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['WRITE:MEMBERS']);
   const canManageMembers = currentUserRoleCode === 'OWNER' || hasRequiredPermissions(currentUserPermissions, ['MANAGE:MEMBERS']);
+  const initialMemberId = searchParams.get('memberId')?.trim() || '';
+  const initialSearch = searchParams.get('search')?.trim() || '';
 
   useEffect(() => {
     void authApi.getMe()
@@ -172,6 +176,30 @@ export default function MembersPage() {
   useEffect(() => {
     void fetchMembers(1);
   }, [fetchMembers]);
+
+  useEffect(() => {
+    if (!initialSearch) {
+      return;
+    }
+
+    setSearchValue(initialSearch);
+    setCurrentPage(1);
+  }, [initialSearch]);
+
+  useEffect(() => {
+    if (!initialMemberId) {
+      return;
+    }
+
+    void membersApi.getById(initialMemberId)
+      .then((member) => {
+        setDetailMember(member);
+        setSearchValue(member.memberCode || member.phone || member.name);
+      })
+      .catch((err) => {
+        messageApi.error(getErrorMessage(err, '加载会员详情失败'));
+      });
+  }, [initialMemberId, messageApi]);
 
   useEffect(() => {
     if (!detailMember) {
@@ -589,7 +617,14 @@ export default function MembersPage() {
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item name="email" label="邮箱" rules={[{ type: 'email', message: '请输入有效邮箱地址' }]}>
+              <Form.Item
+                name="email"
+                label="邮箱"
+                rules={[
+                  { required: true, whitespace: true, message: '请输入邮箱' },
+                  { type: 'email', message: '请输入有效邮箱地址' },
+                ]}
+              >
                 <Input className={pageCls.settingsInput} placeholder="请输入邮箱" />
               </Form.Item>
             </Col>

@@ -18,8 +18,8 @@ export class SettingsController {
   constructor(private readonly settingsService: SettingsService) {}
 
   @Get('studio')
+  @SkipAuth()
   @AllowMiniUser()
-  @RequirePermissions('READ:SETTINGS')
   @ApiOperation({ summary: 'Get studio settings' })
   async getStudioSettings() {
     return this.settingsService.getStudioSettings();
@@ -35,9 +35,13 @@ export class SettingsController {
   @Get('mini-page-images')
   @SkipAuth()
   @ApiOperation({ summary: 'Get mini-program page image settings' })
-  async getMiniPageImages(@Query('compact') compact?: string) {
+  async getMiniPageImages(
+    @Query('compact') compact?: string,
+    @Query('pageKey') pageKey?: string,
+  ) {
     return this.settingsService.getMiniPageImages({
       compact: compact === 'true' || compact === '1',
+      pageKey: pageKey?.trim() || undefined,
     });
   }
 
