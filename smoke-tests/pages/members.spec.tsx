@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { App } from 'antd';
 import { MemoryRouter } from 'react-router-dom';
 import MembersPage from '@/pages/members';
+import { membersApi } from '@/services/members';
 
 vi.mock('@/services/auth', () => ({
   authApi: {
@@ -68,6 +69,7 @@ vi.mock('@/services/members', () => ({
     }),
     getBookings: vi.fn().mockResolvedValue([]),
     getTransactions: vi.fn().mockResolvedValue([]),
+    create: vi.fn(),
   },
 }));
 
@@ -93,5 +95,15 @@ describe('MembersPage smoke test', () => {
       const emailLabel = screen.getByText('邮箱');
       expect(emailLabel.closest('.ant-form-item-required')).not.toBeNull();
     });
+
+    fireEvent.change(screen.getByPlaceholderText('请输入会员姓名'), { target: { value: '新会员' } });
+    fireEvent.change(screen.getByPlaceholderText('请输入手机号'), { target: { value: '13900000000' } });
+    const submitButtons = screen.getAllByRole('button', { name: '新增会员' });
+    fireEvent.click(submitButtons[submitButtons.length - 1]);
+
+    await waitFor(() => {
+      expect(screen.getByText('请输入邮箱')).toBeInTheDocument();
+    });
+    expect(membersApi.create).not.toHaveBeenCalled();
   }, 20000);
 });

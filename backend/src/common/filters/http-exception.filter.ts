@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { localizeErrorDetails, localizeErrorMessage } from '../utils/localized-error-message';
 
 interface ErrorResponse {
   success: false;
@@ -33,7 +34,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       success: false,
       error: {
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'Internal server error',
+        message: '服务器内部错误',
       },
       timestamp: new Date().toISOString(),
       path: request.url,
@@ -44,21 +45,21 @@ export class HttpExceptionFilter implements ExceptionFilter {
       const exceptionResponse = exception.getResponse();
 
       if (typeof exceptionResponse === 'string') {
-        errorResponse.error.message = exceptionResponse;
+        errorResponse.error.message = localizeErrorMessage(exceptionResponse);
       } else if (typeof exceptionResponse === 'object') {
         const res = exceptionResponse as any;
         errorResponse.error = {
           code: res.error || this.getErrorCode(status),
-          message: res.message || exception.message,
-          details: res.details,
+          message: localizeErrorMessage(res.message || exception.message),
+          details: localizeErrorDetails(res.details),
         };
       }
     } else if (exception instanceof Error) {
       this.logger.error(exception.stack);
       errorResponse.error.message =
         process.env.NODE_ENV === 'production'
-          ? 'Internal server error'
-          : exception.message;
+          ? '服务器内部错误'
+          : localizeErrorMessage(exception.message);
     }
 
     this.logger.error(

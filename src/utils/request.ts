@@ -5,6 +5,7 @@ import {
   hasAdminSessionTimedOut,
   touchAdminSession,
 } from '@/utils/session';
+import { localizeErrorText } from '@/utils/errors';
 
 const API_BASE_URL = process.env.API_BASE_URL || '/api';
 
@@ -24,9 +25,24 @@ interface ApiResponse<T> {
   };
   error?: {
     code: string;
-    message: string;
+    message: string | string[];
   };
 }
+
+const normalizeApiErrorMessage = (message: unknown): string | null => {
+  if (Array.isArray(message)) {
+    const normalized = message
+      .map((item) => (typeof item === 'string' ? localizeErrorText(item) : ''))
+      .filter(Boolean);
+    return normalized.length ? normalized.join('；') : null;
+  }
+
+  if (typeof message === 'string' && message.trim()) {
+    return localizeErrorText(message);
+  }
+
+  return null;
+};
 
 const isFormDataBody = (body: unknown): body is FormData =>
   typeof FormData !== 'undefined' && body instanceof FormData;
@@ -64,14 +80,14 @@ class ApiError extends Error {
 
 const extractApiErrorMessage = async (response: Response) => {
   try {
-    const payload = await response.json() as ApiResponse<unknown> | { message?: string };
+    const payload = await response.json() as ApiResponse<unknown> | { message?: string | string[] };
 
     if ('success' in payload && payload.success === false && payload.error?.message) {
-      return payload.error.message;
+      return normalizeApiErrorMessage(payload.error.message);
     }
 
-    if ('message' in payload && typeof payload.message === 'string' && payload.message.trim()) {
-      return payload.message;
+    if ('message' in payload) {
+      return normalizeApiErrorMessage(payload.message);
     }
   } catch {
     // ignore parse errors
@@ -245,7 +261,7 @@ export const request = async <T>(
     const data: ApiResponse<T> = await response.json();
 
     if (!data.success) {
-      throw new ApiError(data.error?.code || 'UNKNOWN_ERROR', data.error?.message || '请求失败');
+      throw new ApiError(data.error?.code || 'UNKNOWN_ERROR', normalizeApiErrorMessage(data.error?.message) || '请求失败');
     }
 
     return data.data;
@@ -321,7 +337,7 @@ export const requestWithMeta = async <T>(
     const data: ApiResponse<T> = await response.json();
 
     if (!data.success) {
-      throw new ApiError(data.error?.code || 'UNKNOWN_ERROR', data.error?.message || '请求失败');
+      throw new ApiError(data.error?.code || 'UNKNOWN_ERROR', normalizeApiErrorMessage(data.error?.message) || '请求失败');
     }
 
     return {

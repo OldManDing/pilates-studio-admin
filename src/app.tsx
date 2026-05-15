@@ -55,7 +55,7 @@ export function rootContainer(container: ReactNode) {
   return (
     <ConfigProvider
       locale={zhCN}
-      form={{ validateMessages: formValidateMessages }}
+      form={{ validateMessages: formValidateMessages, requiredMark: true }}
       theme={{
         algorithm: theme.defaultAlgorithm,
         token: {

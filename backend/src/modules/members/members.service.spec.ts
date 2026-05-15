@@ -118,6 +118,7 @@ describe('MembersService', () => {
       service.create({
         name: 'Alice',
         phone: '13800000000',
+        email: 'alice@example.com',
       }),
     ).rejects.toBeInstanceOf(ConflictException);
   });

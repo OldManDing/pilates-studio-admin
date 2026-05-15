@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsInt, IsEmail, Min, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsInt, IsEmail, Min, IsEnum, IsNotEmpty } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { MemberStatus } from '../../../common/enums/domain.enums';
 
@@ -11,10 +11,11 @@ export class CreateMemberDto {
   @IsString()
   phone: string;
 
-  @ApiPropertyOptional({ example: 'zhangsan@example.com' })
-  @IsOptional()
-  @IsEmail()
-  email?: string;
+  @ApiProperty({ example: 'zhangsan@example.com' })
+  @IsString({ message: '邮箱必须是文本' })
+  @IsNotEmpty({ message: '请输入邮箱' })
+  @IsEmail({}, { message: '请输入有效邮箱地址' })
+  email: string;
 
   @ApiPropertyOptional({ description: '会员卡方案ID' })
   @IsOptional()

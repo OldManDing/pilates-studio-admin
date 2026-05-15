@@ -40,7 +40,7 @@ const iconMap = {
 type MemberFormValues = {
   name: string;
   phone: string;
-  email?: string;
+  email: string;
   planId?: string;
   status: MemberStatus;
   remainingCredits: number;
@@ -620,6 +620,7 @@ export default function MembersPage() {
               <Form.Item
                 name="email"
                 label="邮箱"
+                required
                 rules={[
                   { required: true, whitespace: true, message: '请输入邮箱' },
                   { type: 'email', message: '请输入有效邮箱地址' },

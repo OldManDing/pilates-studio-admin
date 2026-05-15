@@ -7,6 +7,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { createLocalizedValidationException } from './common/utils/localized-validation';
 
 const REQUEST_BODY_LIMIT = '20mb';
 
@@ -49,6 +50,7 @@ async function bootstrap() {
       transformOptions: {
         enableImplicitConversion: true,
       },
+      exceptionFactory: createLocalizedValidationException,
     }),
   );
 

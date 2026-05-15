@@ -28,7 +28,7 @@ export interface Member {
 export interface CreateMemberData {
   name: string;
   phone: string;
-  email?: string;
+  email: string;
   planId?: string;
   remainingCredits?: number;
   initialCredits?: number;
