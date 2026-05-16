@@ -5,8 +5,11 @@ import { SettingsService } from './settings.service';
 describe('SettingsService', () => {
   let service: SettingsService;
   let prisma: any;
+  let fetchMock: jest.Mock;
 
   beforeEach(() => {
+    fetchMock = jest.fn();
+    (globalThis as typeof globalThis & { fetch: jest.Mock }).fetch = fetchMock;
     prisma = {
       notificationSetting: {
         findMany: jest.fn(),
@@ -60,6 +63,8 @@ describe('SettingsService', () => {
       email: '',
       businessHours: '',
       address: '',
+      latitude: null,
+      longitude: null,
       imageUrl: '',
     });
   });
@@ -72,6 +77,68 @@ describe('SettingsService', () => {
 
     expect(prisma.studioSetting.update).toHaveBeenCalledWith({ where: { id: 'studio-1' }, data: { studioName: '愈己CareMe工作室' } });
     expect(result.id).toBe('studio-1');
+  });
+
+  it('geocodes studio address when coordinates are omitted', async () => {
+    prisma.studioSetting.findFirst.mockResolvedValue({ id: 'studio-1' });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => [{ lat: '31.2304', lon: '121.4737' }],
+    });
+
+    await service.updateStudioSettings({
+      studioName: 'CareMe Studio',
+      phone: '400-123-4567',
+      email: 'info@example.com',
+      businessHours: '09:00-21:00',
+      address: '上海市静安区南京西路1000号',
+    } as never);
+
+    expect(fetchMock).toHaveBeenCalled();
+    expect(prisma.studioSetting.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          latitude: 31.2304,
+          longitude: 121.4737,
+        }),
+      }),
+    );
+  });
+
+  it('tries simplified Chinese address variants when the full address is not resolved', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [{ lat: '32.0058', lon: '118.7243' }],
+      });
+
+    await expect(service.geocodeStudioLocation('江苏省南京市建邺区信安大厦B座')).resolves.toEqual({
+      latitude: 32.0058,
+      longitude: 118.7243,
+      source: 'geocoded',
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+    expect(fetchMock.mock.calls[5][0]).toContain(encodeURIComponent('建邺区 信安大厦'));
   });
 
   it('returns mini-program page image defaults with saved overrides', async () => {

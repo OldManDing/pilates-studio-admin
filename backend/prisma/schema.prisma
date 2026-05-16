@@ -345,6 +345,8 @@ model StudioSetting {
   email         String
   businessHours String
   address       String
+  latitude      Float?
+  longitude     Float?
   imageUrl      String?  @db.LongText
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

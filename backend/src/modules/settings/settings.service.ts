@@ -17,6 +17,135 @@ interface MiniPageImagePayloadOptions {
 export class SettingsService {
   constructor(private prisma: PrismaService) {}
 
+  private isValidLatitude(value: unknown) {
+    return typeof value === 'number' && Number.isFinite(value) && value >= -90 && value <= 90;
+  }
+
+  private isValidLongitude(value: unknown) {
+    return typeof value === 'number' && Number.isFinite(value) && value >= -180 && value <= 180;
+  }
+
+  private buildGeocodeCandidates(address?: string | null) {
+    const normalized = address?.trim().replace(/\s+/g, '') || '';
+    if (!normalized) {
+      return [];
+    }
+
+    const candidates = new Set<string>();
+    const addCandidate = (value?: string | null) => {
+      const candidate = value?.trim().replace(/\s+/g, ' ') || '';
+      if (candidate) {
+        candidates.add(candidate);
+      }
+    };
+
+    addCandidate(normalized);
+    addCandidate(normalized.replace(/[，,。．·]/g, ''));
+
+    const withoutProvince = normalized.replace(/^.*?(?:省|自治区|特别行政区)/, '');
+    addCandidate(withoutProvince);
+
+    const withoutCity = withoutProvince.replace(/^.*?市/, '');
+    addCandidate(withoutCity);
+
+    const cityMatch = withoutProvince.match(/^(.+?市)(.*)$/);
+    if (cityMatch) {
+      const cityName = cityMatch[1];
+      const cityRoot = cityName.replace(/市$/, '');
+      const cityRemainder = cityMatch[2];
+      const districtMatch = cityRemainder.match(/^(.+?(?:区|县|旗|市|镇|乡|街道))(.*)$/);
+
+      if (districtMatch) {
+        const districtName = districtMatch[1];
+        const districtRoot = districtName.replace(/(?:区|县|旗|市|镇|乡|街道)$/, '');
+        const venueName = districtMatch[2];
+        const venueRoot = venueName.replace(/(?:[A-Za-z0-9]+)?(?:座|楼|层|室|号|幢|单元)$/u, '');
+
+        addCandidate(`${cityName}${districtName}${venueName}`);
+        addCandidate(`${cityName} ${districtName} ${venueName}`);
+        addCandidate(`${districtName} ${venueName}`);
+        addCandidate(`${districtName} ${venueRoot}`);
+        addCandidate(`${districtRoot} ${venueName}`);
+        addCandidate(`${venueName} ${cityRoot} ${districtRoot}`);
+        addCandidate(`${venueName} ${districtRoot}`);
+        addCandidate(`${cityRoot} ${districtRoot} ${venueRoot}`);
+        addCandidate(`${districtRoot} ${venueRoot}`);
+        addCandidate(`${venueRoot} ${cityRoot} ${districtRoot}`);
+      }
+    }
+
+    const streetMatch = withoutCity.match(/^(.+?(?:路|街|巷|大道|胡同|弄|号))(.*)$/);
+    if (streetMatch) {
+      const streetName = streetMatch[1];
+      const venueName = streetMatch[2];
+      addCandidate(`${streetName}${venueName}`);
+      addCandidate(`${streetName} ${venueName}`);
+    }
+
+    return Array.from(candidates);
+  }
+
+  private normalizeStudioLocation(latitude?: number | null, longitude?: number | null) {
+    if (this.isValidLatitude(latitude) && this.isValidLongitude(longitude)) {
+      return { latitude, longitude };
+    }
+
+    return { latitude: null, longitude: null };
+  }
+
+  private async geocodeAddress(address?: string | null) {
+    const candidates = this.buildGeocodeCandidates(address);
+    if (candidates.length === 0) {
+      return null;
+    }
+
+    for (const query of candidates) {
+      const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`;
+      try {
+        const response = await fetch(geocodeUrl, {
+          headers: {
+            'User-Agent': 'CareMeStudio/1.0',
+            Accept: 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          continue;
+        }
+
+        const results = await response.json() as Array<{ lat?: string; lon?: string }>;
+        const firstResult = results[0];
+
+        if (!firstResult?.lat || !firstResult?.lon) {
+          continue;
+        }
+
+        const latitude = Number(firstResult.lat);
+        const longitude = Number(firstResult.lon);
+
+        if (!this.isValidLatitude(latitude) || !this.isValidLongitude(longitude)) {
+          continue;
+        }
+
+        return { latitude, longitude };
+      } catch {
+        continue;
+      }
+    }
+
+    return null;
+  }
+
+  async resolveStudioLocation(address?: string | null, latitude?: number | null, longitude?: number | null) {
+    const normalized = this.normalizeStudioLocation(latitude, longitude);
+    if (normalized.latitude !== null && normalized.longitude !== null) {
+      return normalized;
+    }
+
+    const geocoded = await this.geocodeAddress(address);
+    return geocoded || normalized;
+  }
+
   private readonly defaultNotificationSettings = [
     { key: 'booking_confirmation', title: '预约确认', channel: 'MINI_PROGRAM', description: '会员预约成功后发送确认通知' },
     { key: 'booking_cancelled', title: '预约取消', channel: 'MINI_PROGRAM', description: '预约取消后发送提醒通知' },
@@ -83,6 +212,8 @@ export class SettingsService {
         email: '',
         businessHours: '',
         address: '',
+        latitude: null,
+        longitude: null,
         imageUrl: '',
       };
     }
@@ -91,18 +222,44 @@ export class SettingsService {
   }
 
   async updateStudioSettings(dto: UpdateStudioDto) {
+    const shouldResolveLocation =
+      dto.address !== undefined ||
+      dto.latitude !== undefined ||
+      dto.longitude !== undefined;
+    const resolvedLocation = shouldResolveLocation
+      ? await this.resolveStudioLocation(dto.address, dto.latitude, dto.longitude)
+      : {};
     const existing = await this.prisma.studioSetting.findFirst();
 
     if (existing) {
       return this.prisma.studioSetting.update({
         where: { id: existing.id },
-        data: dto,
+        data: {
+          ...dto,
+          ...resolvedLocation,
+        },
       });
     }
 
     return this.prisma.studioSetting.create({
-      data: dto,
+      data: {
+        ...dto,
+        ...resolvedLocation,
+      },
     });
+  }
+
+  async geocodeStudioLocation(address: string) {
+    const location = await this.geocodeAddress(address);
+
+    if (!location) {
+      throw new NotFoundException('Studio location could not be resolved');
+    }
+
+    return {
+      ...location,
+      source: 'geocoded' as const,
+    };
   }
 
   async getMiniPageImages(options: MiniPageImagePayloadOptions = {}) {

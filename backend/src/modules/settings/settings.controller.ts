@@ -32,6 +32,14 @@ export class SettingsController {
     return this.settingsService.updateStudioSettings(dto);
   }
 
+  @Get('studio/location')
+  @SkipAuth()
+  @AllowMiniUser()
+  @ApiOperation({ summary: 'Resolve studio location from address' })
+  async geocodeStudioLocation(@Query('address') address: string) {
+    return this.settingsService.geocodeStudioLocation(address);
+  }
+
   @Get('mini-page-images')
   @SkipAuth()
   @ApiOperation({ summary: 'Get mini-program page image settings' })

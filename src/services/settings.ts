@@ -9,6 +9,8 @@ export interface StudioSetting {
   email: string;
   businessHours: string;
   address: string;
+  latitude?: number | null;
+  longitude?: number | null;
   imageUrl?: string;
 }
 

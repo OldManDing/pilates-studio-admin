@@ -1,4 +1,5 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsEmail, IsNotEmpty, IsNumber, IsOptional, IsString, Matches, MaxLength, Min, Max } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateStudioDto {
@@ -27,6 +28,22 @@ export class UpdateStudioDto {
   @IsNotEmpty()
   @MaxLength(255)
   address: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'latitude must be a number' })
+  @Min(-90)
+  @Max(90)
+  latitude?: number | null;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'longitude must be a number' })
+  @Min(-180)
+  @Max(180)
+  longitude?: number | null;
 
   @ApiProperty({ required: false })
   @IsOptional()
