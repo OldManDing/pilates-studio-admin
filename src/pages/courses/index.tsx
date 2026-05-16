@@ -98,6 +98,17 @@ const courseTypeLabelMap: Record<string, string> = {
   COMBO: '综合训练',
 };
 
+const DEFAULT_COURSE_LEVEL_OPTIONS = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
+
+const courseLevelLabelMap: Record<string, string> = {
+  BEGINNER: '初级',
+  INTERMEDIATE: '中级',
+  ADVANCED: '高级',
+  初级: '初级',
+  中级: '中级',
+  高级: '高级',
+};
+
 const getCourseTypeLabel = (type?: string) => {
   const normalizedType = type?.trim();
 
@@ -111,6 +122,18 @@ const getCourseTypeLabel = (type?: string) => {
     .replace(/_+/g, '_');
 
   return courseTypeLabelMap[normalizedType] || courseTypeLabelMap[normalizedKey] || normalizedType;
+};
+
+const getCourseLevelLabel = (level?: string) => {
+  const normalizedLevel = level?.trim();
+
+  if (!normalizedLevel) {
+    return '-';
+  }
+
+  const normalizedKey = normalizedLevel.toUpperCase();
+
+  return courseLevelLabelMap[normalizedLevel] || courseLevelLabelMap[normalizedKey] || normalizedLevel;
 };
 
 export default function CoursesPage() {
@@ -237,6 +260,28 @@ export default function CoursesPage() {
     [allCourses]
   );
 
+  const normalizedCourseLevelOptions = useMemo(
+    () => {
+      const options = new Map<string, string>();
+
+      courseLevelOptions.forEach((item) => {
+        const normalized = item.trim();
+        if (normalized) {
+          options.set(normalized.toUpperCase(), normalized);
+        }
+      });
+
+      DEFAULT_COURSE_LEVEL_OPTIONS.forEach((item) => {
+        if (!options.has(item.toUpperCase())) {
+          options.set(item.toUpperCase(), item);
+        }
+      });
+
+      return Array.from(options.values());
+    },
+    [courseLevelOptions],
+  );
+
   const resetFilters = () => {
     setSearchValue('');
     setTypeFilter('全部');
@@ -279,7 +324,7 @@ export default function CoursesPage() {
       ? '可继续排期与维护。'
       : '当前已停用，保留档案。',
     typeLabel: getCourseTypeLabel(course.type),
-    levelLabel: course.level,
+    levelLabel: getCourseLevelLabel(course.level),
     statusLabel: course.isActive ? '正常开课' : '已停用',
     statusTone: course.isActive ? 'active' : 'inactive',
     coachName: course.coach?.name || '未安排教练',
@@ -302,7 +347,7 @@ export default function CoursesPage() {
     form.setFieldsValue({
       name: '',
       type: DEFAULT_COURSE_TYPE_OPTIONS[0],
-      level: '初级',
+      level: 'BEGINNER',
       coachId: undefined,
       durationMinutes: 50,
       capacity: 8,
@@ -525,7 +570,7 @@ export default function CoursesPage() {
         typeValue={typeFilter}
         typeOptions={[{ label: '全部类别', value: '全部' }, ...normalizedCourseTypeOptions.map((item) => ({ label: getCourseTypeLabel(item), value: item }))]}
         levelValue={levelFilter}
-        levelOptions={[{ label: '全部难度', value: '全部' }, ...courseLevelOptions.map((item) => ({ label: item, value: item }))]}
+        levelOptions={[{ label: '全部难度', value: '全部' }, ...normalizedCourseLevelOptions.map((item) => ({ label: getCourseLevelLabel(item), value: item }))]}
         resetLabel="重置筛选"
         emptyTitle="暂无符合条件的课程"
         emptyDescription="修改搜索词或筛选条件后再试。"
@@ -583,11 +628,7 @@ export default function CoursesPage() {
               <Form.Item name="level" label="课程难度" rules={[{ required: true, message: '请选择课程难度' }]}>
                 <Select
                   className={pageCls.settingsInput}
-                  options={[
-                    { label: '初级', value: '初级' },
-                    { label: '中级', value: '中级' },
-                    { label: '高级', value: '高级' },
-                  ]}
+                  options={normalizedCourseLevelOptions.map((item) => ({ label: getCourseLevelLabel(item), value: item }))}
                 />
               </Form.Item>
             </Col>
@@ -671,7 +712,7 @@ export default function CoursesPage() {
                 ? `当前已排 ${detailCourse._count?.sessions || 0} 节，可继续维护课程设置与排期关系。`
                 : `课程当前已停用，保留 ${detailCourse._count?.sessions || 0} 节关联排期记录。`}
               typeLabel={getCourseTypeLabel(detailCourse.type)}
-              levelLabel={detailCourse.level}
+              levelLabel={getCourseLevelLabel(detailCourse.level)}
               statusLabel={detailCourse.isActive ? '正常开课' : '已停用'}
               statusTone={detailCourse.isActive ? 'active' : 'inactive'}
               coachName={detailCourse.coach?.name || '未安排教练'}
@@ -694,7 +735,7 @@ export default function CoursesPage() {
                 <Descriptions.Item label="课程编号">{detailCourse.courseCode || '-'}</Descriptions.Item>
                 <Descriptions.Item label="课程名称">{detailCourse.name}</Descriptions.Item>
                 <Descriptions.Item label="课程类别">{getCourseTypeLabel(detailCourse.type)}</Descriptions.Item>
-                <Descriptions.Item label="课程难度">{detailCourse.level}</Descriptions.Item>
+                <Descriptions.Item label="课程难度">{getCourseLevelLabel(detailCourse.level)}</Descriptions.Item>
                 <Descriptions.Item label="授课教练">{detailCourse.coach?.name || '-'}</Descriptions.Item>
                 <Descriptions.Item label="课程时长">{detailCourse.durationMinutes} 分钟</Descriptions.Item>
                 <Descriptions.Item label="课程容量">{detailCourse.capacity} 人</Descriptions.Item>
