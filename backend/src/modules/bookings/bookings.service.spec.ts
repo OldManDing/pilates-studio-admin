@@ -237,11 +237,13 @@ describe('BookingsService', () => {
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
-    it('rejects create when the member has another booking in the same time range', async () => {
+    it('rejects mini create when the member has another booking in the same time range', async () => {
       const startsAt = new Date('2026-05-16T02:00:00.000Z');
       const endsAt = new Date('2026-05-16T03:00:00.000Z');
+      prisma.member.findUnique
+        .mockResolvedValueOnce({ id: 'member-1' })
+        .mockResolvedValueOnce(createBooking().member);
       prisma.courseSession.findUnique.mockResolvedValue(createSession({ startsAt, endsAt }));
-      prisma.member.findUnique.mockResolvedValue(createBooking().member);
       prisma.booking.findUnique.mockResolvedValue(null);
       prisma.booking.count.mockResolvedValue(1);
       prisma.booking.findFirst
@@ -249,7 +251,11 @@ describe('BookingsService', () => {
         .mockResolvedValueOnce({ id: 'booking-overlap' });
 
       await expect(
-        service.create({ memberId: 'member-1', sessionId: 'session-1', source: BookingSource.ADMIN }),
+        service.create(
+          { memberId: 'SELF', sessionId: 'session-1', source: BookingSource.MINI_PROGRAM },
+          'mini-user-1',
+          true,
+        ),
       ).rejects.toMatchObject({
         message: '该时间段已有预约课程，请先取消原预约后再预约',
       });
@@ -265,6 +271,25 @@ describe('BookingsService', () => {
           }),
         }),
       );
+    });
+
+    it('allows admin create when the member has another booking in the same time range', async () => {
+      const startsAt = new Date('2026-05-16T02:00:00.000Z');
+      const endsAt = new Date('2026-05-16T03:00:00.000Z');
+      prisma.courseSession.findUnique.mockResolvedValue(createSession({ startsAt, endsAt }));
+      prisma.member.findUnique.mockResolvedValue(createBooking().member);
+      prisma.booking.findUnique.mockResolvedValue(null);
+      prisma.booking.findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ id: 'booking-overlap' });
+      prisma.booking.create.mockResolvedValue(createBooking());
+      prisma.booking.count.mockResolvedValue(1);
+
+      const result = await service.create({ memberId: 'member-1', sessionId: 'session-1', source: BookingSource.ADMIN });
+
+      expect(prisma.booking.findFirst).toHaveBeenCalledTimes(1);
+      expect(prisma.booking.create).toHaveBeenCalled();
+      expect(result.status).toBe(BookingStatus.CONFIRMED);
     });
 
     it('creates a confirmed booking and increments bookedCount', async () => {
