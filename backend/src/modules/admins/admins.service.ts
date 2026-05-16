@@ -132,7 +132,11 @@ export class AdminsService {
   }
 
   async remove(id: string) {
-    await this.findOne(id);
+    const admin = await this.findOne(id);
+
+    if (admin.role?.code === 'OWNER') {
+      throw new ConflictException('Owner admin cannot be deleted');
+    }
 
     await this.prisma.adminUser.delete({
       where: { id },

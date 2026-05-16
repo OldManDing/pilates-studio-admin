@@ -67,6 +67,7 @@ const exactMessages: Record<string, string> = {
   'Phone or email already registered': '手机号或邮箱已被注册',
   'Phone number already registered': '手机号已被注册',
   'Admin not found': '管理员不存在',
+  'Owner admin cannot be deleted': '超级管理员账号禁止删除',
   'Email already registered': '邮箱已被注册',
   'Access token is required': '请先登录',
   'Mini user not found or disabled': '小程序用户不存在或已停用',

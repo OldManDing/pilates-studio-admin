@@ -40,6 +40,12 @@ type CourseFormValues = {
 };
 
 const MAX_IMAGE_FILE_SIZE = 10 * 1024 * 1024;
+const INVALID_COURSE_IMAGE_PATTERN = /fakepath|^[a-z]:\\/i;
+
+function normalizeCourseCoverImageUrl(value?: string | null) {
+  const imageUrl = value?.trim() || '';
+  return imageUrl && !INVALID_COURSE_IMAGE_PATTERN.test(imageUrl) ? imageUrl : '';
+}
 
 function validateImageFile(file: File) {
   if (!file.type.startsWith('image/')) {
@@ -320,7 +326,7 @@ export default function CoursesPage() {
       coachId: course.coach?.id,
       durationMinutes: course.durationMinutes,
       capacity: course.capacity,
-      coverImageUrl: course.coverImageUrl || '',
+      coverImageUrl: normalizeCourseCoverImageUrl(course.coverImageUrl),
       isActive: course.isActive,
     });
     setIsFormOpen(true);
@@ -616,7 +622,7 @@ export default function CoursesPage() {
               </Form.Item>
             </Col>
             <Col span={24}>
-              <Form.Item name="coverImageUrl" label="课程图片">
+              <Form.Item label="课程图片">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <input
                     ref={courseImageInputRef}
@@ -628,7 +634,7 @@ export default function CoursesPage() {
                   <Button onClick={handleSelectCourseImage} disabled={!canWriteCourses || isUploadingCourseImage} loading={isUploadingCourseImage}>上传课程图片</Button>
                   <Form.Item noStyle shouldUpdate>
                     {() => {
-                      const imageUrl = form.getFieldValue('coverImageUrl');
+                      const imageUrl = normalizeCourseCoverImageUrl(form.getFieldValue('coverImageUrl'));
                       return imageUrl ? (
                         <img src={imageUrl} alt="课程图片预览" style={{ width: '100%', maxWidth: 220, borderRadius: 12, border: '1px solid var(--border-subtle)' }} />
                       ) : null;

@@ -14,6 +14,16 @@ const ACTIVE_BOOKING_STATUS_FILTER = {
 export class CourseSessionsService {
   constructor(private prisma: PrismaService) {}
 
+  private normalizeCoverImageUrl(imageUrl?: string | null) {
+    const nextImageUrl = imageUrl?.trim() || '';
+
+    if (!nextImageUrl || /fakepath|^[a-z]:\\/i.test(nextImageUrl)) {
+      return null;
+    }
+
+    return nextImageUrl;
+  }
+
   async create(dto: CreateCourseSessionDto) {
     const startsAt = new Date(dto.startsAt);
     const endsAt = new Date(dto.endsAt);
@@ -347,6 +357,13 @@ export class CourseSessionsService {
         course: {
           select: {
             id: true,
+            name: true,
+            description: true,
+            type: true,
+            level: true,
+            durationMinutes: true,
+            coverImageUrl: true,
+            isActive: true,
             coach: {
               select: { id: true, name: true, avatarUrl: true, bio: true },
             },
@@ -372,16 +389,23 @@ export class CourseSessionsService {
   private withActiveBookedCount<T extends {
     bookedCount: number;
     coach?: unknown | null;
-    course?: { coach?: unknown | null } | null;
+    course?: { coach?: unknown | null; coverImageUrl?: string | null } | null;
     _count?: { bookings: number };
   }>(
     session: T,
   ) {
     const { _count, ...sessionData } = session;
     const effectiveCoach = sessionData.coach ?? sessionData.course?.coach ?? null;
+    const course = sessionData.course
+      ? {
+          ...sessionData.course,
+          coverImageUrl: this.normalizeCoverImageUrl(sessionData.course.coverImageUrl),
+        }
+      : sessionData.course;
 
     return {
       ...sessionData,
+      course,
       coach: effectiveCoach,
       coachSource: sessionData.coach ? 'SESSION' : effectiveCoach ? 'COURSE_DEFAULT' : 'UNASSIGNED',
       bookedCount: _count?.bookings ?? session.bookedCount,

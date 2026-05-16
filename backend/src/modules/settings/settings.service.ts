@@ -46,7 +46,7 @@ export class SettingsService {
   ] as const;
 
   private readonly inheritedMiniPageImageKeys: Record<string, string> = {
-    myCoaches: 'coaches',
+    coaches: 'myCoaches',
   };
 
   private buildMiniPageImagePayload(

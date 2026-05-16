@@ -35,7 +35,6 @@ export const DEFAULT_MINI_PAGE_IMAGES: MiniPageImageSetting[] = [
   { pageKey: 'home', label: '首页', path: '/pages/index/index', defaultImageUrl: '/assets/ui/hero-studio.jpg', imageUrl: '', isDefault: true },
   { pageKey: 'courses', label: '预约', path: '/pages/courses/index', defaultImageUrl: '/assets/ui/hero-courses.jpg', imageUrl: '', isDefault: true },
   { pageKey: 'profile', label: '我的', path: '/pages/profile/index', defaultImageUrl: '/assets/ui/hero-profile.jpg', imageUrl: '', isDefault: true },
-  { pageKey: 'coaches', label: '教练列表', path: '/pages/coaches/index', defaultImageUrl: '/assets/ui/hero-courses.jpg', imageUrl: '', isDefault: true },
   { pageKey: 'membership', label: '会员中心', path: '/pages/membership/index', defaultImageUrl: '/assets/ui/hero-profile.jpg', imageUrl: '', isDefault: true },
   { pageKey: 'membershipRenew', label: '续费会员', path: '/pages/membership-renew/index', defaultImageUrl: '/assets/ui/hero-profile.jpg', imageUrl: '', isDefault: true },
   { pageKey: 'myBookings', label: '我的预约', path: '/pages/my-bookings/index', defaultImageUrl: '/assets/ui/hero-courses.jpg', imageUrl: '', isDefault: true },

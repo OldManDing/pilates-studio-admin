@@ -72,6 +72,8 @@ const getRoleDisplayName = (role?: { code?: string; name?: string } | null) => {
   return roleCodeLabel[role.code as AdminRoleCode] || role.name || role.code || '未分配角色';
 };
 
+const isOwnerAdmin = (admin: AdminRecord) => admin.role?.code === 'OWNER';
+
 const formatDateTime = (value?: string) => {
   if (!value) {
     return '-';
@@ -280,6 +282,11 @@ export default function AdminsPage() {
       return;
     }
 
+    if (isOwnerAdmin(admin)) {
+      messageApi.warning('超级管理员账号禁止删除');
+      return;
+    }
+
     try {
       setDeletingAdminId(admin.id);
       await adminsApi.delete(admin.id);
@@ -418,24 +425,30 @@ export default function AdminsPage() {
                       <aside className={styles.adminActions}>
                         <Button className={pageCls.cardActionSecondary} icon={<EditOutlined />} onClick={() => openEditModal(admin)}>编辑</Button>
                         <Button className={pageCls.cardActionSecondary} icon={<KeyOutlined />} onClick={() => openResetPasswordModal(admin)}>重置密码</Button>
-                        <Popconfirm
-                          title="删除管理员账号"
-                          description="删除后该账号将无法登录后台，确定继续吗？"
-                          okText="删除"
-                          cancelText="取消"
-                          okButtonProps={{ danger: true }}
-                          onConfirm={() => handleDeleteAdmin(admin)}
-                        >
-                          <Button
-                            danger
-                            className={pageCls.cardActionSecondary}
-                            icon={<DeleteOutlined />}
-                            loading={deletingAdminId === admin.id}
-                            disabled={deletingAdminId !== null && deletingAdminId !== admin.id}
-                          >
-                            删除
+                        {isOwnerAdmin(admin) ? (
+                          <Button danger className={pageCls.cardActionSecondary} icon={<DeleteOutlined />} disabled>
+                            禁止删除
                           </Button>
-                        </Popconfirm>
+                        ) : (
+                          <Popconfirm
+                            title="删除管理员账号"
+                            description="删除后该账号将无法登录后台，确定继续吗？"
+                            okText="删除"
+                            cancelText="取消"
+                            okButtonProps={{ danger: true }}
+                            onConfirm={() => handleDeleteAdmin(admin)}
+                          >
+                            <Button
+                              danger
+                              className={pageCls.cardActionSecondary}
+                              icon={<DeleteOutlined />}
+                              loading={deletingAdminId === admin.id}
+                              disabled={deletingAdminId !== null && deletingAdminId !== admin.id}
+                            >
+                              删除
+                            </Button>
+                          </Popconfirm>
+                        )}
                       </aside>
                     ) : null}
                   </article>

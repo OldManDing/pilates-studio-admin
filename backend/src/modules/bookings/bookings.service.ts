@@ -127,6 +127,22 @@ export class BookingsService {
         throw new ConflictException('Member already booked for this session');
       }
 
+      const overlappingBooking = await tx.booking.findFirst({
+        where: {
+          memberId: targetMemberId,
+          status: { notIn: [BookingStatus.CANCELLED, BookingStatus.NO_SHOW] },
+          session: {
+            startsAt: { lt: session.endsAt },
+            endsAt: { gt: session.startsAt },
+          },
+        },
+        select: { id: true },
+      });
+
+      if (overlappingBooking) {
+        throw new ConflictException('该时间段已有预约课程，请先取消原预约后再预约');
+      }
+
       const booking = await tx.booking.create({
         data: {
           bookingCode,

@@ -128,7 +128,7 @@ describe('SettingsService', () => {
     expect(prisma.miniPageImage.findMany).toHaveBeenCalledWith({
       where: {
         pageKey: {
-          in: ['coaches'],
+          in: ['coaches', 'myCoaches'],
         },
       },
     });
@@ -140,25 +140,25 @@ describe('SettingsService', () => {
     });
   });
 
-  it('lets my coaches page inherit the coach list image when it has no override', async () => {
+  it('lets coach list pages inherit the my coaches image when they have no override', async () => {
     const coachImageUrl = 'https://cdn.example.com/coaches.jpg';
     prisma.miniPageImage.findMany.mockResolvedValue([
-      { pageKey: 'coaches', imageUrl: coachImageUrl, updatedAt: new Date('2026-05-08T08:00:00.000Z') },
-      { pageKey: 'myCoaches', imageUrl: '', updatedAt: new Date('2026-05-08T09:00:00.000Z') },
+      { pageKey: 'coaches', imageUrl: '', updatedAt: new Date('2026-05-08T08:00:00.000Z') },
+      { pageKey: 'myCoaches', imageUrl: coachImageUrl, updatedAt: new Date('2026-05-08T09:00:00.000Z') },
     ]);
 
-    const result = await service.getMiniPageImages({ pageKey: 'myCoaches' });
+    const result = await service.getMiniPageImages({ pageKey: 'coaches' });
 
     expect(prisma.miniPageImage.findMany).toHaveBeenCalledWith({
       where: {
         pageKey: {
-          in: ['myCoaches', 'coaches'],
+          in: ['coaches', 'myCoaches'],
         },
       },
     });
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({
-      pageKey: 'myCoaches',
+      pageKey: 'coaches',
       imageUrl: coachImageUrl,
       isDefault: false,
     });

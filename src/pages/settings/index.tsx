@@ -111,6 +111,11 @@ const defaultStoreInfo: StoreInfoValues = {
   area: [],
 };
 
+const HIDDEN_MINI_PAGE_IMAGE_KEYS = new Set(['coaches']);
+
+const normalizeMiniPageImages = (items: MiniPageImageSetting[]) => items
+  .filter((item) => !HIDDEN_MINI_PAGE_IMAGE_KEYS.has(item.pageKey));
+
 const MAX_RESTORE_FILE_SIZE = 10 * 1024 * 1024;
 const BACKUP_REQUIRED_DATA_KEYS = ['members', 'coaches', 'courses', 'sessions', 'bookings', 'transactions', 'membershipPlans', 'adminUsers'] as const;
 
@@ -344,8 +349,8 @@ export default function SettingsPage() {
           settingsApi.getStudio().catch(() => null),
           settingsApi.getNotifications().catch(() => []),
           settingsApi.getMiniPageImages()
-            .then((data) => (data.length > 0 ? data : DEFAULT_MINI_PAGE_IMAGES))
-            .catch(() => DEFAULT_MINI_PAGE_IMAGES),
+            .then((data) => normalizeMiniPageImages(data.length > 0 ? data : DEFAULT_MINI_PAGE_IMAGES))
+            .catch(() => normalizeMiniPageImages(DEFAULT_MINI_PAGE_IMAGES)),
           authApi.getTwoFactorStatus().catch(() => ({ enabled: false, hasSecret: false })),
           authApi.getMe().catch(() => null),
         ]);
@@ -1076,7 +1081,7 @@ export default function SettingsPage() {
                         <div className={widgetCls.recordTitle}>{item.label}</div>
                         <div className={widgetCls.smallText}>{item.path}</div>
                       </div>
-                      <span className={styles.settingsSectionPill}>{item.isDefault ? '默认图' : '已上传'}</span>
+                      <span className={`${styles.settingsSectionPill} ${styles.miniPageImageStatusPill}`}>{item.isDefault ? '默认图' : '已上传'}</span>
                     </div>
                     <div className={styles.miniPageImageActions}>
                       <Button

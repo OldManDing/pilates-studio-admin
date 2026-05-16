@@ -42,6 +42,7 @@ const englishErrorMessages: Record<string, string> = {
   'Cannot refund a refund transaction': '退款交易不能再次退款',
   'Refund amount is invalid': '退款金额无效',
   'Admin not found': '管理员不存在',
+  'Owner admin cannot be deleted': '超级管理员账号禁止删除',
   'Role not found': '角色不存在',
   'Role code already exists': '角色编码已存在',
   'Reserved roles cannot be deleted': '系统预置角色不能删除',

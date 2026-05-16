@@ -64,6 +64,26 @@ describe('CoursesService', () => {
     expect(result.name).toBe('Morning Flow');
   });
 
+  it('ignores browser fakepath values when saving cover images', async () => {
+    prisma.course.findFirst.mockResolvedValue(null);
+    prisma.course.create.mockResolvedValue(createCourse({ coverImageUrl: null }));
+
+    await service.create({
+      name: 'Course With Fakepath',
+      type: 'MAT',
+      level: '初级',
+      durationMinutes: 50,
+      capacity: 8,
+      coverImageUrl: 'C:\\fakepath\\cover.png',
+    });
+
+    expect(prisma.course.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ coverImageUrl: null }),
+      }),
+    );
+  });
+
   it('rejects create when the derived course code already exists', async () => {
     prisma.course.findFirst.mockResolvedValue(createCourse());
 
@@ -95,6 +115,15 @@ describe('CoursesService', () => {
       where: expect.objectContaining({ isActive: true }),
     });
     expect(result.meta.total).toBe(1);
+  });
+
+  it('does not return saved fakepath values in course lists', async () => {
+    prisma.course.findMany.mockResolvedValue([createCourse({ coverImageUrl: 'C:\\fakepath\\cover.png' })]);
+    prisma.course.count.mockResolvedValue(1);
+
+    const result = await service.findAll({ page: 1, pageSize: 6 });
+
+    expect(result.data[0].coverImageUrl).toBeNull();
   });
 
   it('throws not found when course does not exist', async () => {

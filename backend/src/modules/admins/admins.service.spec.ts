@@ -122,4 +122,19 @@ describe('AdminsService', () => {
     );
     expect(result.id).toBe('admin-1');
   });
+
+  it('rejects deleting owner admin accounts', async () => {
+    prisma.adminUser.findUnique.mockResolvedValue(createAdmin());
+
+    await expect(service.remove('admin-1')).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.adminUser.delete).not.toHaveBeenCalled();
+  });
+
+  it('deletes non-owner admin accounts', async () => {
+    prisma.adminUser.findUnique.mockResolvedValue(createAdmin({ role: { id: 'role-2', code: 'FRONTDESK', name: '前台' } }));
+    prisma.adminUser.delete.mockResolvedValue(createAdmin());
+
+    await expect(service.remove('admin-1')).resolves.toEqual({ success: true });
+    expect(prisma.adminUser.delete).toHaveBeenCalledWith({ where: { id: 'admin-1' } });
+  });
 });

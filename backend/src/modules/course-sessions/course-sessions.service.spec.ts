@@ -232,12 +232,19 @@ describe('CourseSessionsService', () => {
     expect(result).toEqual({ availableSeats: 6 });
   });
 
-  it('finds sessions by course id with mapped bookedCount', async () => {
-    prisma.courseSession.findMany.mockResolvedValue([createSession({ bookedCount: 3, _count: { bookings: 3 } })]);
+  it('finds sessions by course id with mapped bookedCount and sanitized course cover', async () => {
+    prisma.courseSession.findMany.mockResolvedValue([
+      createSession({
+        bookedCount: 3,
+        _count: { bookings: 3 },
+        course: { id: 'course-1', name: 'Morning Flow', coverImageUrl: 'C:\\fakepath\\cover.png' },
+      }),
+    ]);
 
     const result = await service.findByCourseId('course-1', { upcoming: true });
 
     expect(result.sessions).toHaveLength(1);
     expect(result.sessions[0].bookedCount).toBe(3);
+    expect(result.sessions[0].course.coverImageUrl).toBeNull();
   });
 });

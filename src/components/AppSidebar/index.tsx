@@ -11,6 +11,8 @@ type Props = {
   pathname: string;
   onNavigate: (path: string) => void;
   user: AuthResponse['user'];
+  brandName?: string;
+  brandImageUrl?: string;
 };
 
 const groupLabelMap = {
@@ -19,7 +21,7 @@ const groupLabelMap = {
   admin: '系统配置',
 } as const;
 
-const AppSidebar: FC<Props> = ({ pathname, onNavigate, user }) => {
+const AppSidebar: FC<Props> = ({ pathname, onNavigate, user, brandName, brandImageUrl }) => {
   const { message } = App.useApp();
   const [accountOpen, setAccountOpen] = useState(false);
   const accountWrapRef = useRef<HTMLDivElement | null>(null);
@@ -93,9 +95,11 @@ const AppSidebar: FC<Props> = ({ pathname, onNavigate, user }) => {
   return (
     <div className={cls.wrapper}>
       <div className={cls.brand}>
-        <div className={cls.logo}>愈</div>
+        <div className={cls.logo}>
+          {brandImageUrl ? <img src={brandImageUrl} alt={`${brandName || '工作室'}标识`} className={cls.logoImage} /> : '愈'}
+        </div>
         <div className={cls.brandCopy}>
-          <div className={cls.brandTitle}>愈己CareMe工作室</div>
+          <div className={cls.brandTitle}>{brandName || '愈己CareMe工作室'}</div>
           <div className={cls.brandMeta}>高端门店管理系统</div>
         </div>
       </div>

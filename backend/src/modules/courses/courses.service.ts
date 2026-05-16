@@ -10,6 +10,23 @@ import { PaginatedResponse } from '../../common/dto/pagination.dto';
 export class CoursesService {
   constructor(private prisma: PrismaService) {}
 
+  private normalizeCourseForOutput<T extends { coverImageUrl?: string | null }>(course: T): T {
+    return {
+      ...course,
+      coverImageUrl: this.normalizeCoverImageUrl(course.coverImageUrl),
+    };
+  }
+
+  private normalizeCoverImageUrl(imageUrl?: string | null) {
+    const nextImageUrl = imageUrl?.trim() || '';
+
+    if (!nextImageUrl || /fakepath|^[a-z]:\\/i.test(nextImageUrl)) {
+      return null;
+    }
+
+    return nextImageUrl;
+  }
+
   async create(dto: CreateCourseDto) {
     const existing = await this.prisma.course.findFirst({
       where: { name: dto.name.trim() },
@@ -31,7 +48,7 @@ export class CoursesService {
         level: dto.level,
         durationMinutes: dto.durationMinutes,
         capacity: dto.capacity,
-        coverImageUrl: dto.coverImageUrl,
+        coverImageUrl: this.normalizeCoverImageUrl(dto.coverImageUrl),
         coachId: dto.coachId,
         isActive: dto.isActive ?? true,
       },
@@ -78,7 +95,7 @@ export class CoursesService {
     ]);
 
     return {
-      data,
+      data: data.map((course) => this.normalizeCourseForOutput(course)),
       meta: {
         page,
         pageSize,
@@ -89,7 +106,7 @@ export class CoursesService {
   }
 
   async findActive() {
-    return this.prisma.course.findMany({
+    const courses = await this.prisma.course.findMany({
       where: { isActive: true },
       include: {
         coach: true,
@@ -99,6 +116,8 @@ export class CoursesService {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    return courses.map((course) => this.normalizeCourseForOutput(course));
   }
 
   async findOne(id: string) {
@@ -126,19 +145,26 @@ export class CoursesService {
       throw new NotFoundException('Course not found');
     }
 
-    return course;
+    return this.normalizeCourseForOutput(course);
   }
 
   async update(id: string, dto: UpdateCourseDto) {
     await this.findOne(id);
 
-    return this.prisma.course.update({
+    const updateData = {
+      ...dto,
+      ...(dto.coverImageUrl !== undefined ? { coverImageUrl: this.normalizeCoverImageUrl(dto.coverImageUrl) } : {}),
+    };
+
+    const course = await this.prisma.course.update({
       where: { id },
-      data: dto,
+      data: updateData,
       include: {
         coach: true,
       },
     });
+
+    return this.normalizeCourseForOutput(course);
   }
 
   async remove(id: string) {

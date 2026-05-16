@@ -106,7 +106,8 @@
 
 .miniPageImageGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  align-items: stretch;
   gap: 14px;
 }
 
@@ -125,6 +126,7 @@
   position: relative;
   overflow: hidden;
   aspect-ratio: 16 / 9;
+  min-height: 132px;
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--mint-soft) 45%, white);
   border: 1px solid var(--border-soft);
@@ -170,11 +172,26 @@
   min-width: 0;
 }
 
+.miniPageImageStatusPill {
+  min-width: 58px;
+  min-height: 24px;
+  flex: 0 0 auto;
+  justify-content: center;
+  padding: 0 9px;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .miniPageImageActions {
   display: flex;
-  align-items: center;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 10px;
+}
+
+.miniPageImageActions :global(.ant-btn) {
+  flex: 1 1 108px;
+  min-width: 0;
 }
 
 .settingsOverviewTop {

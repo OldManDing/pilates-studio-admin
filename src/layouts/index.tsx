@@ -7,6 +7,7 @@ import AppSidebar from '@/components/AppSidebar';
 import cls from '@/styles/layout.module.css';
 import { MOBILE_SIDEBAR_DRAWER_WIDTH } from '@/styles/dimensions';
 import { authApi, clearTokens, type AuthResponse } from '@/services/auth';
+import { settingsApi, type StudioSetting } from '@/services/settings';
 import {
   ADMIN_ACCESS_TOKEN_KEY,
   ADMIN_LAST_ACTIVITY_KEY,
@@ -26,6 +27,7 @@ const AppLayout: FC<PropsWithChildren> = ({ children }) => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<AuthResponse['user'] | null>(null);
+  const [studioBrand, setStudioBrand] = useState<Pick<StudioSetting, 'studioName' | 'imageUrl'> | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -38,8 +40,15 @@ const AppLayout: FC<PropsWithChildren> = ({ children }) => {
       }
 
       try {
-        const me = await authApi.getMe();
+        const [me, studio] = await Promise.all([
+          authApi.getMe(),
+          settingsApi.getStudio().catch(() => null),
+        ]);
         setUser(me);
+        setStudioBrand(studio ? {
+          studioName: studio.studioName,
+          imageUrl: studio.imageUrl,
+        } : null);
       } catch {
         clearTokens();
         navigate('/login', { replace: true });
@@ -162,7 +171,7 @@ const AppLayout: FC<PropsWithChildren> = ({ children }) => {
   return (
     <Layout className={cls.app}>
       <aside className={cls.sidebar}>
-        <AppSidebar pathname={location.pathname} onNavigate={handleNavigate} user={user} />
+        <AppSidebar pathname={location.pathname} onNavigate={handleNavigate} user={user} brandName={studioBrand?.studioName} brandImageUrl={studioBrand?.imageUrl} />
       </aside>
       <div className={cls.mobileHeader}>
         <Button
@@ -173,8 +182,11 @@ const AppLayout: FC<PropsWithChildren> = ({ children }) => {
         >
           菜单
         </Button>
+        <div className={cls.mobileLogo}>
+          {studioBrand?.imageUrl ? <img src={studioBrand.imageUrl} alt={`${studioBrand.studioName || '工作室'}标识`} /> : '愈'}
+        </div>
         <div className={cls.mobileTitleWrap}>
-          <div className={cls.mobileTitle}>愈己CareMe工作室</div>
+          <div className={cls.mobileTitle}>{studioBrand?.studioName || '愈己CareMe工作室'}</div>
           <div className={cls.mobileSubtitle}>高端门店管理系统</div>
         </div>
       </div>
@@ -190,7 +202,7 @@ const AppLayout: FC<PropsWithChildren> = ({ children }) => {
         rootClassName={cls.mobileDrawerRoot}
         closable={false}
       >
-        <AppSidebar pathname={location.pathname} onNavigate={handleNavigate} user={user} />
+        <AppSidebar pathname={location.pathname} onNavigate={handleNavigate} user={user} brandName={studioBrand?.studioName} brandImageUrl={studioBrand?.imageUrl} />
       </Drawer>
     </Layout>
   );
