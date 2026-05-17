@@ -673,6 +673,9 @@ export default function CoursesPage() {
                     onChange={handleCourseImageChange}
                   />
                   <Button onClick={handleSelectCourseImage} disabled={!canWriteCourses || isUploadingCourseImage} loading={isUploadingCourseImage}>上传课程图片</Button>
+                  <Form.Item name="coverImageUrl" hidden>
+                    <Input />
+                  </Form.Item>
                   <Form.Item noStyle shouldUpdate>
                     {() => {
                       const imageUrl = normalizeCourseCoverImageUrl(form.getFieldValue('coverImageUrl'));
