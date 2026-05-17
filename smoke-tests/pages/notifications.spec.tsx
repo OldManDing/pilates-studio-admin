@@ -72,6 +72,13 @@ vi.mock('@/services/notifications', () => ({
           member: { id: 'member-1', name: '林若溪', memberCode: 'M000001', phone: '13800000000' },
           miniUser: null,
           adminUser: null,
+          payload: {
+            bookingId: 'booking-1',
+            sessionId: 'session-1',
+            courseName: '普拉提私教课',
+            startsAt: '2026-04-11T10:00:00.000Z',
+            page: 'pages/my-bookings/index',
+          },
           sentAt: null,
           readAt: null,
           createdAt: '2026-04-11T08:00:00.000Z',
@@ -133,7 +140,10 @@ describe('NotificationsPage smoke test', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: '通知管理' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /新建通知/ })).toBeInTheDocument();
-      expect(screen.getByText('课程提醒')).toBeInTheDocument();
+      expect(screen.getAllByText('课程提醒').length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText(/课程：普拉提私教课/)).toBeInTheDocument();
+      expect(screen.queryByText(/booking-1/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/session-1/)).not.toBeInTheDocument();
     }, { timeout: 20000 });
 
     fireEvent.click(screen.getByRole('button', { name: /新建通知/ }));

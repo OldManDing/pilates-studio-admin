@@ -99,6 +99,10 @@ const notificationTypeOptions = notificationTemplateOptions.map((option) => ({
 const notificationTitleOptions = Array.from(new Set(notificationTemplateOptions.map((option) => option.title)))
   .map((title) => ({ value: title, label: title }));
 
+const notificationTypeLabelMap = Object.fromEntries(
+  notificationTemplateOptions.map((option) => [option.type, option.title]),
+) as Record<string, string>;
+
 const PAGE_SIZE = 10;
 const RECIPIENT_PAGE_SIZE = 100;
 const emptyRecipientOptions: Record<RecipientType, RecipientSelectOption[]> = {
@@ -373,9 +377,14 @@ const payloadLabelMap: Record<string, string> = {
   phone: '联系电话',
   nickname: '微信昵称',
   memberCode: '会员编号',
-  transactionId: '交易编号',
-  planId: '会籍计划',
   amountCents: '申请金额',
+  courseName: '课程',
+  startsAt: '上课时间',
+  endsAt: '结束时间',
+  coachName: '教练',
+  studioName: '门店',
+  remark: '备注',
+  cancelledAt: '取消时间',
   accountDeletionProcessedAt: '处理时间',
 };
 
@@ -385,8 +394,13 @@ const payloadDisplayOrder = [
   'nickname',
   'memberCode',
   'amountCents',
-  'planId',
-  'transactionId',
+  'courseName',
+  'startsAt',
+  'endsAt',
+  'coachName',
+  'studioName',
+  'remark',
+  'cancelledAt',
   'accountDeletionProcessedAt',
 ];
 
@@ -397,6 +411,10 @@ function formatPayloadValue(key: string, value: unknown) {
 
   if (key === 'amountCents' && typeof value === 'number') {
     return `¥${(value / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  if (['startsAt', 'endsAt', 'cancelledAt', 'accountDeletionProcessedAt'].includes(key) && (typeof value === 'string' || value instanceof Date)) {
+    return formatDateTime(String(value));
   }
 
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
@@ -414,9 +432,10 @@ function getNotificationPayloadEntries(notification: NotificationRecord) {
   }
 
   const entries = Object.entries(payload)
+    .filter(([key]) => key in payloadLabelMap)
     .map(([key, value]) => ({
       key,
-      label: payloadLabelMap[key] || key,
+      label: payloadLabelMap[key],
       value: formatPayloadValue(key, value),
     }))
     .filter((entry) => entry.value);
@@ -882,7 +901,7 @@ export default function NotificationsPage() {
                       <div className={styles.notificationMain}>
                         <div className={styles.notificationHeader}>
                           <div className={styles.notificationTitleWrap}>
-                            <span className={styles.typePill}>{notification.type}</span>
+                            <span className={styles.typePill}>{notificationTypeLabelMap[notification.type] || notification.title || '通知'}</span>
                             <h3 className={styles.notificationTitle}>{notification.title}</h3>
                           </div>
                           <StatusTag status={getStatusLabel(notification)} />
