@@ -80,6 +80,8 @@ const formatStoreAddress = (info: Pick<StoreInfoValues, 'province' | 'city' | 'd
   return prefix && info.address.startsWith(prefix) ? info.address : `${prefix} ${info.address}`.trim();
 };
 
+const normalizeAddressText = (value?: string | null) => (value || '').replace(/\s+/g, '');
+
 const todayText = () => new Date().toLocaleString('zh-CN', {
   hour12: false,
   month: '2-digit',
@@ -486,6 +488,9 @@ export default function SettingsPage() {
       district,
       values.address
     ].filter(Boolean).join('');
+    const addressChanged = normalizeAddressText(fullAddress) !== normalizeAddressText(formatStoreAddress(savedStoreInfo));
+    const coordinatesChanged = values.latitude !== savedStoreInfo.latitude || values.longitude !== savedStoreInfo.longitude;
+    const shouldResolveCoordinatesFromAddress = addressChanged && !coordinatesChanged;
     const businessHours = dayjsToHoursString(values.hours as [dayjs.Dayjs, dayjs.Dayjs]);
     const saveData = {
       studioName: values.studioName,
@@ -493,8 +498,8 @@ export default function SettingsPage() {
       email: values.email,
       businessHours,
       address: fullAddress,
-      latitude: values.latitude ?? null,
-      longitude: values.longitude ?? null,
+      latitude: shouldResolveCoordinatesFromAddress ? null : values.latitude ?? null,
+      longitude: shouldResolveCoordinatesFromAddress ? null : values.longitude ?? null,
       imageUrl: values.imageUrl || '',
     };
     const nextInfo: StoreInfoValues = {
@@ -504,8 +509,8 @@ export default function SettingsPage() {
       city,
       district,
       address: values.address,
-      latitude: values.latitude ?? null,
-      longitude: values.longitude ?? null,
+      latitude: saveData.latitude,
+      longitude: saveData.longitude,
       imageUrl: values.imageUrl || '',
       area: values.area || [province, city, district].filter(Boolean),
       hours: values.hours,
@@ -596,10 +601,15 @@ export default function SettingsPage() {
       const values = await storeForm.validateFields();
       const { saveData, nextInfo } = buildStoreSaveState(values);
       
-      await settingsApi.updateStudio(saveData);
-      setStoreInfo(nextInfo);
-      setSavedStoreInfo(nextInfo);
-      storeForm.setFieldsValue(nextInfo);
+      const updatedStudio = await settingsApi.updateStudio(saveData);
+      const savedInfo = {
+        ...nextInfo,
+        latitude: updatedStudio.latitude ?? null,
+        longitude: updatedStudio.longitude ?? null,
+      };
+      setStoreInfo(savedInfo);
+      setSavedStoreInfo(savedInfo);
+      storeForm.setFieldsValue(savedInfo);
       setStoreSavedAt(todayText());
       message.success('门店信息已保存');
     } catch (err) {
@@ -658,10 +668,15 @@ export default function SettingsPage() {
       };
       const { saveData, nextInfo } = buildStoreSaveState(nextValues);
 
-      await settingsApi.updateStudio(saveData);
-      setStoreInfo(nextInfo);
-      setSavedStoreInfo(nextInfo);
-      storeForm.setFieldsValue(nextInfo);
+      const updatedStudio = await settingsApi.updateStudio(saveData);
+      const savedInfo = {
+        ...nextInfo,
+        latitude: updatedStudio.latitude ?? null,
+        longitude: updatedStudio.longitude ?? null,
+      };
+      setStoreInfo(savedInfo);
+      setSavedStoreInfo(savedInfo);
+      storeForm.setFieldsValue(savedInfo);
       setStoreSavedAt(todayText());
       message.success(`店面图片已压缩上传并保存（${Math.ceil(uploaded.size / 1024)}KB）`);
     } catch (err) {
@@ -1040,29 +1055,23 @@ export default function SettingsPage() {
                       <Input className={pageCls.settingsInput} size="large" placeholder="请输入街道、楼栋、门牌号等" />
                     </Form.Item>
                   </Col>
-                  <Col span={12}>
-                    <Form.Item label="门店纬度" name="latitude" tooltip="用于小程序首页地图导航">
-                      <InputNumber
-                        className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`}
-                        size="large"
-                        min={-90}
-                        max={90}
-                        precision={6}
-                        placeholder="例如 31.230416"
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item label="门店经度" name="longitude" tooltip="需与纬度同时填写">
-                      <InputNumber
-                        className={`${pageCls.settingsInput} ${pageCls.fullWidthControl}`}
-                        size="large"
-                        min={-180}
-                        max={180}
-                        precision={6}
-                        placeholder="例如 121.473701"
-                      />
-                    </Form.Item>
+                  <Form.Item name="latitude" hidden>
+                    <InputNumber />
+                  </Form.Item>
+                  <Form.Item name="longitude" hidden>
+                    <InputNumber />
+                  </Form.Item>
+                  <Col span={24}>
+                    <Descriptions size="small" column={2} bordered>
+                      <Descriptions.Item label="地图定位">
+                        {watchedStoreInfo?.latitude && watchedStoreInfo?.longitude
+                          ? `${watchedStoreInfo.latitude}, ${watchedStoreInfo.longitude}`
+                          : '保存地址后自动解析'}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="维护方式">
+                        只需填写门店地址，无需手填坐标
+                      </Descriptions.Item>
+                    </Descriptions>
                   </Col>
                 </Row>
               </div>

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateStudioDto } from './dto/update-studio.dto';
@@ -7,6 +8,22 @@ import { BookingStatus, CoachStatus, MembershipPlanCategory, NotificationChannel
 
 const COMPACT_INLINE_IMAGE_MAX_LENGTH = 120 * 1024;
 const INLINE_IMAGE_DATA_URL_PATTERN = /^data:image\/[a-z0-9.+-]+;base64,/i;
+
+interface GeocodeLocation {
+  latitude: number;
+  longitude: number;
+}
+
+interface TencentGeocodePayload {
+  status?: number;
+  message?: string;
+  result?: {
+    location?: {
+      lat?: unknown;
+      lng?: unknown;
+    };
+  };
+}
 
 interface MiniPageImagePayloadOptions {
   compact?: boolean;
@@ -23,6 +40,10 @@ export class SettingsService {
 
   private isValidLongitude(value: unknown) {
     return typeof value === 'number' && Number.isFinite(value) && value >= -180 && value <= 180;
+  }
+
+  private isLikelyChineseAddress(address?: string | null) {
+    return /[\u4e00-\u9fff]/.test(address || '');
   }
 
   private buildGeocodeCandidates(address?: string | null) {
@@ -93,12 +114,159 @@ export class SettingsService {
     return { latitude: null, longitude: null };
   }
 
-  private async geocodeAddress(address?: string | null) {
-    const candidates = this.buildGeocodeCandidates(address);
-    if (candidates.length === 0) {
+  private getTencentMapKey() {
+    return process.env.TENCENT_MAP_KEY || process.env.TENCENT_LBS_KEY || process.env.QQ_MAP_KEY || '';
+  }
+
+  private getTencentMapSk() {
+    return process.env.TENCENT_MAP_SK || process.env.TENCENT_LBS_SK || process.env.QQ_MAP_SK || '';
+  }
+
+  private getAmapKey() {
+    return process.env.AMAP_KEY || process.env.GAODE_MAP_KEY || '';
+  }
+
+  private parseTencentLocation(payload: unknown): GeocodeLocation | null {
+    const location = (payload as TencentGeocodePayload)?.result?.location;
+    const latitude = Number(location?.lat);
+    const longitude = Number(location?.lng);
+
+    if (!this.isValidLatitude(latitude) || !this.isValidLongitude(longitude)) {
       return null;
     }
 
+    return { latitude, longitude };
+  }
+
+  private isTencentFatalStatus(payload: unknown) {
+    const status = Number((payload as TencentGeocodePayload)?.status);
+    return status === 121 || status === 199;
+  }
+
+  private buildTencentGeocodeUrl(address: string, key: string) {
+    const pathname = '/ws/geocoder/v1/';
+    const params = new URLSearchParams({ address, key });
+    const sortedEntries = Array.from(params.entries()).sort(([left], [right]) => left.localeCompare(right));
+    const encodedQuery = sortedEntries
+      .map(([paramKey, paramValue]) => `${encodeURIComponent(paramKey)}=${encodeURIComponent(paramValue)}`)
+      .join('&');
+    const rawQuery = sortedEntries
+      .map(([paramKey, paramValue]) => `${paramKey}=${paramValue}`)
+      .join('&');
+    const sk = this.getTencentMapSk();
+
+    if (!sk) {
+      return `https://apis.map.qq.com${pathname}?${encodedQuery}`;
+    }
+
+    const sig = createHash('md5')
+      .update(`${pathname}?${rawQuery}${sk}`)
+      .digest('hex');
+
+    return `https://apis.map.qq.com${pathname}?${encodedQuery}&sig=${sig}`;
+  }
+
+  private parseAmapLocation(payload: unknown): GeocodeLocation | null {
+    const firstGeocode = (payload as { geocodes?: Array<{ location?: string }> })?.geocodes?.[0];
+    const [longitudeValue, latitudeValue] = (firstGeocode?.location || '').split(',');
+    const latitude = Number(latitudeValue);
+    const longitude = Number(longitudeValue);
+
+    if (!this.isValidLatitude(latitude) || !this.isValidLongitude(longitude)) {
+      return null;
+    }
+
+    return { latitude, longitude };
+  }
+
+  private parseNominatimLocation(payload: unknown): GeocodeLocation | null {
+    const firstResult = (payload as Array<{ lat?: string; lon?: string }>)[0];
+
+    if (!firstResult?.lat || !firstResult?.lon) {
+      return null;
+    }
+
+    const latitude = Number(firstResult.lat);
+    const longitude = Number(firstResult.lon);
+
+    if (!this.isValidLatitude(latitude) || !this.isValidLongitude(longitude)) {
+      return null;
+    }
+
+    return { latitude, longitude };
+  }
+
+  private async geocodeByTencentMap(candidates: string[]) {
+    const key = this.getTencentMapKey();
+    if (!key) {
+      return null;
+    }
+
+    for (const query of candidates) {
+      const geocodeUrl = this.buildTencentGeocodeUrl(query, key);
+      try {
+        const response = await fetch(geocodeUrl, {
+          headers: {
+            Accept: 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          continue;
+        }
+
+        const payload = await response.json();
+        const location = this.parseTencentLocation(payload);
+
+        if (location) {
+          return location;
+        }
+
+        if (this.isTencentFatalStatus(payload)) {
+          return null;
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    return null;
+  }
+
+  private async geocodeByAmap(candidates: string[]) {
+    const key = this.getAmapKey();
+    if (!key) {
+      return null;
+    }
+
+    for (const query of candidates) {
+      const geocodeUrl = `https://restapi.amap.com/v3/geocode/geo?address=${encodeURIComponent(query)}&key=${encodeURIComponent(key)}`;
+      try {
+        const response = await fetch(geocodeUrl, {
+          headers: {
+            Accept: 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          continue;
+        }
+
+        const payload = await response.json();
+        const location = this.parseAmapLocation(payload);
+
+        if (location) {
+          return location;
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    return null;
+  }
+
+  private async geocodeByNominatim(candidates: string[]) {
     for (const query of candidates) {
       const geocodeUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`;
       try {
@@ -113,27 +281,32 @@ export class SettingsService {
           continue;
         }
 
-        const results = await response.json() as Array<{ lat?: string; lon?: string }>;
-        const firstResult = results[0];
+        const payload = await response.json();
+        const location = this.parseNominatimLocation(payload);
 
-        if (!firstResult?.lat || !firstResult?.lon) {
-          continue;
+        if (location) {
+          return location;
         }
-
-        const latitude = Number(firstResult.lat);
-        const longitude = Number(firstResult.lon);
-
-        if (!this.isValidLatitude(latitude) || !this.isValidLongitude(longitude)) {
-          continue;
-        }
-
-        return { latitude, longitude };
       } catch {
         continue;
       }
     }
 
     return null;
+  }
+
+  private async geocodeAddress(address?: string | null) {
+    const candidates = this.buildGeocodeCandidates(address);
+    if (candidates.length === 0) {
+      return null;
+    }
+
+    const reliableChinaLocation = (await this.geocodeByTencentMap(candidates)) || (await this.geocodeByAmap(candidates));
+    if (reliableChinaLocation || this.isLikelyChineseAddress(address)) {
+      return reliableChinaLocation;
+    }
+
+    return this.geocodeByNominatim(candidates);
   }
 
   async resolveStudioLocation(address?: string | null, latitude?: number | null, longitude?: number | null) {
@@ -222,14 +395,22 @@ export class SettingsService {
   }
 
   async updateStudioSettings(dto: UpdateStudioDto) {
+    const existing = await this.prisma.studioSetting.findFirst();
+    const addressChanged = dto.address !== undefined && dto.address !== existing?.address;
+    const latitudeUnchanged = dto.latitude === undefined || dto.latitude === existing?.latitude;
+    const longitudeUnchanged = dto.longitude === undefined || dto.longitude === existing?.longitude;
+    const shouldDiscardStaleCoordinates = Boolean(existing && addressChanged && latitudeUnchanged && longitudeUnchanged);
     const shouldResolveLocation =
       dto.address !== undefined ||
       dto.latitude !== undefined ||
       dto.longitude !== undefined;
     const resolvedLocation = shouldResolveLocation
-      ? await this.resolveStudioLocation(dto.address, dto.latitude, dto.longitude)
+      ? await this.resolveStudioLocation(
+        dto.address,
+        shouldDiscardStaleCoordinates ? null : dto.latitude,
+        shouldDiscardStaleCoordinates ? null : dto.longitude,
+      )
       : {};
-    const existing = await this.prisma.studioSetting.findFirst();
 
     if (existing) {
       return this.prisma.studioSetting.update({

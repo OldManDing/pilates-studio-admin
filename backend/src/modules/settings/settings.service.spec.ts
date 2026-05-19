@@ -1,4 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import { NotificationChannel } from '../../common/enums/domain.enums';
 import { SettingsService } from './settings.service';
 
@@ -8,6 +9,14 @@ describe('SettingsService', () => {
   let fetchMock: jest.Mock;
 
   beforeEach(() => {
+    delete process.env.TENCENT_MAP_KEY;
+    delete process.env.TENCENT_LBS_KEY;
+    delete process.env.QQ_MAP_KEY;
+    delete process.env.TENCENT_MAP_SK;
+    delete process.env.TENCENT_LBS_SK;
+    delete process.env.QQ_MAP_SK;
+    delete process.env.AMAP_KEY;
+    delete process.env.GAODE_MAP_KEY;
     fetchMock = jest.fn();
     (globalThis as typeof globalThis & { fetch: jest.Mock }).fetch = fetchMock;
     prisma = {
@@ -79,7 +88,7 @@ describe('SettingsService', () => {
     expect(result.id).toBe('studio-1');
   });
 
-  it('geocodes studio address when coordinates are omitted', async () => {
+  it('does not use inaccurate fallback geocoding for Chinese addresses without a local map key', async () => {
     prisma.studioSetting.findFirst.mockResolvedValue({ id: 'studio-1' });
     fetchMock.mockResolvedValue({
       ok: true,
@@ -94,7 +103,43 @@ describe('SettingsService', () => {
       address: '上海市静安区南京西路1000号',
     } as never);
 
-    expect(fetchMock).toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(prisma.studioSetting.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          latitude: null,
+          longitude: null,
+        }),
+      }),
+    );
+  });
+
+  it('uses Tencent Maps geocoding when a map key is configured', async () => {
+    process.env.TENCENT_MAP_KEY = 'test-map-key';
+    prisma.studioSetting.findFirst.mockResolvedValue({ id: 'studio-1' });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: 0,
+        result: {
+          location: {
+            lat: 31.2304,
+            lng: 121.4737,
+          },
+        },
+      }),
+    });
+
+    await service.updateStudioSettings({
+      studioName: 'CareMe Studio',
+      phone: '400-123-4567',
+      email: 'info@example.com',
+      businessHours: '09:00-21:00',
+      address: '上海市静安区南京西路1000号',
+    } as never);
+
+    expect(fetchMock.mock.calls[0][0]).toContain('apis.map.qq.com/ws/geocoder/v1/');
+    expect(fetchMock.mock.calls[0][0]).toContain('key=test-map-key');
     expect(prisma.studioSetting.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -105,31 +150,114 @@ describe('SettingsService', () => {
     );
   });
 
-  it('tries simplified Chinese address variants when the full address is not resolved', async () => {
+  it('signs Tencent Maps geocoding requests when a map SK is configured', async () => {
+    process.env.TENCENT_MAP_KEY = 'test-map-key';
+    process.env.TENCENT_MAP_SK = 'test-map-sk';
+    prisma.studioSetting.findFirst.mockResolvedValue({ id: 'studio-1' });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: 0,
+        result: {
+          location: {
+            lat: 31.2304,
+            lng: 121.4737,
+          },
+        },
+      }),
+    });
+
+    await service.updateStudioSettings({
+      address: '上海市静安区南京西路1000号',
+    } as never);
+
+    const requestUrl = new URL(fetchMock.mock.calls[0][0] as string);
+    const queryEntries = Array.from(requestUrl.searchParams.entries())
+      .filter(([key]) => key !== 'sig')
+      .sort(([left], [right]) => left.localeCompare(right));
+    const rawQuery = queryEntries
+      .map(([key, value]) => `${key}=${value}`)
+      .join('&');
+    const expectedSig = createHash('md5')
+      .update(`/ws/geocoder/v1/?${rawQuery}test-map-sk`)
+      .digest('hex');
+
+    expect(requestUrl.searchParams.get('sig')).toBe(expectedSig);
+  });
+
+  it('re-geocodes a changed studio address instead of keeping unchanged old coordinates', async () => {
+    process.env.AMAP_KEY = 'test-amap-key';
+    prisma.studioSetting.findFirst.mockResolvedValue({
+      id: 'studio-1',
+      address: '旧地址',
+      latitude: 31.2304,
+      longitude: 121.4737,
+    });
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: '1',
+        geocodes: [{ location: '118.7303,32.0034' }],
+      }),
+    });
+
+    await service.updateStudioSettings({
+      studioName: 'CareMe Studio',
+      phone: '400-123-4567',
+      email: 'info@example.com',
+      businessHours: '09:00-21:00',
+      address: '新地址',
+      latitude: 31.2304,
+      longitude: 121.4737,
+    } as never);
+
+    expect(fetchMock).toHaveBeenCalled();
+    expect(fetchMock.mock.calls[0][0]).toContain('restapi.amap.com/v3/geocode/geo');
+    expect(prisma.studioSetting.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          address: '新地址',
+          latitude: 32.0034,
+          longitude: 118.7303,
+        }),
+      }),
+    );
+  });
+
+  it('tries simplified Chinese address variants with Tencent Maps when the full address is not resolved', async () => {
+    process.env.TENCENT_MAP_KEY = 'test-map-key';
     fetchMock
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => [],
+        json: async () => ({ status: 0, result: {} }),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => [],
+        json: async () => ({ status: 0, result: {} }),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => [],
+        json: async () => ({ status: 0, result: {} }),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => [],
+        json: async () => ({ status: 0, result: {} }),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => [],
+        json: async () => ({ status: 0, result: {} }),
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => [{ lat: '32.0058', lon: '118.7243' }],
+        json: async () => ({
+          status: 0,
+          result: {
+            location: {
+              lat: 32.0058,
+              lng: 118.7243,
+            },
+          },
+        }),
       });
 
     await expect(service.geocodeStudioLocation('江苏省南京市建邺区信安大厦B座')).resolves.toEqual({
@@ -139,6 +267,20 @@ describe('SettingsService', () => {
     });
     expect(fetchMock).toHaveBeenCalledTimes(6);
     expect(fetchMock.mock.calls[5][0]).toContain(encodeURIComponent('建邺区 信安大厦'));
+  });
+
+  it('stops Tencent geocoding retries when the API returns a fatal status', async () => {
+    process.env.TENCENT_MAP_KEY = 'test-map-key';
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        status: 121,
+        message: 'daily quota exceeded',
+      }),
+    });
+
+    await expect(service.geocodeStudioLocation('江苏省南京市建邺区信安大厦A座')).rejects.toBeInstanceOf(NotFoundException);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('returns mini-program page image defaults with saved overrides', async () => {
