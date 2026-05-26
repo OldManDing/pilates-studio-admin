@@ -2,6 +2,7 @@ import { defineConfig } from 'umi';
 
 export default defineConfig({
   npmClient: 'npm',
+  title: '愈己CareMe工作室管理后台',
   favicons: ['/favicon.ico', '/favicon.png', '/apple-touch-icon.png'],
 
   // Build settings
