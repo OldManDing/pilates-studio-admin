@@ -2,7 +2,7 @@ import { defineConfig } from 'umi';
 
 export default defineConfig({
   npmClient: 'npm',
-  favicons: ['/favicon.svg'],
+  favicons: ['/favicon.ico', '/favicon.png', '/apple-touch-icon.png'],
 
   // Build settings
   base: process.env.PUBLIC_PATH || '/',
