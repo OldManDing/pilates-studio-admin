@@ -1,11 +1,12 @@
 .backdrop {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(circle at 16% 18%, rgba(83, 191, 168, 0.22), transparent 38%),
-    radial-gradient(circle at 82% 14%, rgba(136, 120, 238, 0.16), transparent 32%),
-    radial-gradient(circle at 80% 84%, rgba(239, 177, 105, 0.15), transparent 34%);
+  background: #eef5f1;
   pointer-events: none;
+}
+
+.panel {
+  background: rgba(255, 255, 255, 0.97);
 }
 
 .brand {
